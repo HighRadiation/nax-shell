@@ -18,6 +18,7 @@
 */
 
 #include "parse.h"
+#include "test.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,13 +27,6 @@
 #define GREEN "\033[0;32m"
 #define RED "\033[0;31m"
 #define OFF "\033[0m"
-
-/* Test sayaclari; tek bir kosunun sonucunu tasir. */
-typedef struct s_score
-{
-	int	passed;
-	int	failed;
-}	t_score;
 
 /* Metin icindeki \t ve \\ kacislarini yerinde cozer. */
 static void	unescape(char *s)

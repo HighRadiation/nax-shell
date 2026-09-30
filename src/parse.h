@@ -11,6 +11,7 @@
 # define PARSE_H
 
 # include <stddef.h>
+# include "nax.h"
 
 /*
 ** Bir sozcuk parcasinin tirnak kipi.
@@ -81,6 +82,30 @@ typedef struct s_lex_err
 	const char	*message;
 	size_t		at;
 }	t_lex_err;
+
+/*
+** Sozcuk ayirma sirasindaki tum gecici durum.
+**
+** Yalnizca lexer.c kullanir; yapi tanimlari norm geregi basliklarda durur.
+**
+** src               : ayristirilan satir
+** i                 : satirdaki mevcut konum
+** head, tail        : uretilmekte olan token listesi
+** seg_head, seg_tail: uzerinde calisilan sozcugun parcalari
+** buf               : bir sonraki parcanin metni burada birikir
+** err               : hata bildirimi icin cagiranin verdigi yer
+*/
+typedef struct s_lexer
+{
+	const char	*src;
+	size_t		i;
+	t_token		*head;
+	t_token		*tail;
+	t_seg		*seg_head;
+	t_seg		*seg_tail;
+	t_buf		buf;
+	t_lex_err	*err;
+}	t_lexer;
 
 t_token		*lex_split(const char *line, t_lex_err *err);
 void		lex_free(t_token *tokens);

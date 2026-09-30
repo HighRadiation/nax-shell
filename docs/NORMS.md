@@ -60,6 +60,22 @@ static const char	*skip_blank(const char *s)
 - Girinti sekme ile.
 - Değişken bildirimleri fonksiyonun başında, gövde ondan sonra.
 
+## Yapı tanımları başlıklarda durur
+
+`struct`, `enum` ve `union` tanımları `.c` dosyalarına yazılmaz; başlık
+dosyalarında durur. Bu, yalnızca tek bir modülün kullandığı iç yapılar için de
+geçerlidir — örneğin sözcük ayırıcının geçici durumu yalnızca `lexer.c`
+tarafından kullanılır ama tanımı `parse.h` içindedir.
+
+Gerekçe okunabilirlik: bir tipi aradığında nereye bakacağını bilirsin, ve bir
+modülün veri şekli uygulamasından ayrı okunabilir.
+
+| Başlık | İçerdiği yapılar |
+|---|---|
+| `src/nax.h` | oturum durumu, metin tamponu |
+| `src/parse.h` | tırnak kipi, sözcük parçası, token, sözcük ayırıcı durumu, hata bildirimi |
+| `test/test.h` | test sayacı |
+
 ## Modülerlik
 
 Bir fonksiyonun içinde başka bir fonksiyona ait iş bulunmaz. Örnek: "satır

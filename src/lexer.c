@@ -23,19 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Sozcuk ayirma sirasindaki tum gecici durum. */
-typedef struct s_lexer
-{
-	const char	*src;
-	size_t		i;
-	t_token		*head;
-	t_token		*tail;
-	t_seg		*seg_head;
-	t_seg		*seg_tail;
-	t_buf		buf;
-	t_lex_err	*err;
-}	t_lexer;
-
 /* Karakterin sozcukleri ayiran bir bosluk olup olmadigini soyler. */
 static int	is_blank(char c)
 {
