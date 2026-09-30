@@ -1,5 +1,7 @@
 /*
-** exec.c - boru hattini kurar ve calistirir.
+** exec.c - ANA surecin tarafi: kim catallanir, kim beklenir, hangi kod doner.
+**
+** Catallandiktan sonra cocugun yaptigi is stage.c icinde.
 **
 ** CIKIS KODU SEMANTIGI (bash olculerek dogrulandi):
 **   normal cikis        cocugun kendi kodu
@@ -10,19 +12,16 @@
 **   bos komut           0, hicbir sey calismaz
 **   boru hatti          SON komutun kodu
 **
-** Son satir onemli: "false | true" 0, "true | false" 1 doner. Ama TUM
-** cocuklar beklenmek zorunda, yoksa zombi kalir.
+** TEK BASINA YERLESIK ANA SURECTE KOSAR:
+**   cd, export, unset ve exit kabugun durumunu degistiriyor. Cocukta
+**   kosarlarsa degisiklik cocukla birlikte yok olur ve "cd /tmp" hicbir
+**   ise yaramaz. Boru hattinin ICINDEKI yerlesik ise cocukta kosar; bash
+**   de boyle davraniyor, "echo x | cd /tmp" kabugun dizinini
+**   degistirmiyor (olculdu).
 **
-** COZUMLEME COCUKTA YAPILIR:
-**   Her asama kendi komutunu cozer. Boru hattinda zorunlu, tek komutta da
-**   ayni yolu kullanmak kod yolunu tekilestiriyor. Gozlenebilir davranis
-**   ayni: bulunamayan komut yine 127 doner, mesaj yine kabugun stderr'ine
-**   gider.
-**
-** EINTR DONGUSU:
-**   Sinyaller SA_RESTART olmadan kuruldu (gerekcesi signal.c icinde), yani
-**   onplanda bir komut kosarken Ctrl-C waitpid'i keser. Sarmazsak kabuk
-**   cocugu beklemeyi birakir, zombi kalir ve cikis kodu uydurma olur.
+**   Bunun bedeli: yonlendirme ana surecte 0 ve 1'i degistirdigi icin
+**   once kaydedilip sonra geri yuklenmek zorunda. Cocukta bu sorun yoktu,
+**   cunku cocuk zaten yok oluyordu.
 **
 ** HENUZ YOK:
 **   "<<" yonlendirmesi. Govdesini okumak icin okuma dongusunden ek satir
@@ -36,9 +35,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <sys/wait.h>
-
-extern char	**environ;
 
 /* Hata mesajini stdout tamponunu bosaltarak stderr'e yazar. */
 void	ex_warn(const char *message)
@@ -56,122 +52,122 @@ void	ex_warn_name(const char *name, const char *reason)
 	fprintf(stderr, "%s: %s: %s\n", NAX_NAME, name, reason);
 }
 
-/*
-** Alan listesini execve icin NULL ile biten diziye cevirir.
-**
-** Metinler KOPYALANMAZ, alan listesinden odunc alinir; liste bu dizinin
-** omrunden uzun yasiyor. Serbest birakilirken yalnizca dizi birakilir.
-*/
-static char	**build_argv(const t_field *fields)
+/* Yerlesik hatasini yazar; arg NULL ise yalnizca sebep yazilir. */
+void	ex_warn_bi(const char *builtin, const char *arg, const char *reason)
 {
-	const t_field	*walk;
-	char			**argv;
-	size_t			count;
-
-	count = 0;
-	walk = fields;
-	while (walk != NULL)
-	{
-		count++;
-		walk = walk->next;
-	}
-	argv = malloc((count + 1) * sizeof(*argv));
-	if (argv == NULL)
-		return (NULL);
-	count = 0;
-	while (fields != NULL)
-	{
-		argv[count] = fields->text;
-		count++;
-		fields = fields->next;
-	}
-	argv[count] = NULL;
-	return (argv);
+	fflush(stdout);
+	if (arg == NULL)
+		fprintf(stderr, "%s: %s: %s\n", NAX_NAME, builtin, reason);
+	else
+		fprintf(stderr, "%s: %s: %s: %s\n", NAX_NAME, builtin, arg, reason);
 }
 
-/* Komutu cozer ve calistirir; bu islev donmez. */
-static void	exec_or_die(const t_field *args)
+/* Ana surecte yerlesik kosmadan once 0 ve 1'i kaydeder. */
+static int	fd_save(int saved[2])
 {
-	t_resolve	status;
-	char		*path;
-	char		**argv;
-
-	status = path_resolve(args->text, &path);
-	if (status != RES_OK)
-	{
-		ex_warn_name(args->text, path_reason(status));
-		_exit(path_code(status));
-	}
-	argv = build_argv(args);
-	if (argv == NULL)
-	{
-		ex_warn("bellek ayrilamadi");
-		_exit(1);
-	}
-	execve(path, argv, environ);
-	ex_warn_name(argv[0], strerror(errno));
-	_exit(126);
+	saved[0] = dup(STDIN_FILENO);
+	saved[1] = dup(STDOUT_FILENO);
+	return (saved[0] >= 0 && saved[1] >= 0);
 }
 
-/* Cocukta boru uclarini baglar ve fazlaligi kapatir. */
-static int	wire_pipes(const t_stage *st)
+/* Kaydedilen tanimlayicilari geri yukler. */
+static void	fd_restore(int saved[2])
 {
-	if (st->spare_fd >= 0)
-		close(st->spare_fd);
-	if (st->in_fd >= 0)
+	if (saved[0] >= 0)
 	{
-		if (dup2(st->in_fd, STDIN_FILENO) < 0)
-			return (0);
-		close(st->in_fd);
+		dup2(saved[0], STDIN_FILENO);
+		close(saved[0]);
 	}
-	if (st->out_fd >= 0)
+	if (saved[1] >= 0)
 	{
-		if (dup2(st->out_fd, STDOUT_FILENO) < 0)
-			return (0);
-		close(st->out_fd);
+		dup2(saved[1], STDOUT_FILENO);
+		close(saved[1]);
 	}
-	return (1);
 }
 
 /*
-** Cocuk surecte asamayi kurar ve calistirir; bu islev donmez.
+** Tek basina bir yerlesigi ana surecte kosar.
 **
-** Yonlendirmeler borulardan SONRA uygulanir, cunku catisma halinde
-** yonlendirme kazanmak zorunda: "ls > f | wc" ciktisini dosyaya yazar,
-** wc'ye hicbir sey gitmez.
+** Geri yuklemeden ONCE fflush zorunlu: yerlesigin tamponda bekleyen
+** ciktisi bosaltilmazsa, tanimlayicilar geri yuklendikten sonra yanlis
+** yere yazilir. Yani "pwd > dosya" ciktisini terminale basardi.
 */
-static void	child_stage(const t_xcmd *xcmd, const t_stage *st)
+static int	run_lone_builtin(t_shell *sh, t_builtin_fn fn, const t_xcmd *xcmd)
 {
-	sig_reset_child();
-	if (wire_pipes(st) == 0)
+	int		saved[2];
+	char	**argv;
+	int		code;
+
+	if (fd_save(saved) == 0)
 	{
 		ex_warn(strerror(errno));
-		_exit(1);
+		fd_restore(saved);
+		return (1);
 	}
-	if (redir_apply(xcmd->redirs) == 0)
-		_exit(1);
-	if (xcmd->args == NULL)
-		_exit(0);
-	exec_or_die(xcmd->args);
+	code = 1;
+	if (redir_apply(xcmd->redirs) != 0)
+	{
+		argv = build_argv(xcmd->args);
+		if (argv == NULL)
+			ex_warn("bellek ayrilamadi");
+		else
+		{
+			code = fn(sh, argv);
+			free(argv);
+		}
+	}
+	fflush(stdout);
+	fd_restore(saved);
+	return (code);
 }
 
-/* Cocugu bekler ve cikis kodunu dondurur; EINTR dongusu zorunlu. */
-static int	wait_child(pid_t pid)
+/* Tek komutu catallar, bekler ve cikis kodunu dondurur. */
+static int	fork_and_wait(t_shell *sh, const t_xcmd *xcmd)
 {
-	int	status;
-	int	got;
+	t_stage	st;
+	pid_t	pid;
 
-	got = waitpid(pid, &status, 0);
-	while (got < 0 && errno == EINTR)
-		got = waitpid(pid, &status, 0);
-	if (got < 0)
+	st.in_fd = -1;
+	st.out_fd = -1;
+	st.spare_fd = -1;
+	pid = fork();
+	if (pid == 0)
+		child_stage(sh, xcmd, &st);
+	if (pid < 0)
 	{
 		ex_warn(strerror(errno));
 		return (1);
 	}
-	if (WIFSIGNALED(status))
-		return (128 + WTERMSIG(status));
-	return (WEXITSTATUS(status));
+	return (wait_child(pid));
+}
+
+/*
+** Borusuz tek komutu calistirir.
+**
+** Yerlesik olup olmadigina argv[0] GENISLETILDIKTEN sonra bakilir,
+** boylece CMD=cd iken "$CMD /tmp" de calisir; bash da boyle davraniyor.
+*/
+static int	run_one(t_shell *sh, const t_cmd *cmd)
+{
+	t_exp_err		err;
+	t_xcmd			xcmd;
+	t_builtin_fn	fn;
+	int				code;
+
+	if (exp_cmd(cmd, sh, &xcmd, &err) == 0)
+	{
+		ex_warn(err.message);
+		return (1);
+	}
+	fn = NULL;
+	if (xcmd.args != NULL)
+		fn = bi_lookup(xcmd.args->text);
+	if (fn != NULL)
+		code = run_lone_builtin(sh, fn, &xcmd);
+	else
+		code = fork_and_wait(sh, &xcmd);
+	xcmd_free(&xcmd);
+	return (code);
 }
 
 /* Bir asamayi genisletip catallar; pid'i dondurur, hata halinde -1. */
@@ -188,7 +184,7 @@ static pid_t	fork_stage(t_shell *sh, const t_cmd *cmd, const t_stage *st)
 	}
 	pid = fork();
 	if (pid == 0)
-		child_stage(&xcmd, st);
+		child_stage(sh, &xcmd, st);
 	if (pid < 0)
 		ex_warn(strerror(errno));
 	xcmd_free(&xcmd);
@@ -215,6 +211,9 @@ static size_t	stage_count(const t_cmd *cmds)
 ** Gercekten catallanan asama sayisini dondurur; boru acilamazsa yarida
 ** kesilir ama o ana kadar catallanmis cocuklar yine beklenir, yoksa zombi
 ** kalirlar.
+**
+** Ana surecin fds[1]'i kapatmasi ZORUNLU: boru EOF'u yazma uclari
+** kapandiginda gorulur, kapatilmazsa okuyan asama sonsuza kadar bekler.
 */
 static size_t	fork_all(t_shell *sh, const t_cmd *cmds, pid_t *pids)
 {
@@ -277,6 +276,25 @@ static int	wait_all(const pid_t *pids, size_t n)
 	return (last);
 }
 
+/* Cok asamali boru hattini kurar, kosar ve son kodu dondurur. */
+static int	run_pipeline(t_shell *sh, const t_cmd *cmds)
+{
+	pid_t	*pids;
+	size_t	n;
+	int		code;
+
+	pids = malloc(stage_count(cmds) * sizeof(*pids));
+	if (pids == NULL)
+	{
+		ex_warn("bellek ayrilamadi");
+		return (1);
+	}
+	n = fork_all(sh, cmds, pids);
+	code = wait_all(pids, n);
+	free(pids);
+	return (code);
+}
+
 /* Bu asamada calistirilamayan yapiyi soyler; yoksa NULL doner. */
 static const char	*unsupported(const t_cmd *cmds)
 {
@@ -306,8 +324,6 @@ static const char	*unsupported(const t_cmd *cmds)
 void	ex_run(t_shell *sh, const t_cmd *cmds)
 {
 	const char	*reason;
-	pid_t		*pids;
-	size_t		n;
 
 	if (cmds == NULL)
 		return ;
@@ -318,16 +334,10 @@ void	ex_run(t_shell *sh, const t_cmd *cmds)
 		sh->last_status = 1;
 		return ;
 	}
-	pids = malloc(stage_count(cmds) * sizeof(*pids));
-	if (pids == NULL)
-	{
-		ex_warn("bellek ayrilamadi");
-		sh->last_status = 1;
-		return ;
-	}
-	n = fork_all(sh, cmds, pids);
-	sh->last_status = wait_all(pids, n);
-	free(pids);
+	if (cmds->next == NULL)
+		sh->last_status = run_one(sh, cmds);
+	else
+		sh->last_status = run_pipeline(sh, cmds);
 	if (sig_take_interrupt())
 		write(STDOUT_FILENO, "\n", 1);
 }

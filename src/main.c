@@ -7,9 +7,13 @@
 **   satirin ne anlama geldigi ise siniflandiriciya (classifier.c) gececek.
 **
 ** BU ASAMADA:
-**   Satir sozcuklere ayrilip ayristiriliyor ve CALISTIRILIYOR. Tek komut
-**   gercekten kosuyor; boru hatti ve yonlendirme icin calistirici
-**   anlasilir bir mesaj veriyor.
+**   Satir sozcuklere ayrilip ayristiriliyor ve CALISTIRILIYOR: tek komut,
+**   boru hatlari, yonlendirmeler ve yerlesikler.
+**
+**   "exit" artik gecici bir ozel durum DEGIL, gercek bir yerlesik. Onceki
+**   surumde satir daha ayristirilmadan yakalaniyordu; o kestirme
+**   kaldirildi, cunku "exit 7" ve "exit abc" gibi haller ancak normal
+**   hattan gecerek dogru davranabiliyor.
 **
 ** CIKIS KODLARI:
 **   Sozdizimi hatasi 2. Calistirma tarafindaki kodlar exec.c icinde
@@ -35,18 +39,6 @@ static const char	*skip_blank(const char *s)
 static int	is_blank(const char *line)
 {
 	return (*skip_blank(line) == '\0');
-}
-
-/* Satirin tek basina "exit" komutu olup olmadigini soyler. */
-static int	is_exit_request(const char *line)
-{
-	const char	*p;
-
-	p = skip_blank(line);
-	if (strncmp(p, "exit", 4) != 0)
-		return (0);
-	p = skip_blank(p + 4);
-	return (*p == '\0');
 }
 
 /*
@@ -91,11 +83,6 @@ static void	handle_line(t_shell *sh, const char *line)
 
 	if (is_blank(line))
 		return ;
-	if (is_exit_request(line))
-	{
-		sh->exiting = 1;
-		return ;
-	}
 	tokens = lex_split(line, &err);
 	if (tokens == NULL && err.message != NULL)
 	{
