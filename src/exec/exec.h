@@ -15,6 +15,7 @@
 # define EXEC_H
 
 # include "parse.h"
+# include <sys/types.h>
 
 /*
 ** Komut cozumleme sonucu.
@@ -80,8 +81,38 @@ t_resolve	path_resolve(const char *name, char **out);
 const char	*path_reason(t_resolve status);
 int			path_code(t_resolve status);
 
+/*
+** Yerlesik komut islevi.
+**
+** argv NULL ile biter ve argv[0] komutun kendi adidir. Donus degeri cikis
+** kodudur. sh verilir cunku cd, export, unset ve exit kabugun DURUMUNU
+** degistirir; bu da neden ana surecte kosmak zorunda olduklarinin sebebi.
+*/
+typedef int	(*t_builtin_fn)(t_shell *sh, char **argv);
+
+/* Yerlesik adi ile islevi eslestiren tablo girdisi. */
+typedef struct s_builtin
+{
+	const char		*name;
+	t_builtin_fn	fn;
+}	t_builtin;
+
+t_builtin_fn	bi_lookup(const char *name);
+int			bi_echo(t_shell *sh, char **argv);
+int			bi_pwd(t_shell *sh, char **argv);
+int			bi_exit(t_shell *sh, char **argv);
+int			bi_export(t_shell *sh, char **argv);
+int			bi_unset(t_shell *sh, char **argv);
+int			bi_cd(t_shell *sh, char **argv);
+
+char		**build_argv(const t_field *fields);
+void		child_stage(t_shell *sh, const t_xcmd *xcmd, const t_stage *st);
+int			wait_child(pid_t pid);
+
 void		ex_warn(const char *message);
 void		ex_warn_name(const char *name, const char *reason);
+void		ex_warn_bi(const char *builtin, const char *arg,
+				const char *reason);
 int			redir_apply(const t_xredir *redirs);
 
 void		ex_run(t_shell *sh, const t_cmd *cmds);
