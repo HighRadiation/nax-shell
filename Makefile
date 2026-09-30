@@ -34,7 +34,7 @@ endif
 #   alanin basligi kendi klasorunde duruyor; bu -I listesi sayesinde
 #   dosyalarda "parse.h" yazmak yeterli, yola gerek kalmiyor. Gruplama
 #   okunabilirlik icin, dahil etme satirlarini uzatmak icin degil.
-INC         = -Isrc -Isrc/parse -Isrc/exec
+INC         = -Isrc -Isrc/parse -Isrc/exec -Isrc/ai
 CFLAGS      = $(CSTD) $(WARN) $(OPT) $(INC)
 
 # Alt klasorler de taranir; nesne agaci kaynak agacini AYNALAR, boylece
