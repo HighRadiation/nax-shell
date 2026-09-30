@@ -22,6 +22,16 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+/*
+** Bir sonraki promptta tampona yazilacak metin.
+**
+** Dosya geneli tek bir isaretci, cunku readline'in baslangic kancasi
+** parametre almiyor; hazirlanan metni kancaya baska yolla ulastirmak
+** mumkun degil. Kanca metni yazdiktan sonra birakiyor ve NULL'a cekiyor,
+** boylece oneri yalnizca BIR kez gelir.
+*/
+static char	*g_preload = NULL;
+
 #define HIST_FILE ".nax_history"
 #define CLR_NAME "\001\033[1;36m\002"
 #define CLR_OFF "\001\033[0m\002"
@@ -150,6 +160,86 @@ static char	*read_plain(void)
 	return (line);
 }
 
+/*
+** Bir gecmis satirinin ilk sozcugu verilen ad mi.
+**
+** Tam satiri ayirmak gerekmiyor: yalniz basi karsilastirmak yeterli ve
+** gecmis her aday icin taraniyor, o yuzden ucuz olmasi onemli.
+*/
+static int	head_matches(const char *line, const char *name, size_t len)
+{
+	while (*line == ' ' || *line == '\t')
+		line++;
+	if (strncmp(line, name, len) != 0)
+		return (0);
+	return (line[len] == '\0' || line[len] == ' ' || line[len] == '\t');
+}
+
+/*
+** Gecmiste bu adin kac kez bas olarak kullanildigini verir.
+**
+** NEDEN BURADA: gecmis readline'in elinde. Yazim duzeltmesi bu sayiyi
+** esit uzaklikta hangi adayin kazanacagina karar vermek icin kullaniyor
+** ama readline'i tanimasi gerekmiyor; bu islev araya giriyor.
+**
+** Etkilesimli olmayan kosumda gecmis bos olur ve her aday icin 0 doner;
+** o zaman siralamayi tarama sirasi belirler. Testlerin belirleyici
+** olmasinin sebebi de bu.
+*/
+int	ln_head_uses(const char *name)
+{
+	HIST_ENTRY	**list;
+	size_t		len;
+	int			count;
+	int			i;
+
+	list = history_list();
+	if (list == NULL || name == NULL || *name == '\0')
+		return (0);
+	len = strlen(name);
+	count = 0;
+	i = 0;
+	while (list[i] != NULL)
+	{
+		if (list[i]->line != NULL && head_matches(list[i]->line, name, len))
+			count++;
+		i++;
+	}
+	return (count);
+}
+
+/*
+** Bir sonraki promptta duzenleme tamponuna hazir gelecek metni saklar.
+**
+** NEDEN ISARETCI DEGIL KOPYA: cagiran metni kendi yigitinda tutuyor,
+** prompt ise bir sonraki dongude basiliyor. Isaretciyi saklamak askida
+** kalan bellege bakmak olurdu.
+*/
+void	ln_preload(const char *text)
+{
+	free(g_preload);
+	g_preload = NULL;
+	if (text != NULL && *text != '\0')
+		g_preload = strdup(text);
+}
+
+/*
+** readline tamponu hazirlanirken bekleyen metni icine yazar.
+**
+** rl_startup_hook, tampon olusturulduktan ama kullanici tusa basmadan
+** once cagriliyor; metni buraya yazmak kullanicinin kendisi yazmis
+** olmasiyla ayni sonucu veriyor, yani Enter yeterli oluyor.
+*/
+static int	insert_preload(void)
+{
+	if (g_preload == NULL)
+		return (0);
+	rl_insert_text(g_preload);
+	free(g_preload);
+	g_preload = NULL;
+	return (0);
+}
+
 /* Terminalde prompt basip bir satir okur ve bos degilse gecmise ekler. */
 static char	*read_interactive(void)
 {
@@ -157,6 +247,7 @@ static char	*read_interactive(void)
 	char	*line;
 
 	prompt = build_prompt();
+	rl_startup_hook = insert_preload;
 	if (prompt != NULL)
 		line = readline(prompt);
 	else
