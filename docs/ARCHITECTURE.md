@@ -284,35 +284,49 @@ fonksiyonu tipin yaşadığı modülde durur (`tok_free` sözcük ayırıcıda,
 
 ```
 src/
-  nax.h          ortak tipler ve paylaşılan bildirimler
-  parse.h        dil tarafının tipleri: tırnak kipi, parça, token
-  main.c         giriş noktası, okuma döngüsü, kurulum ve kapanış
-  line.c         satır okuma, prompt, geçmiş
-  signal.c       etkileşimli sinyal davranışı (Ctrl-C, Ctrl-\)
-  buf.c          büyüyebilen metin tamponu (üç modül birlikte kullanır)
-  lexer.c        satırı token listesine çevirir
-  lex_dump.c     token listesini kanonik metne çevirir (test ve ayıklama)
-  parser.c       token listesini boru hattı ağacına çevirir
-  ast_dump.c     ağacı kanonik metne çevirir (test ve ayıklama)
-  expand.c       bir sözcüğü alanlara çevirir ($VAR, $?, ~, alan ayırma)
-  expand_cmd.c   bir komutun tüm argüman ve yönlendirmelerini genişletir
-  exp_dump.c     genişletilmiş hattı kanonik metne çevirir (test ve ayıklama)
-  exec.h         çalıştırma tarafının tipleri ve bildirimleri
-  path.c         komut adını çalıştırılabilir bir yola çözer
-  exec.c         boru hattı kurulumu, fork/execve/waitpid, çıkış kodları
-  redir.c        yönlendirmeleri çocuk süreçte uygular
+  nax.h            ortak tipler; her grup buna bakar
+  main.c           giriş noktası, okuma döngüsü, kurulum ve kapanış
+  core/            kabuğun altyapısı
+    buf.c          büyüyebilen metin tamponu
+    line.c         satır okuma, prompt, geçmiş
+    signal.c       etkileşimli sinyal davranışı (Ctrl-C, Ctrl-\)
+  parse/           dilin tarafı
+    parse.h        tırnak kipi, parça, token, ağaç, alan tipleri
+    lexer.c        satırı token listesine çevirir
+    lex_dump.c     token listesini kanonik metne çevirir
+    parser.c       token listesini boru hattı ağacına çevirir
+    ast_dump.c     ağacı kanonik metne çevirir
+    expand.c       bir sözcüğü alanlara çevirir
+    expand_cmd.c   bir komutun argüman ve yönlendirmelerini genişletir
+    exp_dump.c     genişletilmiş hattı kanonik metne çevirir
+  exec/            çalıştırma
+    exec.h         çözümleme sonucu, aşama bağlantıları, bildirimler
+    path.c         komut adını çalıştırılabilir bir yola çözer
+    exec.c         boru hattı kurulumu, fork/execve/waitpid
+    redir.c        yönlendirmeleri çocuk süreçte uygular
+  (ai/             sonraki aşamada: sınıflandırıcı, yardımcı süreç istemcisi)
 test/
-  run.sh         tek test giriş noktası; make test ve make check bunu çağırır
-  test.h         test koşucularının paylaştığı tipler ve iskele
-  harness.c      vaka dosyası okuma, kaçış çözme, özet basma
-  test_lexer.c   tablo tabanlı sözcük ayırıcı testleri
-  test_parser.c  tablo tabanlı ayrıştırıcı testleri
-  test_expand.c  tablo tabanlı genişletme testleri
-  cases/*.tsv    vaka tabloları; yeni vaka için yeniden derleme gerekmez
-  pty_drive.py   sahte terminal üzerinden etkileşimli yol testleri
-naxd/            AI yardımcı süreci (sonraki aşamada)
-docs/            bu dizin
+  test.h           test koşucularının paylaştığı tipler ve iskele
+  harness.c        vaka dosyası okuma, kaçış çözme, özet basma
+  run.sh           tek test giriş noktası
+  test_lexer.c     tablo tabanlı sözcük ayırıcı testleri
+  test_parser.c    tablo tabanlı ayrıştırıcı testleri
+  test_expand.c    tablo tabanlı genişletme testleri
+  cases/*.tsv      vaka tabloları; yeni vaka için yeniden derleme gerekmez
+  pty_drive.py     sahte terminal üzerinden etkileşimli yol testleri
+naxd/              AI yardımcı süreci (sonraki aşamada)
+docs/              bu dizin
 ```
+
+Gruplar **mimarinin kendisini** yansıtıyor: altyapı, dil, çalıştırma, ve
+sıradaki AI tarafı. On yedi dosya düz durduğunda okuyan haritayı kaybediyordu.
+
+Alan başlıkları kendi klasörlerinde duruyor; `Makefile` her klasörü `-I`
+listesine eklediği için dosyalarda `"parse.h"` yazmak yeterli. Gruplama
+okunabilirlik için, dahil etme satırlarını uzatmak için değil.
+
+Nesne ağacı kaynak ağacını **aynalar** (`obj/parse/lexer.o`), böylece iki
+klasörde aynı adda kaynak olsa bile nesneleri çarpışmaz.
 
 İki test giriş noktası olmasının sebebi, birinin diğerinin göremediği kodu
 kapsaması: boru ile beslenen testler terminal olmadığı için etkileşimsiz yolu

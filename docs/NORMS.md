@@ -7,6 +7,14 @@ kod bunlara uyar.
 
 **Dosya, fonksiyon ve değişken adları İngilizce. Yorumlar Türkçe.**
 
+**Kod dosyaları tamamen ASCII.** Türkçe karakterler ASCII karşılıklarıyla
+yazılır, uzun tire yerine `-` kullanılır. Dokümanlar (`docs/*.md`) bu kuralın
+dışında — orada tam Türkçe yazım geçerli.
+
+Kural "Türkçe karakter yok" değil "ASCII" olarak yazılı, çünkü ilki eksikti:
+kodda hiç Türkçe harf yoktu ama her dosya başlığında bir uzun tire vardı ve
+yalnızca Türkçe harf arayan denetim onu kaçırıyordu.
+
 Fonksiyon adları modül önekiyle yazılır, böylece bir adı gördüğünde hangi
 dosyada yaşadığı belli olur:
 
@@ -122,6 +130,20 @@ denetleyicileriyle yapılır:
 make asan     # denetleyicili ikiliyi uretir
 make check    # testleri hem normal hem denetleyicili ikilide kosar
 ```
+
+## Normlar suite içinde denetlenir
+
+Bu dosyadaki kuralların denetimi `make check` içinde koşar; elle koşulan
+denetim, koşulmayan denetime dönüşür.
+
+Bu bir kez yaşandı: kaynaklar alt klasörlere taşınırken makro çakışma
+denetiminin `src/*.h` deseni yalnızca tek başlığı bulmaya başladı ve denetim
+**hiçbir şey denetlemediği hâlde yeşil geçti**. Aynı taşımada ASCII denetimi de
+kodda zaten var olan bir uzun tireyi ortaya çıkardı — eski desen yalnızca
+Türkçe harf arıyordu, tipografik karakteri kaçırıyordu.
+
+Altı alt denetimin her biri, kasten ihlal sokularak doğrulandı. Yeni bir
+denetim eklendiğinde aynı doğrulama yapılır.
 
 `make check` üç test grubunu da koşar: birim testleri modülleri doğrudan
 çağırır, boru ile beslenenler etkileşimsiz yolu, sahte terminal testleri
