@@ -33,8 +33,8 @@
 
 #define EXIT_STATUS_MAX 256
 
-/* Verilen ad bir yerlesige karsilik geliyorsa islevini dondurur. */
-t_builtin_fn	bi_lookup(const char *name)
+/* Yerlesik tablosunu dondurur; iki okuyucu ayni listeyi gorsun diye ayri. */
+static const t_builtin	*bi_table(void)
 {
 	static const t_builtin	table[] = {
 		{"cd", bi_cd},
@@ -45,8 +45,37 @@ t_builtin_fn	bi_lookup(const char *name)
 		{"exit", bi_exit},
 		{NULL, NULL}
 	};
-	size_t					i;
 
+	return (table);
+}
+
+/*
+** Siradaki yerlesigin adini dondurur; liste bittiginde NULL.
+**
+** Yazim duzeltmesi aday olarak yerlesikleri de taramak zorunda, yoksa
+** "ehco" icin PATH'te karsilik bulunur ama "exprot" icin bulunmaz.
+*/
+const char	*bi_name_at(size_t i)
+{
+	const t_builtin	*table;
+	size_t			n;
+
+	table = bi_table();
+	n = 0;
+	while (table[n].name != NULL)
+		n++;
+	if (i >= n)
+		return (NULL);
+	return (table[i].name);
+}
+
+/* Ada karsilik gelen yerlesigi dondurur; yoksa NULL. */
+t_builtin_fn	bi_lookup(const char *name)
+{
+	const t_builtin	*table;
+	size_t			i;
+
+	table = bi_table();
 	i = 0;
 	while (table[i].name != NULL)
 	{

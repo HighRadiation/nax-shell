@@ -99,6 +99,7 @@ typedef struct s_builtin
 }	t_builtin;
 
 t_builtin_fn	bi_lookup(const char *name);
+const char	*bi_name_at(size_t i);
 int			bi_echo(t_shell *sh, char **argv);
 int			bi_pwd(t_shell *sh, char **argv);
 int			bi_exit(t_shell *sh, char **argv);
