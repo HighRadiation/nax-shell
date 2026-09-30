@@ -7,8 +7,12 @@
 **   satirin ne anlama geldigi ise siniflandiriciya (classifier.c) gececek.
 **
 ** BU ASAMADA:
-**   Satir sozcuklere ayrilip ayristiriliyor ve CALISTIRILIYOR: tek komut,
-**   boru hatlari, yonlendirmeler ve yerlesikler.
+**   Satir once SINIFLANDIRILIYOR: kabuk komutu mu, dogal dil mi. Kabuk
+**   komutuysa ayristirilip calistiriliyor; dogal dilse simdilik bir bilgi
+**   satiri basiliyor, cunku yardimci surec henuz yok.
+**
+**   Bos satir ve denetim karakteri filtresi de artik siniflandiricinin
+**   isi; main.c'deki eski is_blank kontrolu oraya tasindi.
 **
 **   "exit" artik gecici bir ozel durum DEGIL, gercek bir yerlesik. Onceki
 **   surumde satir daha ayristirilmadan yakalaniyordu; o kestirme
@@ -21,25 +25,12 @@
 */
 
 #include "nax.h"
+#include "ai.h"
 #include "exec.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-/* Bastaki bosluklari atlar; ilk bosluk olmayan karakteri gosterir. */
-static const char	*skip_blank(const char *s)
-{
-	while (*s == ' ' || *s == '\t')
-		s++;
-	return (s);
-}
-
-/* Satirin tamamen bos (yalnizca bosluk) olup olmadigini soyler. */
-static int	is_blank(const char *line)
-{
-	return (*skip_blank(line) == '\0');
-}
 
 /*
 ** Hatayi kullaniciya bildirir ve verilen cikis kodunu ayarlar.
@@ -75,21 +66,40 @@ static void	run_tokens(t_shell *sh, const t_token *tokens)
 	ast_free(cmds);
 }
 
-/* Tek bir girdi satirini isler: ayirir, ayristirir, sonucu basar. */
+/*
+** AI yolunu simdilik bir bilgi satiriyla karsilar.
+**
+** Siniflandirici kararini veriyor ama yardimci surec henuz yok. Mesaj
+** kararin GORUNUR olmasi icin: hangi satirin niyet sayildigini ve hangi
+** vetonun tetiklendigini gozle dogrulamak, korpus testinin yanindaki
+** ikinci gozlem yolu.
+*/
+static void	report_route(t_shell *sh, const t_decision *d)
+{
+	fflush(stdout);
+	if (d->route == ROUTE_EXPLAIN)
+		fprintf(stderr, "%s: son hata aciklamasi henuz bagli degil\n",
+			NAX_NAME);
+	else
+		fprintf(stderr, "%s: niyet (veto %#x) henuz bagli degil: %s\n",
+			NAX_NAME, d->vetoes, d->text);
+	sh->last_status = 1;
+}
+
+/* Tek bir girdi satirini isler: siniflandirir, sonra yoluna gonderir. */
 static void	handle_line(t_shell *sh, const char *line)
 {
 	t_lex_err	err;
 	t_token		*tokens;
+	t_decision	d;
 
-	if (is_blank(line))
-		return ;
-	tokens = lex_split(line, &err);
-	if (tokens == NULL && err.message != NULL)
-	{
+	d = cls_classify(line, &tokens, &err);
+	if (d.route == ROUTE_SHELL)
+		run_tokens(sh, tokens);
+	else if (d.route == ROUTE_SYNTAX_ERR)
 		report_error(sh, err.message, 2);
-		return ;
-	}
-	run_tokens(sh, tokens);
+	else if (d.route != ROUTE_EMPTY)
+		report_route(sh, &d);
 	lex_free(tokens);
 }
 
