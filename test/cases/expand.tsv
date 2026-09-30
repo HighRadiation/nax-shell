@@ -1,0 +1,95 @@
+# Genisletme vaka tablosu.
+#
+# Bicim:  girdi <SEKME> beklenen
+# Beklenen "!" ile baslarsa o hata mesaji beklenir.
+#
+# Sabit ortam (test_expand.c icinde kurulur):
+#   TV=deger   TS="a b"   TE=""   TSP="a "   HOME=/test/ev   YOK tanimsiz
+#   son durum ($?) = 7
+#
+# Kanonik cikti ast_dump ile ayni bicimde, ama koseli parantezler artik
+# sozcuk degil GENISLETME SONUCU olusan alanlari tutuyor.
+
+
+# --- degisken degeri ---
+echo $TV	(cmd [echo] [deger])
+echo "$TV"	(cmd [echo] [deger])
+echo '$TV'	(cmd [echo] [$TV])
+echo ${TV}	(cmd [echo] [deger])
+echo ${TV}x	(cmd [echo] [degerx])
+echo a$TV	(cmd [echo] [adeger])
+echo "a$TV b"	(cmd [echo] [adeger b])
+
+# --- alan ayirma tirnaksizda olur, tirnaklida olmaz ---
+echo $TS	(cmd [echo] [a] [b])
+echo "$TS"	(cmd [echo] [a b])
+echo $TS$TS	(cmd [echo] [a] [ba] [b])
+echo $TS -l	(cmd [echo] [a] [b] [-l])
+
+# --- bos alan kurali (bash olculerek dogrulandi) ---
+echo $TE	(cmd [echo])
+echo "$TE"	(cmd [echo] [])
+echo $YOK	(cmd [echo])
+echo "$YOK"	(cmd [echo] [])
+echo ""	(cmd [echo] [])
+echo $TSP""	(cmd [echo] [a] [])
+# Asagidaki uc vaka mutasyon denemesiyle bulundu: "emit" bayragi alan
+# basina degil sozcuk basina tutulursa bunlar fazladan bos alan uretir.
+# Ayrim, harfi harfine icerikten SONRA genisletmeden gelen bir bosluk
+# geldiginde ortaya cikiyor. Bash olculerek dogrulandi.
+echo a$TSP	(cmd [echo] [aa])
+echo "x"$TSP	(cmd [echo] [xa])
+echo a$TS	(cmd [echo] [aa] [b])
+echo "$TE"x	(cmd [echo] [x])
+echo x$YOK	(cmd [echo] [x])
+echo $YOK$YOK	(cmd [echo])
+
+# --- son durum ---
+echo $?	(cmd [echo] [7])
+echo "$?"	(cmd [echo] [7])
+echo a$?b	(cmd [echo] [a7b])
+
+# --- konumsal parametre yok, bos genisler ---
+echo $1	(cmd [echo])
+echo x$1	(cmd [echo] [x])
+
+# --- ev dizini yalnizca sozcugun basinda ve tirnaksiz ---
+echo ~	(cmd [echo] [/test/ev])
+echo ~/alt	(cmd [echo] [/test/ev/alt])
+echo x~	(cmd [echo] [x~])
+echo ~x	(cmd [echo] [~x])
+echo "~"	(cmd [echo] [~])
+echo '~'	(cmd [echo] [~])
+# Asagidaki iki vaka da mutasyon denemesiyle bulundu: ~ yalnizca sozcugun
+# ILK parcasinda acilir. Onceki vakalar bunu olcmuyordu, cunku hepsinde
+# tek parca vardi. Bash olculerek dogrulandi.
+echo ""~	(cmd [echo] [~])
+echo a"b"~	(cmd [echo] [ab~])
+
+# --- kacis karakteri dolari harfi harfine yapar ---
+echo \\$TV	(cmd [echo] [$TV])
+echo "\\$TV"	(cmd [echo] [$TV])
+
+# --- cozulemeyen dolar harfi harfine kalir ---
+echo $	(cmd [echo] [$])
+echo a$	(cmd [echo] [a$])
+echo $-	(cmd [echo] [$-])
+
+# --- yonlendirme hedefi genisletilir ---
+cat > $TV	(cmd [cat] >[deger])
+cat < $TV | wc -l	(pipe (cmd [cat] <[deger]) (cmd [wc] [-l]))
+cat > "$TE"	(cmd [cat] >[])
+
+# --- hedef tek alan uretmezse belirsiz yonlendirme ---
+cat > $TS	!belirsiz yonlendirme
+cat > $YOK	!belirsiz yonlendirme
+cat > $TE	!belirsiz yonlendirme
+
+# --- hatali degisken yazimi ---
+echo ${}	!hatali degisken yazimi
+echo ${TV	!hatali degisken yazimi
+# Asagidakiler desteklenmeyen parametre bicimleri. Ad dogrulamasi olmadan
+# bunlar SESSIZCE bosa genisliyordu; sessiz yanlis cevap hatadan kotudur.
+echo ${TV:-varsayilan}	!hatali degisken yazimi
+echo ${#TV}	!hatali degisken yazimi
+echo ${1}	!hatali degisken yazimi
