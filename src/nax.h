@@ -40,4 +40,7 @@ void	ln_hist_load(const char *path);
 void	ln_hist_save(const char *path);
 char	*ln_read(const t_shell *sh);
 
+void	sig_setup_interactive(void);
+int		sig_take_interrupt(void);
+
 #endif

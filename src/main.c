@@ -64,6 +64,8 @@ static void	shell_init(t_shell *sh)
 	sh->last_status = 0;
 	sh->interactive = isatty(STDIN_FILENO);
 	sh->exiting = 0;
+	if (sh->interactive)
+		sig_setup_interactive();
 	ln_setup();
 	sh->hist_path = ln_hist_path();
 	ln_hist_load(sh->hist_path);
@@ -77,7 +79,13 @@ static void	shell_free(t_shell *sh)
 	sh->hist_path = NULL;
 }
 
-/* Okuma dongusu: satir al, isle, birak. EOF ya da "exit" ile biter. */
+/*
+** Okuma dongusu: satir al, isle, birak. EOF ya da "exit" ile biter.
+**
+** Kesme kontrolu satir kontrolunden ONCE yapilir: Ctrl-C ile iptal edilen
+** satir bos bir dize olarak doner, gercek dosya sonu ise NULL doner. Ikisi
+** yalnizca kesme bayragiyla ayrilir.
+*/
 static void	loop(t_shell *sh)
 {
 	char	*line;
@@ -85,6 +93,12 @@ static void	loop(t_shell *sh)
 	while (sh->exiting == 0)
 	{
 		line = ln_read(sh);
+		if (sig_take_interrupt())
+		{
+			free(line);
+			sh->last_status = 130;
+			continue ;
+		}
 		if (line == NULL)
 		{
 			if (sh->interactive)
