@@ -214,13 +214,13 @@ def sanitizer_report(screen):
 
 
 def case_echo_and_exit(binary, rep):
-    """Prompt basiliyor, satir geri yaziliyor, exit sessizce cikiyor."""
+    """Prompt basiliyor, komut gercekten kosuyor, exit sessizce cikiyor."""
     sh = Shell(binary)
-    sh.ask(b"merhaba\n")
-    got = sh.wait_for("(cmd [merhaba])")
+    sh.ask(b"echo merhaba\n")
+    got = sh.wait_for("merhaba", skip=1)
     sh.ask(b"exit\n")
     alive, info = sh.close()
-    rep.check("prompt basildi ve satir geri yazildi", got, sh.screen()[-200:])
+    rep.check("prompt basildi ve komut kostu", got, sh.screen()[-200:])
     rep.check("terminalde duzgun kapandi", not alive, info)
     return sh.screen()
 
@@ -228,12 +228,12 @@ def case_echo_and_exit(binary, rep):
 def case_history(binary, rep):
     """Yukari ok onceki satiri geri getiriyor."""
     sh = Shell(binary)
-    sh.ask(b"tarihce-vakasi\n")
-    sh.wait_for("(cmd [tarihce-vakasi])")
+    sh.ask(b"echo tarihce-vakasi\n")
+    sh.wait_for("tarihce-vakasi", skip=1)
     sh.ask(b"\x1b[A")
     recalled = sh.wait_for("tarihce-vakasi", skip=2)
     sh.send(b"\n")
-    sh.wait_for("(cmd [tarihce-vakasi])", skip=1)
+    sh.wait_for("tarihce-vakasi", skip=3)
     sh.ask(b"exit\n")
     sh.close()
     rep.check("yukari ok onceki satiri getirdi", recalled, sh.screen()[-300:])
@@ -243,11 +243,11 @@ def case_history(binary, rep):
 def case_sigint_discards_line(binary, rep):
     """Ctrl-C yarim satiri atar, kabuk yasar, sonraki satir tek basina islenir."""
     sh = Shell(binary)
-    sh.ask(b"yarim satir")
+    sh.ask(b"echo yarim satir")
     sh.wait_for("yarim satir")
     sh.send(b"\x03")
-    sh.ask(b"sonrasi\n")
-    sh.wait_for("(cmd [sonrasi])")
+    sh.ask(b"echo sonrasi\n")
+    sh.wait_for("sonrasi", skip=1)
     screen = sh.screen()
     sh.ask(b"exit\n")
     alive, info = sh.close()
@@ -258,9 +258,24 @@ def case_sigint_discards_line(binary, rep):
         "iki satir birlesmis:\n" + screen[-300:],
     )
     rep.check("Ctrl-C sonrasi satir tek basina islendi",
-              "(cmd [sonrasi])" in screen, screen[-300:])
+              screen.count("sonrasi") >= 2, screen[-300:])
     rep.check("Ctrl-C ekranda ^C gosterdi", "^C" in screen, screen[-300:])
     return screen
+
+
+def case_sigint_during_command(binary, rep):
+    """Onplanda kosan komut Ctrl-C ile olur, kabuk yasar, durum 130 olur."""
+    sh = Shell(binary)
+    sh.ask(b"sleep 5\n")
+    sh.quiet()
+    sh.send(b"\x03")
+    sh.ask(b"echo $?\n")
+    saw = sh.wait_for("130")
+    sh.ask(b"exit\n")
+    alive, info = sh.close()
+    rep.check("kosan komut Ctrl-C ile oldu, kabuk yasadi", not alive, info)
+    rep.check("kesilen komutun durumu 130", saw, sh.screen()[-300:])
+    return sh.screen()
 
 
 def case_sigint_repeated(binary, rep):
@@ -268,8 +283,8 @@ def case_sigint_repeated(binary, rep):
     sh = Shell(binary)
     for _ in range(3):
         sh.ask(b"\x03")
-    sh.ask(b"ayakta\n")
-    survived = sh.wait_for("(cmd [ayakta])")
+    sh.ask(b"echo ayakta\n")
+    survived = sh.wait_for("ayakta", skip=1)
     sh.ask(b"exit\n")
     alive, info = sh.close()
     rep.check("ust uste uc Ctrl-C sonrasi kabuk ayakta", survived and not alive, info)
@@ -280,8 +295,8 @@ def case_sigquit_ignored(binary, rep):
     """Ctrl-\\ kabugu oldurmez ve yeni prompt uretmez."""
     sh = Shell(binary)
     sh.ask(b"\x1c")
-    sh.send(b"ayakta\n")
-    survived = sh.wait_for("(cmd [ayakta])")
+    sh.send(b"echo ayakta\n")
+    survived = sh.wait_for("ayakta", skip=1)
     sh.ask(b"exit\n")
     alive, info = sh.close()
     rep.check("Ctrl-\\ yok sayildi", survived and not alive, info)
@@ -313,6 +328,7 @@ def main():
         case_echo_and_exit,
         case_history,
         case_sigint_discards_line,
+        case_sigint_during_command,
         case_sigint_repeated,
         case_sigquit_ignored,
         case_eof,
