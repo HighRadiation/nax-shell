@@ -15,8 +15,24 @@
 #ifndef NAX_H
 # define NAX_H
 
+# include <stddef.h>
+
 # define NAX_NAME "nax"
 # define NAX_VERSION "0.1.0"
+
+/*
+** Buyuyebilen metin tamponu.
+**
+** Sozcuk ayirici, kanonik yazdirici ve genisletme ucu de karakter
+** karakter metin biriktirir; bu yuzden tampon ortak tip olarak burada
+** durur. Sahiplik kurallari src/buf.c dosyasinin basinda yazili.
+*/
+typedef struct s_buf
+{
+	char	*data;
+	size_t	len;
+	size_t	cap;
+}	t_buf;
 
 /*
 ** Kabugun oturum boyu yasayan durumu.
@@ -33,6 +49,13 @@ typedef struct s_shell
 	int		interactive;
 	int		exiting;
 }	t_shell;
+
+void	buf_init(t_buf *buf);
+int		buf_push(t_buf *buf, char c);
+int		buf_push_str(t_buf *buf, const char *s);
+int		buf_empty(const t_buf *buf);
+char	*buf_take(t_buf *buf);
+void	buf_free(t_buf *buf);
 
 void	ln_setup(void);
 char	*ln_hist_path(void);
