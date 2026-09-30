@@ -94,4 +94,14 @@ run_status "EOF ile cikis kodu sifir"   $'merhaba\n'            0
 run_leak_check
 
 printf "\n  %d gecti, %d patladi\n" "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ] || exit 1
+
+# Etkilesimli yol boru ile test edilemez; onu sahte terminal betigi dener.
+PTY_RC=0
+if command -v python3 >/dev/null 2>&1; then
+	printf "\n"
+	NAX_BIN="$BIN" ./test/pty_drive.py || PTY_RC=1
+else
+	printf "\n  ${S}atlandi${N} pty testleri (python3 yok)\n"
+fi
+
+[ "$FAIL" -eq 0 ] && [ "$PTY_RC" -eq 0 ] || exit 1
