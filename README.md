@@ -138,7 +138,7 @@ Geri dönüşü olmayan komutlar (`rm`, `dd`, `chmod`, `kill` ve benzeri) bu
 istisnanın dışında: önerilirler ama **tampona konulmazlar.** Tampona konan
 öneri tek Enter'la koşar ve bu tür bir komut için o fazla yakın.
 
-Sıradaki: AI yardımcı süreci ve protokolü.
+Sıradaki: AI yardımcı süreci ve protokolü — bkz. [docs/ROADMAP.md](docs/ROADMAP.md).
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 
@@ -152,4 +152,5 @@ Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 | [docs/CONFIG.md](docs/CONFIG.md) | Sağlayıcılar, yerel model, düşme kuralı |
 | [docs/PRIVACY.md](docs/PRIVACY.md) | Neyin gönderildiği ve neyin gönderilmediği |
 | [docs/NORMS.md](docs/NORMS.md) | Kod stili sözleşmesi |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Nerede kaldık, sırada ne var |
 | [docs/FINDINGS.md](docs/FINDINGS.md) | Ertelenmiş işler |
