@@ -85,6 +85,10 @@ make asan     # denetleyicili ikiliyi uretir
 make check    # testleri hem normal hem denetleyicili ikilide kosar
 ```
 
+`make check` iki test grubunu da koşar: boru ile beslenenler etkileşimsiz
+yolu, sahte terminal testleri etkileşimli yolu kapsar. Yalnızca birini koşmak
+kodun yarısını ölçmeden bırakır.
+
 ## Uyarılar
 
 `make` uyarıları hata sayar. Taban `-Wall -Wextra -Werror`, üstüne gölgeleme,

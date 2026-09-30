@@ -72,7 +72,8 @@ denetleyicilerle yapılır. Sızıntı sıfır olmadan hiçbir aşama bitmiş sa
 ## Durum
 
 Çekirdek kabuk kuruluyor. Şu an çalışan: okuma döngüsü, renkli prompt, kalıcı
-geçmiş, `exit` ve Ctrl-D. Sözcük ayırıcı, ayrıştırıcı, genişletme ve
+geçmiş, `exit`, Ctrl-D ve sinyaller — Ctrl-C yarım satırı atıp temiz bir prompt
+verir, Ctrl-\ yok sayılır. Sözcük ayırıcı, ayrıştırıcı, genişletme ve
 çalıştırıcı sıradaki aşamada; AI hattı onun üstüne geliyor.
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.

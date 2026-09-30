@@ -98,11 +98,19 @@ src/
   nax.h        ortak tipler ve paylaşılan bildirimler
   main.c       giriş noktası, okuma döngüsü, kurulum ve kapanış
   line.c       satır okuma, prompt, geçmiş
+  signal.c     etkileşimli sinyal davranışı (Ctrl-C, Ctrl-\)
 test/
   run.sh       tek test giriş noktası; make test ve make check bunu çağırır
+  pty_drive.py sahte terminal üzerinden etkileşimli yol testleri
 naxd/          AI yardımcı süreci (sonraki aşamada)
 docs/          bu dizin
 ```
+
+İki test giriş noktası olmasının sebebi, birinin diğerinin göremediği kodu
+kapsaması: boru ile beslenen testler terminal olmadığı için etkileşimsiz yolu
+koşar, `readline`, geçmiş ve prompt üretimi orada hiç çalışmaz. Sahte terminal
+testleri bu boşluğu kapatır ve denetleyicili ikili ile koşturulduğunda
+etkileşimli yolun bellek doğrulamasını da yapar.
 
 Dosya sayısı bilinçli olarak dengede tutulur: ne her şeyi tek dosyaya yığmak,
 ne her fonksiyon için ayrı dosya açmak. Aynı gerekçeyle her `.c` için ayrı bir
