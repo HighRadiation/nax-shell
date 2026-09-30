@@ -120,6 +120,23 @@ static t_resolve	search_path(const char *name, char **out)
 }
 
 /*
+** Ad bir komuta cozuluyor mu; yalnizca evet/hayir gerektiginde kullanilir.
+**
+** Siniflandirici bunu her satirda cagiriyor ama yola ihtiyaci yok. Ayri
+** bir islev olmasinin sebebi cagiranin donen yolu birakmayi unutmamasi;
+** onbellek gelene kadar ic tarafta yine ayirma var.
+*/
+int	path_is_command(const char *name)
+{
+	char	*path;
+
+	if (path_resolve(name, &path) != RES_OK)
+		return (0);
+	free(path);
+	return (1);
+}
+
+/*
 ** Komut adini calistirilabilir bir yola cozer.
 **
 ** RES_OK donerse out yeni ayrilmis bir yol tutar ve cagiran birakir;

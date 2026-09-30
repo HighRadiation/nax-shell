@@ -78,6 +78,7 @@ typedef struct s_stage
 }	t_stage;
 
 t_resolve	path_resolve(const char *name, char **out);
+int			path_is_command(const char *name);
 const char	*path_reason(t_resolve status);
 int			path_code(t_resolve status);
 
