@@ -25,6 +25,7 @@ typedef enum e_route
 {
 	ROUTE_EMPTY,
 	ROUTE_SHELL,
+	ROUTE_FIX,
 	ROUTE_INTENT,
 	ROUTE_EXPLAIN,
 	ROUTE_SYNTAX_ERR
@@ -51,6 +52,35 @@ typedef enum e_route
 # define VETO_HEAD 0x10
 
 /*
+** Yerel duzeltme adayi.
+**
+** name sabit boyutlu: tek aday tutuluyor ve ayirma yapmadan tasimak
+** karar yolunu bellek hatasi olasiligindan kurtariyor. limit sozcuk
+** uzunlugundan cikan esik, adaylar bunu asamaz. uses gecmiste kac kez
+** kullanildigi; esit uzaklikta hangi adayin kazandigini belirler.
+**
+** from DUZELTILEN sozcugun kendisi. Karar yapisinda tasinmasinin sebebi
+** token listesinin satirdaki konumu tasimamasi: hata mesajini basin
+** kendisiyle yazmak ve satiri yeniden kurmak icin gerekiyor. Yazim
+** hatasi tanim geregi esikten kisa, o yuzden ayni sabit boyuta siger.
+**
+** FIX_MAX_LEN alanin boyutunu ve kabul edilen en uzun aday adini AYNI
+** yerde tutuyor. Dizin girdisi 255 bayta kadar cikabildigi icin bu sinir
+** gercek bir kisit: tarama daha uzun adlari hic denemez.
+*/
+# define FIX_MAX_LEN 24
+
+typedef struct s_fix
+{
+	char	from[FIX_MAX_LEN + 1];
+	char	name[FIX_MAX_LEN + 1];
+	int		distance;
+	int		uses;
+	int		limit;
+	int		found;
+}	t_fix;
+
+/*
 ** Siniflandirma karari.
 **
 ** route  : satirin gidecegi yol
@@ -59,6 +89,9 @@ typedef enum e_route
 **          dil. Girdi satirina ISARET EDER, sahibi degildir.
 ** vetoes : tetiklenen vetolarin bit maskesi
 ** forced : kullanici bir kacis yolu kullandi mi
+** fix    : ROUTE_FIX'te yerel duzeltme adayi. GOMULU tutuluyor, isaretci
+**          degil: t_fix sabit boyutlu oldugu icin karar yapisi hicbir
+**          ayirma yapmiyor ve cagiranin serbest birakacagi bir sey yok.
 */
 typedef struct s_decision
 {
@@ -66,7 +99,14 @@ typedef struct s_decision
 	const char	*text;
 	int			vetoes;
 	int			forced;
+	t_fix		fix;
 }	t_decision;
+
+int			fix_distance(const char *a, const char *b);
+int			fix_suggest(const char *word, t_fix *best);
+int			fix_is_dangerous(const char *name);
+char		*fix_rewrite(const char *line, const char *head,
+				const char *name);
 
 t_decision	cls_classify(const char *line, t_token **tokens,
 				t_lex_err *lerr);

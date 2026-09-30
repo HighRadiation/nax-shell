@@ -144,33 +144,51 @@ static int	head_resolves(const t_token *tokens)
 	return (ok);
 }
 
+/* Basin yerel bir karsiligi var mi; bulursa karara yazar. */
+static int	try_fix(t_decision *d, const t_token *tokens)
+{
+	char	*head;
+	int		ok;
+
+	if (tokens->type != T_WORD)
+		return (0);
+	head = cls_word_text(tokens);
+	if (head == NULL)
+		return (0);
+	ok = fix_suggest(head, &d->fix);
+	free(head);
+	return (ok);
+}
+
 /*
 ** Bas cozulmediginde ne yapilacagi.
 **
-** PLANDAN BILINCLI SAPMA: plan "kalan her sey niyet" diyordu. Oyle
+** SIRA ONEMLI, her adimin sebebi ayri:
+**
+** 1  Vetolara BAKILIR. Duzeltme yalnizca satir kabuk seklindeyken
+**    denenebilir; sebebi olculdu, "dun" sozcugunun "du" komutuna uzakligi
+**    1. Veto once bakilmasa "dun degisen dosyalari goster" istegi disk
+**    kullanimi komutu sanilirdi.
+** 2  Yerel duzeltme denenir. Bulunursa AI'a hic gidilmez.
+** 3  Operator varsa ya da tek sozcukse kabuk yolu; calistirici 127 uretir.
+** 4  Kalan her sey niyet.
+**
+** 3. ADIM PLANDAN BILINCLI SAPMA: plan "kalan her sey niyet" diyordu. Oyle
 ** yapilinca "boylebirkomutyok" artik "command not found" vermiyor, AI'a
-** gidiyor - yani kabugun en temel hata mesaji kayboluyor ve yazim
-** hatasinin cevabi bir ag turuna baglaniyor.
-**
-** KURAL: satirda kabuk operatoru varsa ya da tek sozcukse kabuk yoluna
-** gider ve calistirici 127 uretir; iki ya da daha fazla sozcukse niyet
-** sayilir.
-**
-** OPERATOR KURALI SONRADAN EKLENDI: olmadan "a && b" ve "> dosya"
-** satirlari niyet saniliyor, kabugun sozdizimi hatasi hic gorunmuyordu.
+** gidiyor - kabugun en temel hata mesaji kayboluyor.
 **
 ** GEREKCE: tek bir sozcuk neredeyse her zaman yazim hatasidir, dogal dil
-** istegi degil; ve bash'in cevabi (127) aninda ve dogrudur. Iki sozcukten
-** sonrasi ise tersine doner - "sil eski loglari" istek, "boylebirkomutyok
-** arg1 arg2" ise yanlis yazilmis komut olabilir, ama ilkine "command not
-** found" demek ikincisine "boyle bir komut yok" demekten daha kotu.
-**
-** Yazim hatasinin yerel cevabi sonraki adimda gelecek; o zaman tek
-** sozcuklu satirlar AI'a hic ugramadan duzeltme onerisi alacak.
+** istegi degil; ve 127 aninda ve dogrudur. Iki sozcukten sonrasi tersine
+** doner: "sil eski loglari" istek, ve olculdu, "sil" icin yerel aday yok.
 */
 static t_decision	*unresolved_head(t_decision *d, const t_token *tokens)
 {
-	if (cls_has_operator(tokens) || cls_word_count(tokens) == 1)
+	d->vetoes = cls_vetoes(tokens, d->text);
+	if (d->vetoes != 0)
+		d->route = ROUTE_INTENT;
+	else if (try_fix(d, tokens))
+		d->route = ROUTE_FIX;
+	else if (cls_has_operator(tokens) || cls_word_count(tokens) == 1)
 		d->route = ROUTE_SHELL;
 	else
 		d->route = ROUTE_INTENT;
@@ -184,6 +202,8 @@ const char	*cls_route_name(t_route route)
 		return ("EMPTY");
 	if (route == ROUTE_SHELL)
 		return ("SHELL");
+	if (route == ROUTE_FIX)
+		return ("FIX");
 	if (route == ROUTE_INTENT)
 		return ("INTENT");
 	if (route == ROUTE_EXPLAIN)
@@ -206,6 +226,9 @@ t_decision	cls_classify(const char *line, t_token **tokens, t_lex_err *lerr)
 	d.text = line;
 	d.vetoes = 0;
 	d.forced = 0;
+	d.fix.found = 0;
+	d.fix.from[0] = '\0';
+	d.fix.name[0] = '\0';
 	*tokens = NULL;
 	lerr->message = NULL;
 	lerr->at = 0;
