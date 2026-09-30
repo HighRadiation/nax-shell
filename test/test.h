@@ -1,5 +1,5 @@
 /*
-** test.h — tablo tabanli test kosucularinin paylastigi tipler ve iskele.
+** test.h - tablo tabanli test kosucularinin paylastigi tipler ve iskele.
 **
 ** NEDEN VAR:
 **   Ucuncu test dosyasi yazilirken vaka dosyasini okuma, kacis cozme ve

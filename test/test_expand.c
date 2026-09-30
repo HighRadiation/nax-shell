@@ -1,5 +1,5 @@
 /*
-** test_expand.c — genisletme icin tablo tabanli testler.
+** test_expand.c - genisletme icin tablo tabanli testler.
 **
 ** ZINCIR:
 **   Her vaka girdiyi sozcuklere ayirir, ayristirir, sonra genisletir. Yani

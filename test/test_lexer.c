@@ -1,5 +1,5 @@
 /*
-** test_lexer.c — sozcuk ayirici icin tablo tabanli testler.
+** test_lexer.c - sozcuk ayirici icin tablo tabanli testler.
 **
 ** NEDEN TABLO:
 **   Vaka eklemek yeniden derleme gerektirmesin. Vakalar

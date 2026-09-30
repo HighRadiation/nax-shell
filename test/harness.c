@@ -1,5 +1,5 @@
 /*
-** harness.c — tablo tabanli testlerin ortak iskelesi.
+** harness.c - tablo tabanli testlerin ortak iskelesi.
 **
 ** VAKA DOSYASI BICIMI:
 **   girdi <SEKME> beklenen
@@ -7,7 +7,7 @@
 **
 ** SEKMESIZ SATIR SESSIZCE ATLANMAZ:
 **   Vaka olarak patlar. Sessiz atlama yesil bir suite gosterir ama hicbir
-**   sey olcmez; bu tuzak gercekten yasandi — vaka dosyasi bir kez gercek
+**   sey olcmez; bu tuzak gercekten yasandi - vaka dosyasi bir kez gercek
 **   sekme yerine "\t" metniyle uretilmisti ve tum vakalar sessizce
 **   atlanmisti.
 **

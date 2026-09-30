@@ -1,5 +1,5 @@
 /*
-** test_parser.c — ayristirici icin tablo tabanli testler.
+** test_parser.c - ayristirici icin tablo tabanli testler.
 **
 ** ZINCIR:
 **   Her vaka girdiyi once sozcuklere ayirir, sonra ayristirir. Yani bu

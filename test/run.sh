@@ -138,7 +138,7 @@ run_merged() {
 run_macro_clash_check() {
 	local names bad n
 
-	names=$(grep -hoE '^	[A-Z][A-Z0-9_]+' src/*.h | tr -d '\t' | sort -u)
+	names=$(grep -hoE '^	[A-Z][A-Z0-9_]+' src/*.h src/*/*.h | tr -d '\t' | sort -u)
 	bad=""
 	for n in $names; do
 		printf '#include <unistd.h>\n#include <signal.h>\n#include <fcntl.h>\n#include <sys/stat.h>\n#include <sys/wait.h>\n#ifdef %s\n#error CAKISMA\n#endif\n' "$n" \
@@ -171,6 +171,39 @@ run_leak_fd_check() {
 		FAIL=$((FAIL + 1))
 		printf "  ${R}patladi${N} 200 boru hatti sonrasi son komut kosmadi\n"
 		printf "    gelen: %s\n" "$out"
+	fi
+}
+
+# Kod normlarini dogrular.
+#
+# NEDEN SUITE ICINDE:
+#   Bu denetimler her kilometre tasinda ELLE kosuluyordu ve bir kez sessizce
+#   daraldilar: kaynaklar alt klasorlere tasinirken "src/*.h" deseni yalnizca
+#   tek basligi bulmaya basladi, yani makro cakisma denetimi HICBIR SEY
+#   denetlemedigi halde yesil gectii. Elle kosulan denetim, kosulmayan
+#   denetime donusur. Suite icinde olunca bu olamaz.
+#
+# Kurallar docs/NORMS.md icinde yazili; buradaki her kontrol oradaki bir
+# kurala karsilik geliyor.
+run_norm_check() {
+	local src hdr bad
+
+	src=$(ls src/*.c src/*/*.c test/*.c 2>/dev/null)
+	hdr=$(ls src/*.h src/*/*.h test/*.h 2>/dev/null)
+	bad=""
+	grep -qE '^[[:blank:]]+(/\*|//)' $src $hdr && bad="$bad fonksiyon-icinde-yorum"
+	grep -qE 'return[[:blank:]]+[^(;]' $src && bad="$bad parantezsiz-return"
+	grep -qE '^[a-zA-Z_].*\)[[:blank:]]*\{' $src && bad="$bad ayni-satirda-susly"
+	grep -qP '^ ' $src $hdr && bad="$bad bosluk-girinti"
+	grep -qP '[^\x00-\x7F]' $src $hdr && bad="$bad kodda-ascii-disi-karakter"
+	grep -qzoP 'typedef\s+(struct|enum|union)\s+\w*\s*\{' $src \
+		&& bad="$bad c-dosyasinda-yapi-tanimi"
+	if [ -z "$bad" ]; then
+		PASS=$((PASS + 1))
+		printf "  ${G}gecti${N}   kod normlari\n"
+	else
+		FAIL=$((FAIL + 1))
+		printf "  ${R}patladi${N} norm ihlali:%s\n" "$bad"
 	fi
 }
 
@@ -287,6 +320,7 @@ run_merged "hata ve cikti dogru sirada"   $'echo bir\nls |\necho iki\n' \
            $'bir\nnax: boru isaretinin iki yaninda da komut olmali\niki'
 
 run_macro_clash_check
+run_norm_check
 run_leak_check
 
 printf "\n  %d gecti, %d patladi\n" "$PASS" "$FAIL"
