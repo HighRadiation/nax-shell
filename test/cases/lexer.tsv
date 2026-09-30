@@ -1,0 +1,77 @@
+# Sozcuk ayirici vaka tablosu.
+#
+# Bicim:  girdi <SEKME> beklenen
+# Beklenen "!" ile baslarsa o hata mesaji beklenir.
+#
+# Kanonik cikti: sozcuk W(kip:metin+kip:metin), operator literal isareti.
+# Kipler: none (genislet + alan ayir), dq (genislet), sq (harfi harfine).
+#
+# KACISLAR: her iki alanda \t ve \\ cozulur. \n COZULMEZ, cunku ters
+# egik cizgi testlerinde "\n" dizisinin harfi harfine kalmasi gerekiyor.
+
+
+# --- sade sozcukler ---
+echo hello	W(none:echo) W(none:hello)
+   bosluklar   atlanir   	W(none:bosluklar) W(none:atlanir)
+tek	W(none:tek)
+
+# --- operatorler ---
+ls | wc -l	W(none:ls) | W(none:wc) W(none:-l)
+cat < in > out	W(none:cat) < W(none:in) > W(none:out)
+echo a >> log	W(none:echo) W(none:a) >> W(none:log)
+cat << EOF	W(none:cat) << W(none:EOF)
+a ; b	W(none:a) ; W(none:b)
+a && b	W(none:a) && W(none:b)
+a || b	W(none:a) || W(none:b)
+sleep 1 &	W(none:sleep) W(none:1) &
+( a )	( W(none:a) )
+
+# --- operator bosluk gerektirmez, uzun bicim once taninir ---
+ls|wc	W(none:ls) | W(none:wc)
+a>b	W(none:a) > W(none:b)
+a>>b	W(none:a) >> W(none:b)
+a<b	W(none:a) < W(none:b)
+a<<b	W(none:a) << W(none:b)
+a|b|c	W(none:a) | W(none:b) | W(none:c)
+a&&b	W(none:a) && W(none:b)
+
+# --- tirnaklar ---
+echo 'tek tirnak'	W(none:echo) W(sq:tek tirnak)
+echo "cift tirnak"	W(none:echo) W(dq:cift tirnak)
+echo ''	W(none:echo) W(sq:)
+echo ""	W(none:echo) W(dq:)
+
+# --- tirnak sozcuge yapisir, parcalar zincir olur ---
+abc"def"	W(none:abc+dq:def)
+"a"'b'c	W(dq:a+sq:b+none:c)
+pre'mid'post	W(none:pre+sq:mid+none:post)
+
+# --- tirnak icindeki operator sozcugun parcasidir ---
+echo "a | b"	W(none:echo) W(dq:a | b)
+echo 'x > y'	W(none:echo) W(sq:x > y)
+echo "; ( )"	W(none:echo) W(dq:; ( ))
+
+# --- dolar isareti burada GENISLETILMEZ, kip bunu tasir ---
+echo '$HOME'	W(none:echo) W(sq:$HOME)
+echo "$HOME"	W(none:echo) W(dq:$HOME)
+echo $HOME	W(none:echo) W(none:$HOME)
+
+# --- kacis karakteri karakteri sq kipine dusurur ---
+a\\ b	W(none:a+sq: +none:b)
+echo \\$HOME	W(none:echo) W(sq:$+none:HOME)
+echo \\\\	W(none:echo) W(sq:\\)
+echo \\|	W(none:echo) W(sq:|)
+
+# --- cift tirnak icinde kacis yalnizca $ " \ icin gecerli ---
+echo "\\$x"	W(none:echo) W(sq:$+dq:x)
+echo "a\\"b"	W(none:echo) W(dq:a+sq:"+dq:b)
+echo "a\\nb"	W(none:echo) W(dq:a\\nb)
+
+# --- hatalar ---
+echo 'acik	!kapanmamis tek tirnak
+echo "acik	!kapanmamis cift tirnak
+echo son\\	!satir sonunda ters egik cizgi
+
+# --- bos girdi token uretmez ---
+	
+      	
