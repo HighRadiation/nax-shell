@@ -31,6 +31,16 @@ BIN="${NAX_BIN:-./nax}"
 PASS=0
 FAIL=0
 
+# Her vaka zaman siniriyla kosar.
+#
+# NEDEN VAR: bir hata kabugu ASILDIRABILIR, ozellikle boru uclari
+# kapatilmadiginda okuyan asama hic EOF gormez. Asilma hatadan KOTUDUR:
+# suite patlamak yerine sessizce durur ve kimse sebebini gormez. Zaman
+# siniri asilmayi normal bir vaka hatasina cevirir. Olculdu: ana surecte
+# boru yazma ucunun kapatilmasi kaldirildiginda iki asamali bir hat bile
+# asiliyor, cunku okuyan taraf hic EOF gormuyor.
+CASE_TIMEOUT=10
+
 # Genisletme vakalarinin okudugu degiskenler. Birim testler kendi ortamini
 # kuruyor; burada amac genisletmenin GERCEK ikilide de calistigini gormek.
 export NAX_TV=deger
@@ -44,12 +54,15 @@ chmod +x "$FIX/kosar.sh"
 echo metin > "$FIX/kosmaz.txt"
 chmod 644 "$FIX/kosmaz.txt"
 mkdir "$FIX/birdizin"
+printf 'satir1\nsatir2\n' > "$FIX/girdi.txt"
+mkdir "$FIX/saltokunur"
+chmod 555 "$FIX/saltokunur"
 
 # Tek bir vakayi kosar: girdiyi ikiliye verir, ciktiyi beklenenle karsilastirir.
 run_case() {
 	local name="$1" input="$2" want="$3" got
 
-	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 "$BIN" 2>/dev/null)"
+	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 timeout "$CASE_TIMEOUT" "$BIN" 2>/dev/null)"
 	if [ "$got" = "$want" ]; then
 		PASS=$((PASS + 1))
 		printf "  ${G}gecti${N}   %s\n" "$name"
@@ -65,7 +78,7 @@ run_case() {
 run_status() {
 	local name="$1" input="$2" want="$3" got
 
-	printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 "$BIN" >/dev/null 2>&1
+	printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 timeout "$CASE_TIMEOUT" "$BIN" >/dev/null 2>&1
 	got=$?
 	if [ "$got" = "$want" ]; then
 		PASS=$((PASS + 1))
@@ -80,7 +93,7 @@ run_status() {
 run_stderr() {
 	local name="$1" input="$2" want="$3" got
 
-	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 "$BIN" 2>&1 >/dev/null)"
+	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 timeout "$CASE_TIMEOUT" "$BIN" 2>&1 >/dev/null)"
 	case "$got" in
 		*"$want"*)
 			PASS=$((PASS + 1))
@@ -99,7 +112,7 @@ run_stderr() {
 run_merged() {
 	local name="$1" input="$2" want="$3" got
 
-	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 "$BIN" 2>&1)"
+	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 timeout "$CASE_TIMEOUT" "$BIN" 2>&1)"
 	if [ "$got" = "$want" ]; then
 		PASS=$((PASS + 1))
 		printf "  ${G}gecti${N}   %s\n" "$name"
@@ -137,6 +150,27 @@ run_macro_clash_check() {
 	else
 		FAIL=$((FAIL + 1))
 		printf "  ${R}patladi${N} sistem makrosuyla cakisan sabit:%s\n" "$bad"
+	fi
+}
+
+# Boru uclarinin kapatildigini dogrular.
+#
+# NEDEN VAR: bir asama, kendi cikis borusunun OKUMA ucunu da devralir.
+# Kapatilmazsa iki sey olur: fd'ler birikir, ve daha kotusu okuyan asama
+# hic EOF gormedigi icin asili kalir. Iki yuz hat kosup son komutun hala
+# calistigini dogrulamak bu sinifi yakalar.
+run_leak_fd_check() {
+	local script out
+
+	script=$(for _ in $(seq 200); do printf 'printf "a\\nb\\n" | wc -l\n'; done)
+	out=$(printf '%s\nprintf SONKOMUT\n' "$script" | timeout 60 "$BIN" 2>&1 | tail -1)
+	if [ "$out" = "SONKOMUT" ]; then
+		PASS=$((PASS + 1))
+		printf "  ${G}gecti${N}   200 boru hatti sonrasi kabuk saglam\n"
+	else
+		FAIL=$((FAIL + 1))
+		printf "  ${R}patladi${N} 200 boru hatti sonrasi son komut kosmadi\n"
+		printf "    gelen: %s\n" "$out"
 	fi
 }
 
@@ -214,8 +248,40 @@ run_stderr "desteklenmeyen operator"      $'a && b\n'           "desteklenmeyen 
 run_case   "son durum sonraki satirda okunur" $'false\necho $?\n' "1"
 run_case   "sozdizimi durumu okunur"          $'ls |\necho $?\n'  "2"
 
-run_stderr "boru hatti henuz kosmuyor"    $'ls | wc\n'            "boru hatti bu asamada calistirilmiyor"
-run_stderr "yonlendirme henuz kosmuyor"   $'echo a > /dev/null\n' "yonlendirme bu asamada calistirilmiyor"
+run_stderr "<< henuz kosmuyor"            $'cat << SON\n'         "<< yonlendirmesi bu asamada calistirilmiyor"
+run_status "<< kodu 1"                    $'cat << SON\n'         1
+
+run_case   "iki asamali boru"             $'printf "a\\nb\\nc\\n" | wc -l\n'      "3"
+run_case   "uc asamali boru"              $'printf "a\\nb\\nc\\n" | grep -v b | wc -l\n' "2"
+run_case   "dort asamali boru"            $'printf "c\\na\\nb\\n" | sort | head -2 | tr "\\n" ","\n' "a,b,"
+run_case   "yazan taraf erken kapanir"    $'yes | head -2 | tr "\\n" ","\n'  "y,y,"
+run_status "boru kodu son komuttan (0)"   $'false | true\n'       0
+run_status "boru kodu son komuttan (1)"   $'true | false\n'       1
+run_status "son komut bulunamaz"          $'echo x | boylebirkomutyok\n' 127
+run_status "ilk komut bulunamaz"          $'boylebirkomutyok | wc -l\n'  0
+
+run_case   "dosyaya yaz ve geri oku"      "echo icerik > $FIX/o1"$'\n'"cat $FIX/o1"$'\n' "icerik"
+run_case   "dosyadan oku"                 "wc -l < $FIX/girdi.txt"$'\n' "2"
+# Cocuklara fd sizmadigini dogrular. Boru asamasi kendi cikis borusunun
+# okuma ucunu devralir; kapatilmazsa calistirilan programa sizar. Linux'a
+# ozgu bir kontrol (/proc), bu proje Linux'ta kosuyor.
+run_case   "cocuga fazla fd sizmaz"       $'ls /proc/self/fd | tr -d "\\n"\n' "0123"
+run_case   "ekleme ustune yazmaz"         "echo bir > $FIX/ek"$'\n'"echo iki >> $FIX/ek"$'\n'"cat $FIX/ek"$'\n' $'bir\niki'
+run_case   "cikti ve girdi birlikte"      "wc -l < $FIX/girdi.txt > $FIX/o2"$'\n'"cat $FIX/o2"$'\n' "2"
+run_case   "boru ciktisi dosyaya"         'printf "a\nb\n" | wc -l > '"$FIX"'/o3'$'\n'"cat $FIX/o3"$'\n' "2"
+run_case   "yonlendirme boruyu ezer"      "echo veri > $FIX/o4 | wc -c"$'\n'"cat $FIX/o4"$'\n' $'0\nveri'
+run_case   "sadece > dosya olusturur"     "> $FIX/o5"$'\n'"wc -c < $FIX/o5"$'\n' "0"
+
+run_status "okunamayan dosyadan oku"      "cat < $FIX/saltokunur/yok"$'\n' 1
+run_status "yazilamayan dizine yaz"       "echo x > $FIX/saltokunur/yeni"$'\n' 1
+run_status "olmayan dizine yaz"           $'echo x > /yok/dizin/dosya\n' 1
+run_stderr "yonlendirme sebebi bildirilir" $'cat < /yok/boyle/dosya\n' "No such file or directory"
+run_stderr "belirsiz yonlendirme"         $'cat > $NAX_TS\n'      "belirsiz yonlendirme"
+
+# fd sizintisi gerilemesi: 200 boru hatti kosup son komutun hala
+# calistigini dogrular. Boru uclari kapatilmazsa hem fd tukenir hem de
+# okuyan asama EOF gormedigi icin asilir.
+run_leak_fd_check
 
 run_merged "hata ve cikti dogru sirada"   $'echo bir\nls |\necho iki\n' \
            $'bir\nnax: boru isaretinin iki yaninda da komut olmali\niki'
