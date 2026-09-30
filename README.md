@@ -73,21 +73,24 @@ denetleyicilerle yapılır. Sızıntı sıfır olmadan hiçbir aşama bitmiş sa
 
 Çekirdek kabuk kuruluyor. Şu an çalışan: okuma döngüsü, renkli prompt, kalıcı
 geçmiş, `exit`, Ctrl-D ve sinyaller — Ctrl-C yarım satırı atıp temiz bir prompt
-verir, Ctrl-\ yok sayılır. **Sözcük ayırıcı, ayrıştırıcı ve genişletme tamam**:
-tırnaklar, kaçış karakteri, boru hattı, yönlendirmeler, `$VAR`, `$?`, `~`, alan
-ayırma ve hata halleri — 136 vakalık tablolarla doğrulanmış halde. Şu an bir
-satır yazdığında genişletilmiş hattın şekli basılıyor:
+verir, Ctrl-\ yok sayılır. **Komutlar artık gerçekten koşuyor** — tek komut,
+`PATH` çözümleme, gerçek çıkış kodları ve bash ile birebir eşleşen hata
+mesajları:
 
 ```
-nax ~/projeler $ ls -la | grep foo | wc -l
-(pipe (cmd [ls] [-la]) (cmd [grep] [foo]) (cmd [wc] [-l]))
-
-nax ~/projeler $ echo $HOME/belgeler
-(cmd [echo] [/home/kullanici/belgeler])
+nax ~/projeler $ echo merhaba dunya
+merhaba dunya
+nax ~/projeler $ printf "[%s]" $BOSLUKLU
+[bir][iki]
+nax ~/projeler $ boylebirkomutyok
+nax: boylebirkomutyok: command not found
+nax ~/projeler $ echo $?
+127
 ```
 
-Sıradaki: çalıştırıcı. Ağacın yerine gerçek komutlar o zaman koşacak. AI hattı
-onun üstüne geliyor.
+Boru hattı ve yönlendirme ayrıştırılıyor ve genişletiliyor ama henüz
+çalıştırılmıyor; ikisi de anlaşılır bir mesaj veriyor. Yerleşik komutlar da
+henüz yok. İkisi sıradaki iki adım; ardından AI hattı geliyor.
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 

@@ -16,7 +16,9 @@ listenin geçmişi de okunabilir kalır.
 
 | Tarih | Ne | Nerede | Neden şimdi değil |
 |---|---|---|---|
-| 2026-09-30 | **Koşul, sıradaki aşama için:** `SIGINT` işleyicisi `SA_RESTART` olmadan kuruldu, yani bloke eden çağrılar `EINTR` dönebilir. Çalıştırıcı geldiğinde `waitpid`, yardımcı süreç beklemesi geldiğinde `poll` **`EINTR` döngüsüne sarılmak zorunda.** Sarılmazsa Ctrl-C bir komut beklenirken bozuk davranır. | `src/signal.c` (gerekçe dosya başında) → `src/exec.c`, `src/naxd_client.c` | Sarılacak kod henüz yok; bu bir hata değil, o kod yazılırken uyulacak bir koşul |
+| 2026-09-30 | **Koşul, yardımcı süreç aşaması için:** `SA_RESTART` olmadığı için yardımcı süreç beklemesindeki `poll` da `EINTR` döngüsüne sarılmak zorunda. Çalıştırıcı tarafı ödendi. | `src/naxd_client.c` (henüz yok) | Sarılacak kod henüz yok; bir hata değil, o kod yazılırken uyulacak bir koşul |
+| 2026-09-30 | Boru hattı ve yönlendirme **çalıştırılmıyor**; ikisinde de anlaşılır mesaj verilip 1 dönüyor. Sözcük ayırıcı, ayrıştırıcı ve genişletme ikisini de doğru işliyor | `src/exec.c` (`unsupported`) | Çalıştırıcının 2. parçası; bilinçli bölme, üç konu birbirine karışmasın diye |
+| 2026-09-30 | Yerleşik komut yok; `exit` geçici olarak okuma döngüsünde ele alınıyor | `src/main.c` (`is_exit_request`) | Çalıştırıcının 3. parçası. `cd` ve `export` ana süreçte koşmak zorunda, o yüzden ayrı bir adım |
 | 2026-09-30 | Prompt son komutun çıkış kodunu göstermiyor | `src/line.c` (`build_prompt`) | Bu aşamada hiçbir şey çalıştırılmadığı için kod her zaman sıfır; gösterge ölü kod olurdu |
 | 2026-09-30 | Geçmiş dosyası sınırsız büyüyor; `history_truncate_file` çağrısı yok | `src/line.c` (`ln_hist_save`) | Tek satırlık iş ama bu oturumun konusu değil; geçmiş yönetimi sıradaki aşamada zaten elden geçecek |
 | 2026-09-30 | Etkileşimsiz koşu da geçmiş dosyasını yüklüyor ve yazıyor. Görünür zararı yok (aynı içerik geri yazılıyor) ama gereksiz giriş/çıkış, ve iki eşzamanlı oturum birbirini ezebilir | `src/main.c` (`shell_init`, `shell_free`) | Aynı gerekçe: geçmiş yönetimi sıradaki aşamada toplu ele alınacak |
@@ -36,4 +38,5 @@ listenin geçmişi de okunabilir kalır.
 |---|---|---|
 | 2026-09-30 | ~~readline etkileşimsiz girdide okuduğu satırı yankılıyor, çıktıyı ikiye katlıyordu~~ | `src/line.c` — etkileşimsiz yol `getline` kullanır, readline yalnızca terminalde çalışır |
 | 2026-09-30 | ~~Prompt'ta Ctrl-C kabuğu öldürüyordu (sinyal 2)~~ | `src/signal.c` — `rl_catch_signals` kapatıldı, işleyici yalnızca bayrak set ediyor, satır iptali `rl_event_hook` içinde normal bağlamda yapılıyor. Ctrl-C yarım satırı atar, `^C` basar, `$?`'yi 130 yapar; Ctrl-\ yok sayılır |
+| 2026-09-30 | ~~`R_OK` adlı enum sabiti `<unistd.h>`'nin `access()` makrosuyla çakıştı; ön işlemci her kullanımı `4` ile değiştirdi ve derleyici hiç uyarmadı. Dizin komut olarak çağrıldığında yanlış mesaj çıkıyordu~~ | `src/exec.h` — sabitler `RES_*` önekli oldu; `make check`'e bu sınıfı otomatik yakalayan bir denetim eklendi, denetim kasten çakışma sokularak doğrulandı |
 | 2026-09-30 | ~~`make check`'in "sıfır sızıntı" iddiası kodun yarısını kapsıyordu: bütün testler boru ile besliyor, yani readline, geçmiş ve prompt üretimi hiç koşmuyordu~~ | `test/pty_drive.py` — sahte terminal üzerinden 12 vaka; `NAX_BIN` denetleyicili ikiliyi gösterdiğinde etkileşimli yol da sızıntı denetiminden geçer |

@@ -165,6 +165,43 @@ hata verilir. Doğrulama olmadan `${VAR:-varsayılan}` gibi desteklenmeyen bir
 biçim `VAR:-varsayılan` adını arar, bulamaz ve **sessizce boşa genişler** —
 sessiz yanlış cevap hatadan kötüdür.
 
+## Çalıştırma
+
+Çıkış kodu semantiği (bash ölçülerek doğrulandı):
+
+| Durum | Kod |
+|---|---|
+| Normal çıkış | çocuğun kendi kodu |
+| Sinyalle ölüm | `128 + sinyal` |
+| Komut bulunamadı | 127 |
+| Çalıştırılamadı (dizin, yetki yok) | 126 |
+| Boş komut | 0, hiçbir şey çalışmaz |
+
+Son satır gerçek bir durum: `$YOKBOYLE` tek başına yazıldığında genişletme
+hiç alan üretmez, yani çalıştırılacak bir şey yoktur.
+
+**Komut çözümlemenin iki ayrı kuralı var.** Ad `/` içeriyorsa `PATH`'e hiç
+bakılmaz ve başarısızlığın sebebi ayırt edilir (yok / dizin / yetki yok). Ad
+`/` içermiyorsa `PATH` taranır ve **yalnızca çalıştırılabilir dosyalar**
+sayılır; hiçbiri bulunmazsa 127. Ölçülen sonuç: `PATH` içinde aynı adda
+çalıştırılamayan bir dosya bulunsa bile bash 126 değil 127 veriyor.
+
+**`PATH` önbelleği yok.** Çözümleme komut başına bir kez oluyor ve altı dizini
+taramak mikrosaniyeler sürüyor. Önbellek sınıflandırıcı için anlamlı olacak —
+orada karar milisaniyenin altında kalmak zorunda — ve o zaman eklenecek.
+
+**Çocukta sinyaller sıfırlanır, ve bu zorunlu.** `execve` *yakalanan* sinyalleri
+varsayılana döndürür ama *yok sayılan* sinyalleri yok sayılı bırakır. Kabuk
+`SIGQUIT`'i yok sayıyor; sıfırlanmazsa her çocuk bunu devralır. Bakım kuralı:
+kabuk yeni bir sinyali yok saymaya başlarsa o sinyal `sig_reset_child`'a da
+eklenmek zorunda.
+
+**`EINTR` döngüsü zorunlu.** Sinyaller `SA_RESTART` olmadan kuruldu, yani ön
+planda bir komut koşarken Ctrl-C `waitpid`'i keser. Sarılmazsa kabuk çocuğu
+beklemeyi bırakır, zombi kalır ve çıkış kodu uydurma olur. Aynı şekilde komut
+bittikten sonra kesme bayrağı temizlenmek zorunda; temizlenmezse bir sonraki
+okumada readline satırı kullanıcı bir şey yazmadan iptal eder.
+
 ## Bellek sahipliği
 
 Sızıntı disiplininin tek kuralı: **her modül kendi ürettiği tipi kendisi
@@ -182,6 +219,8 @@ serbest bırakır.**
 | boru hattı ağacı | `parser.c` (`ast_build`) | çağıran (`ast_free`) |
 | alan listesi | `expand.c` (`exp_word`) | çağıran (`field_free`) |
 | genişletilmiş komut | `expand_cmd.c` (`exp_cmd`) | çağıran (`xcmd_free`) |
+| çözülmüş komut yolu | `path.c` (`path_resolve`) | çağıran |
+| `argv` dizisi | `exec.c` (`build_argv`) | çağıran; **metinler kopyalanmaz**, alan listesinden ödünç alınır |
 
 **Ağaç token'ları ödünç alır.** Ağaç düğümleri yalnızca kendi struct'larının
 sahibidir; içerdikleri sözcük token'ları sözcük ayırıcının listesinde kalır.
@@ -217,6 +256,9 @@ src/
   expand.c       bir sözcüğü alanlara çevirir ($VAR, $?, ~, alan ayırma)
   expand_cmd.c   bir komutun tüm argüman ve yönlendirmelerini genişletir
   exp_dump.c     genişletilmiş hattı kanonik metne çevirir (test ve ayıklama)
+  exec.h         çalıştırma tarafının tipleri ve bildirimleri
+  path.c         komut adını çalıştırılabilir bir yola çözer
+  exec.c         fork/execve/waitpid, çıkış kodu semantiği
 test/
   run.sh         tek test giriş noktası; make test ve make check bunu çağırır
   test.h         test koşucularının paylaştığı tipler ve iskele

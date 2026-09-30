@@ -21,6 +21,8 @@ dosyada yaşadığı belli olur:
 | `ast_` | ayrıştırıcı |
 | `field_` | genişletme sonucu alanlar |
 | `xcmd_` | genişletilmiş komut |
+| `ex_` | çalıştırıcı |
+| `sig_` | sinyaller |
 | `exp_` | genişletme |
 | `ex_` | çalıştırıcı |
 | `bi_` | yerleşik komutlar |
@@ -77,6 +79,21 @@ modülün veri şekli uygulamasından ayrı okunabilir.
 | `src/nax.h` | oturum durumu, metin tamponu |
 | `src/parse.h` | tırnak kipi, sözcük parçası, token, sözcük ayırıcı durumu, hata bildirimi |
 | `test/test.h` | test sayacı |
+
+## Sabit adları sistem makrolarıyla çakışmamalı
+
+Enum sabitleri ve makrolar **modül önekli** olur. Kısa ve genel adlar POSIX
+makrolarıyla çakışır.
+
+Bu kural ölçülmüş bir hatadan geliyor: `R_OK` adlı bir enum sabiti
+`<unistd.h>` içindeki `access()` makrosuyla çakıştı. Makro olduğu için ön
+işlemci koddaki her `R_OK` metnini `4` ile değiştirdi — yani başka bir sabitin
+değeriyle. Ortaya geçerli kod çıktığı için derleyici **tek bir uyarı vermedi**;
+hata yalnızca davranışta göründü ve bash ile karşılaştırma testi yakaladı.
+
+`make check` bu sınıfı otomatik denetler: başlıklardaki her büyük harfli sabit
+için, sistem başlıklarından *sonra* makro olarak tanımlı mı diye bakar. Denetim
+kasten çakışma sokularak doğrulandı.
 
 ## Modülerlik
 
