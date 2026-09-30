@@ -57,6 +57,41 @@ run_status() {
 	fi
 }
 
+# Cikti ve hatayi AYNI akista birlestirip karsilastirir; sira testi icin.
+run_merged() {
+	local name="$1" input="$2" want="$3" got
+
+	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 "$BIN" 2>&1)"
+	if [ "$got" = "$want" ]; then
+		PASS=$((PASS + 1))
+		printf "  ${G}gecti${N}   %s\n" "$name"
+	else
+		FAIL=$((FAIL + 1))
+		printf "  ${R}patladi${N} %s\n" "$name"
+		printf "    beklenen: %s\n" "$(printf '%q' "$want")"
+		printf "    gelen   : %s\n" "$(printf '%q' "$got")"
+	fi
+}
+
+# Girdiyi kosar ve hata ciktisinda beklenen metni arar.
+run_stderr() {
+	local name="$1" input="$2" want="$3" got
+
+	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 "$BIN" 2>&1 >/dev/null)"
+	case "$got" in
+		*"$want"*)
+			PASS=$((PASS + 1))
+			printf "  ${G}gecti${N}   %s\n" "$name"
+			;;
+		*)
+			FAIL=$((FAIL + 1))
+			printf "  ${R}patladi${N} %s\n" "$name"
+			printf "    beklenen icerik: %s\n" "$want"
+			printf "    gelen          : %s\n" "$got"
+			;;
+	esac
+}
+
 # Denetleyicili ikiliyi sizinti raporu icin ayrica kosar.
 run_leak_check() {
 	local out
@@ -93,14 +128,26 @@ done
 
 printf "nax testleri (%s)\n" "$BIN"
 
-run_case   "satiri geri yazar"          $'merhaba\n'            "merhaba"
-run_case   "bos satir cikti uretmez"    $'\n\n\n'               ""
-run_case   "bosluklu satir yok sayilir" $'   \t  \n'            ""
-run_case   "exit ciktisiz ciker"        $'exit\n'               ""
-run_case   "exit oncesi satir yazilir"  $'merhaba\nexit\n'      "merhaba"
-run_case   "bosluklu exit de ciker"     $'  exit  \nsonra\n'    ""
-run_status "temiz cikis kodu sifir"     $'merhaba\nexit\n'      0
-run_status "EOF ile cikis kodu sifir"   $'merhaba\n'            0
+run_case   "tek komut agaci"            $'merhaba\n'            "(cmd [merhaba])"
+run_case   "argumanli komut"             $'echo a b\n'           "(cmd [echo] [a] [b])"
+run_case   "boru hatti"                  $'ls -la | wc -l\n'     "(pipe (cmd [ls] [-la]) (cmd [wc] [-l]))"
+run_case   "yonlendirmeler"              $'cat < in > out\n'     "(cmd [cat] <[in] >[out])"
+run_case   "tirnakli sozcuk tek arguman" $'cat "a b"\n'          "(cmd [cat] [a b])"
+run_case   "bos satir cikti uretmez"     $'\n\n\n'               ""
+run_case   "bosluklu satir yok sayilir"  $'   \t  \n'            ""
+run_case   "exit ciktisiz ciker"         $'exit\n'               ""
+run_case   "exit oncesi satir islenir"   $'merhaba\nexit\n'      "(cmd [merhaba])"
+run_case   "bosluklu exit de ciker"      $'  exit  \nsonra\n'    ""
+run_case   "sozdizimi hatasi stdout'a yazilmaz" $'ls |\n'        ""
+run_stderr "boru hatasi bildirilir"      $'ls |\n'               "boru isaretinin iki yaninda"
+run_stderr "kapanmamis tirnak bildirilir" $"echo 'x\n"           "kapanmamis tek tirnak"
+run_stderr "desteklenmeyen operator bildirilir" $'a && b\n'      "desteklenmeyen operator"
+run_status "temiz cikis kodu sifir"      $'merhaba\nexit\n'      0
+run_status "EOF ile cikis kodu sifir"    $'merhaba\n'            0
+run_status "sozdizimi hatasi kodu 2"     $'ls |\n'               2
+run_status "tirnak hatasi kodu 2"        $"echo 'x\n"            2
+run_merged "hata ve cikti dogru sirada"  $'echo bir\nls |\necho iki\n' \
+           $'(cmd [echo] [bir])\nnax: boru isaretinin iki yaninda da komut olmali\n(cmd [echo] [iki])'
 run_leak_check
 
 printf "\n  %d gecti, %d patladi\n" "$PASS" "$FAIL"

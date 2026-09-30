@@ -7,12 +7,14 @@
 **   satirin ne anlama geldigi ise siniflandiriciya (classifier.c) gececek.
 **
 ** BU ASAMADA:
-**   Satir henuz yorumlanmiyor, yalnizca geri yaziliyor. "exit" ve Ctrl-D
-**   kabuktan cikarir. Lexer, ayristirici ve calistirici sonraki asamada
-**   devreye girecek ve handle_line govdesi onlara devredilecek.
+**   Satir sozcuklere ayrilip ayristiriliyor, sonra uretilen boru hattinin
+**   kanonik metni basiliyor. Calistirici geldiginde bu basim onun
+**   cagrisiyla degisecek; agacin dogru kuruldugunu gozle gormek ve hattin
+**   gercek ikilide de test edilmesi icin simdi burada.
 */
 
 #include "nax.h"
+#include "parse.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,9 +46,49 @@ static int	is_exit_request(const char *line)
 	return (*p == '\0');
 }
 
-/* Tek bir girdi satirini isler; bu asamada yalnizca geri yazar. */
+/*
+** Sozdizimi hatasini kullaniciya bildirir ve cikis kodunu 2 yapar.
+**
+** NEDEN ONCE fflush:
+**   stdout boruya yazarken blok tamponlu, stderr ise tamponsuz. Tamponu
+**   bosaltmadan hata yazmak, "nax < betik > log 2>&1" gibi bir kullanimda
+**   hatalarin ciktidan once gorunmesine yol acar; olculdu.
+*/
+static void	report_syntax_error(t_shell *sh, const char *message)
+{
+	fflush(stdout);
+	fprintf(stderr, "%s: %s\n", NAX_NAME, message);
+	sh->last_status = 2;
+}
+
+/* Token listesinden boru hattini kurar ve kanonik metnini basar. */
+static void	run_tokens(t_shell *sh, const t_token *tokens)
+{
+	t_ast_err	err;
+	t_cmd		*cmds;
+	char		*shape;
+
+	cmds = ast_build(tokens, &err);
+	if (cmds == NULL)
+	{
+		if (err.message != NULL)
+			report_syntax_error(sh, err.message);
+		return ;
+	}
+	shape = ast_dump(cmds);
+	if (shape != NULL)
+		printf("%s\n", shape);
+	free(shape);
+	ast_free(cmds);
+	sh->last_status = 0;
+}
+
+/* Tek bir girdi satirini isler: ayirir, ayristirir, sonucu basar. */
 static void	handle_line(t_shell *sh, const char *line)
 {
+	t_lex_err	err;
+	t_token		*tokens;
+
 	if (is_blank(line))
 		return ;
 	if (is_exit_request(line))
@@ -54,8 +96,14 @@ static void	handle_line(t_shell *sh, const char *line)
 		sh->exiting = 1;
 		return ;
 	}
-	printf("%s\n", line);
-	sh->last_status = 0;
+	tokens = lex_split(line, &err);
+	if (tokens == NULL && err.message != NULL)
+	{
+		report_syntax_error(sh, err.message);
+		return ;
+	}
+	run_tokens(sh, tokens);
+	lex_free(tokens);
 }
 
 /* Kabuk durumunu ilk degerlerine kurar ve gecmisi yukler. */

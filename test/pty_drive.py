@@ -217,7 +217,7 @@ def case_echo_and_exit(binary, rep):
     """Prompt basiliyor, satir geri yaziliyor, exit sessizce cikiyor."""
     sh = Shell(binary)
     sh.ask(b"merhaba\n")
-    got = sh.wait_for("merhaba", skip=1)
+    got = sh.wait_for("(cmd [merhaba])")
     sh.ask(b"exit\n")
     alive, info = sh.close()
     rep.check("prompt basildi ve satir geri yazildi", got, sh.screen()[-200:])
@@ -229,11 +229,11 @@ def case_history(binary, rep):
     """Yukari ok onceki satiri geri getiriyor."""
     sh = Shell(binary)
     sh.ask(b"tarihce-vakasi\n")
-    sh.wait_for("tarihce-vakasi", skip=1)
+    sh.wait_for("(cmd [tarihce-vakasi])")
     sh.ask(b"\x1b[A")
     recalled = sh.wait_for("tarihce-vakasi", skip=2)
     sh.send(b"\n")
-    sh.wait_for("tarihce-vakasi", skip=3)
+    sh.wait_for("(cmd [tarihce-vakasi])", skip=1)
     sh.ask(b"exit\n")
     sh.close()
     rep.check("yukari ok onceki satiri getirdi", recalled, sh.screen()[-300:])
@@ -247,7 +247,7 @@ def case_sigint_discards_line(binary, rep):
     sh.wait_for("yarim satir")
     sh.send(b"\x03")
     sh.ask(b"sonrasi\n")
-    sh.wait_for("sonrasi", skip=1)
+    sh.wait_for("(cmd [sonrasi])")
     screen = sh.screen()
     sh.ask(b"exit\n")
     alive, info = sh.close()
@@ -258,7 +258,7 @@ def case_sigint_discards_line(binary, rep):
         "iki satir birlesmis:\n" + screen[-300:],
     )
     rep.check("Ctrl-C sonrasi satir tek basina islendi",
-              screen.count("sonrasi") >= 2, screen[-300:])
+              "(cmd [sonrasi])" in screen, screen[-300:])
     rep.check("Ctrl-C ekranda ^C gosterdi", "^C" in screen, screen[-300:])
     return screen
 
@@ -269,7 +269,7 @@ def case_sigint_repeated(binary, rep):
     for _ in range(3):
         sh.ask(b"\x03")
     sh.ask(b"ayakta\n")
-    survived = sh.wait_for("ayakta", skip=1)
+    survived = sh.wait_for("(cmd [ayakta])")
     sh.ask(b"exit\n")
     alive, info = sh.close()
     rep.check("ust uste uc Ctrl-C sonrasi kabuk ayakta", survived and not alive, info)
@@ -281,7 +281,7 @@ def case_sigquit_ignored(binary, rep):
     sh = Shell(binary)
     sh.ask(b"\x1c")
     sh.send(b"ayakta\n")
-    survived = sh.wait_for("ayakta", skip=1)
+    survived = sh.wait_for("(cmd [ayakta])")
     sh.ask(b"exit\n")
     alive, info = sh.close()
     rep.check("Ctrl-\\ yok sayildi", survived and not alive, info)
