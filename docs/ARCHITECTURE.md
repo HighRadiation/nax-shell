@@ -338,7 +338,8 @@ src/
     ai.h           yol, veto maskesi, karar tipleri
     classifier.c   karar sırası: ön filtre, baş çözümü, yol seçimi
     veto.c         şekil vetoları: baş çözülse bile satır doğal dil mi
-  (ai/ içinde sonraki aşamada: yerel yazım düzeltmesi, yardımcı süreç istemcisi)
+    fix.c          yerel yazım düzeltmesi; AI'a gitmeden öneri
+  (ai/ içinde sonraki aşamada: yardımcı süreç istemcisi ve protokolü)
 test/
   test.h           test koşucularının paylaştığı tipler ve iskele
   harness.c        vaka dosyası okuma, kaçış çözme, özet basma

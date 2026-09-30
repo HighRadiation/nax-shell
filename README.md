@@ -111,7 +111,34 @@ merhaba dunya
 `cd` ve `export` ana süreçte koşar, yoksa değişiklik çocukla birlikte yok
 olurdu. `<<` yönlendirmesi henüz yok, anlaşılır bir mesaj veriyor.
 
-Sıradaki: AI hattı.
+**Kabuk artık her satırı kendisi sınıflandırıyor** — hiçbir işaret, hiçbir
+kip yok. Normal komutlar bu yoldan hiç sapmadan geçiyor; doğal dil ayrı yola
+gidiyor:
+
+```
+nax ~/projeler $ ls -la                      # komut, doğrudan koşar
+nax ~/projeler $ find all big files          # doğal dil, niyet yoluna gider
+nax ~/projeler $ cat sirket.txt              # "cat" + var olan dosya: komut
+```
+
+Önemli olan şu: `ls -la` yazıldığında ne gecikme ne ücret oluşuyor. AI yalnızca
+kabuğun anlamlandıramadığı satırlarda devreye giriyor. Kararın nasıl
+verildiği [docs/CLASSIFIER.md](docs/CLASSIFIER.md) içinde.
+
+**Yazım hataları AI'a hiç gitmeden yerelde düzeltiliyor:**
+
+```
+nax ~/projeler $ celar
+nax: celar: boyle bir komut yok
+nax: bunu mu demek istediniz: clear
+nax ~/projeler $ clear▮        ← düzeltilmiş satır tampona hazır gelir
+```
+
+Geri dönüşü olmayan komutlar (`rm`, `dd`, `chmod`, `kill` ve benzeri) bu
+istisnanın dışında: önerilirler ama **tampona konulmazlar.** Tampona konan
+öneri tek Enter'la koşar ve bu tür bir komut için o fazla yakın.
+
+Sıradaki: AI yardımcı süreci ve protokolü.
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 

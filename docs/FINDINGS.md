@@ -34,6 +34,11 @@ listenin geçmişi de okunabilir kalır.
 | 2026-09-30 | Vaka dosyası satırları 4096 bayttan uzunsa test koşucusu sessizce bölerek okur | `test/test_lexer.c` (`LINE_MAX_LEN`) | En uzun vaka 60 bayt civarında; sınır aşılırsa fark edilir ve o zaman büyütülür |
 | 2026-09-30 | `&&`, `||`, `;`, `&`, `(`, `)` sözcük ayırıcıda tanınıyor, ayrıştırıcı anlaşılır hata veriyor | `src/parser.c` (`is_unsupported`) | Bunları şimdi tanımak lexer'ı ikinci kez açmayı önlüyor; ayrıştırıcı desteği plandaki yerinde gelecek |
 | 2026-09-30 | Sınıflandırıcıda bilinen açık: PATH'te karşılığı olan bir kelimeyle başlayan doğal dil cümlesi komut sanılabilir | `docs/CLASSIFIER.md` şekil vetosu bölümü | Şekil vetoları riski büyük ölçüde kapatıyor; kalan nadir durum için `nax <metin>` kaçış yolu var |
+| 2026-09-30 | Yerel düzeltme `nax` yazıldığında `npx` öneriyor (uzaklık 1); kabuğun kendi adı PATH'te olmadığı sürece böyle | `src/ai/fix.c` | Kurulumdan sonra `nax` PATH'te çözüleceği için kendiliğinden kapanıyor; özel durum yazmaya değmez |
+| 2026-09-30 | Tek başına `dun` yazıldığında `du` öneriliyor. Cümle içindeyken veto kuralı bunu engelliyor ama tek sözcükte engel yok | `src/ai/fix.c`, `docs/CLASSIFIER.md` | Kabul edildi: tek sözcüklü Türkçe girdi nadir ve öneri koşmuyor, yalnızca yazılıyor |
+
+| 2026-09-30 | `fix_offer` içindeki uzunluk kontrolü **testle gözlemlenemiyor**: `fix_distance` eşikten uzun adlara zaten -1 dönüyor ve o da bir satır önce eleniyor | `src/ai/fix.c` | Kaldırılmadı. Hemen altındaki `memcpy`'nin ön koşulu bu; bir bellek yazmasının güvenliğini uzaktaki bir işlevin sözleşmesine bağlamak istemiyorum. Mutasyon testi kaçtığı için burada kayıtlı — yeşil test bu satırı kapsamıyor |
+| 2026-09-30 | Öneriyi tampona koymadan önceki `sh->interactive == 0` kontrolü **gözlemlenemiyor**: betik modunda ön yükleme hiçbir şey yapmıyor, yalnızca bir dize ayrılmış kalıyor (statik göstericide durduğu için sızıntı olarak da raporlanmıyor) | `src/main.c` `report_fix` | Kaldırılmadı; niyet belirtiyor ve boşa ayırma yapmıyor. Davranış farkı olmadığı için testi de yok |
 
 ## Kapandı
 

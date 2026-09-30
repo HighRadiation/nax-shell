@@ -80,24 +80,75 @@ yavaşlık kabul edilebilir, sessiz yanlış davranış edilemez.
 
 ## Aşama 4 — yerel yazım düzeltmesi
 
-Baş çözülmediğinde ilk iş AI'a gitmek değildir. Gerçek kullanımdaki yazım
-hatalarının neredeyse tamamı, sık kullanılan bir komuta iki karakterden az
-uzaklıktadır (`celar` → `clear`, `exot` → `exit`, `gti` → `git`). Bunları
-uzak bir modele göndermek hem israf hem yüz milisaniyelerce gecikme.
+Baş çözülmediğinde ilk iş AI'a gitmek değildir. Yazım hatalarının neredeyse
+tamamı sık kullanılan bir komuta iki karakterden az uzaklıktadır. Bunları uzak
+bir modele göndermek hem israf hem yüz milisaniyelerce gecikme.
 
-Bu yüzden aşama 4 yerel bir düzenleme uzaklığı hesabıyla çalışır: aday kümesi
-yerleşik komutlar + PATH + geçmişte kullanılan başlar; geçmiş sıklığı
-eşitlikleri bozar.
+Aday kümesi **yerleşikler + PATH**; sıralama önce uzaklık, eşitlikte geçmiş
+sıklığı. Yerleşikler önce taranır, yani eşitlikte yerleşik kazanır — `ehco`
+için `echo` doğru cevap.
 
-İki katı kural:
+### Uzaklık ölçüsü neden Damerau-Levenshtein
 
-1. **Satırın tamamı kabuk şeklinde olmalı** (sözcük sayısı ≤ 3, argümanlar
-   seçenek ya da yol görünümünde). Aksi halde düzeltme atlanır. Gerekçesi
-   aşağıdaki tuzak tablosunda.
-2. **Yıkıcı başlar asla önerilmez.** `rm`, `dd`, `mkfs*`, `shred`, `chown`,
-   `chmod`, `kill`, `mv`, `truncate` bir düzeltme sonucu olarak düzenleme
-   satırına yazılmaz. Gerekçe basit: tamponda duran `rm -rf` bir tuş
-   uzaklıktadır.
+Düz Levenshtein'de komşu iki harfin yer değiştirmesi **iki** adım sayılır.
+Oysa en sık daktilo hatası tam olarak budur. Yer değiştirmeyi tek adım sayan
+ölçü, eşiği büyütmek zorunda kalmadan bu hataları yakalıyor. Bu kapta ölçülen
+sonuçlar:
+
+| Yazılan | Öneri | Uzaklık |
+|---|---|---|
+| `celar` | `clear` | 1 |
+| `mkae` | `make` | 1 |
+| `gerp` | `grep` | 1 |
+| `exprot` | `export` | 1 |
+| `systemclt` | `systemctl` | 1 |
+| `pyhton` | `python3` | 2 |
+
+### Üç sınır ve hepsinin ölçülmüş sebebi
+
+| Sınır | Değer | Sebep |
+|---|---|---|
+| En kısa baş | 3 harf | `a` sözcüğünün PATH'te 1 uzaklıkta onlarca karşılığı var. Sınır olmasa `a && b` satırı `w && b` önerisi alırdı |
+| En uzun baş | 24 harf | DP tablosu sabit boyutlu; değişken uzunluklu dizi yasak |
+| Eşik | ≤ 4 harf için 1, üstü için 2 | Kısa sözcükte 2 adım çok geniş: tek harfi ortak olan her şeyi aday yapıyor |
+
+### İki katı kural
+
+**1. Düzeltme yalnızca satır kabuk şeklindeyse denenir**, yani **hiçbir şekil
+vetosu tetiklenmemişse.** Bu, planda "sözcük sayısı ≤ 3" diye yazılmıştı;
+uygulamada veto kontrolü bunun yerini aldı çünkü daha doğru ölçüyor.
+
+Gerekçe ölçüldü: `dun` sözcüğünün `du` komutuna uzaklığı **1**. Bu kural
+olmasa `dun degisen dosyalari goster` isteği disk kullanımı komutu sanılırdı.
+Satırda dört çıplak kelime olduğu için V3 tetikleniyor ve düzeltme hiç
+denenmiyor.
+
+Aynı kural `sil eski loglari` satırını da korur — ama farklı yolla: o satırda
+veto tetiklenmiyor, düzeltme deneniyor ve **`sil` için aday bulunamıyor**
+(ölçüldü). Satır bu yüzden sözcük sayısı kuralına düşüp niyet oluyor.
+
+**2. Geri dönüşü olmayan komutlar önerilir ama tampona KONULMAZ.**
+
+Bu ayrım kritik ve planda yanlış yazılmıştı ("asla önerilmez"). Öneri
+*yazılır* — kullanıcı `chmdo` yazdığında `chmod` demek istediğini bilmeli.
+Yazılmayan şey öneriyi **bir sonraki promptun düzenleme tamponuna** koymaktır:
+tampona konan öneri tek Enter'la koşar, ve `rn -rf .` için `rm -rf .`
+hazırlamak refleks bir tuşla geri alınamayan silme demek.
+
+Liste kasten kısa, yalnız geri alınamayan işlere bakıyor: dosya silen
+(`rm`, `rmdir`, `shred`), üzerine yazan (`dd`, `truncate`, `mkfs*`, `mkswap`,
+`fdisk`, `parted`), izin ve sahiplik değiştiren (`chmod`, `chown`, `chgrp`),
+süreç öldüren (`kill`, `killall`, `pkill`), taşıyan (`mv`), makineyi kapatan
+(`reboot`, `shutdown`, `halt`, `poweroff`) ve kullanıcı silen (`userdel`,
+`groupdel`).
+
+Bu kuralın testi pty üzerinden koşuyor ve mutasyonla doğrulandı: koruma
+kaldırıldığında "riskli öneri tampona KONULMADI" vakası patlıyor.
+
+### Öneri kabul edilmediğinde
+
+Hiçbir şey koşmadığı için çıkış kodu **127** — bash'in "command not found"
+cevabı. Öneri yazılmış olması bunu değiştirmiyor.
 
 ## Bilinen tuzaklar
 
