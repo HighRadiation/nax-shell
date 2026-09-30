@@ -88,9 +88,20 @@ nax ~/projeler $ echo $?
 127
 ```
 
-Boru hattı ve yönlendirme ayrıştırılıyor ve genişletiliyor ama henüz
-çalıştırılmıyor; ikisi de anlaşılır bir mesaj veriyor. Yerleşik komutlar da
-henüz yok. İkisi sıradaki iki adım; ardından AI hattı geliyor.
+**Borular ve yönlendirmeler de çalışıyor:**
+
+```
+nax ~/projeler $ printf "c\na\nb\n" | sort | head -2 | tr "\n" ","
+a,b,
+nax ~/projeler $ wc -l < girdi.txt > sayim.txt
+nax ~/projeler $ true | false
+nax ~/projeler $ echo $?
+1
+```
+
+Yerleşik komutlar (`cd`, `export`, `unset`, `pwd`…) ve `<<` yönlendirmesi
+henüz yok; ikisi de anlaşılır bir mesaj veriyor. Sıradaki adım yerleşikler,
+ardından AI hattı geliyor.
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 

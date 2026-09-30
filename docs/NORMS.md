@@ -22,9 +22,11 @@ dosyada yaşadığı belli olur:
 | `field_` | genişletme sonucu alanlar |
 | `xcmd_` | genişletilmiş komut |
 | `ex_` | çalıştırıcı |
+| `redir_` | yönlendirme uygulama |
 | `sig_` | sinyaller |
 | `exp_` | genişletme |
 | `ex_` | çalıştırıcı |
+| `redir_` | yönlendirme uygulama |
 | `bi_` | yerleşik komutlar |
 | `ses_` | oturum bağlamı |
 | `red_` | sır temizleme |

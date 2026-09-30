@@ -175,7 +175,9 @@ sessiz yanlış cevap hatadan kötüdür.
 | Sinyalle ölüm | `128 + sinyal` |
 | Komut bulunamadı | 127 |
 | Çalıştırılamadı (dizin, yetki yok) | 126 |
+| Yönlendirme hatası | 1 |
 | Boş komut | 0, hiçbir şey çalışmaz |
+| **Boru hattı** | **son** komutun kodu |
 
 Son satır gerçek bir durum: `$YOKBOYLE` tek başına yazıldığında genişletme
 hiç alan üretmez, yani çalıştırılacak bir şey yoktur.
@@ -189,6 +191,45 @@ sayılır; hiçbiri bulunmazsa 127. Ölçülen sonuç: `PATH` içinde aynı adda
 **`PATH` önbelleği yok.** Çözümleme komut başına bir kez oluyor ve altı dizini
 taramak mikrosaniyeler sürüyor. Önbellek sınıflandırıcı için anlamlı olacak —
 orada karar milisaniyenin altında kalmak zorunda — ve o zaman eklenecek.
+
+**Boru hattının kodu son komuttan gelir** — `false | true` 0, `true | false`
+1 döner. Ama **tüm** çocuklar beklenmek zorunda, yoksa zombi kalır.
+
+**Çözümleme çocukta yapılır.** Her aşama kendi komutunu çözer. Boru hattında
+zorunlu; tek komutta da aynı yolu kullanmak kod yolunu tekilleştiriyor.
+Gözlenebilir davranış aynı: bulunamayan komut yine 127 döner.
+
+### Boru uçlarının kapatılması
+
+İki ayrı kapatma var ve **ikisi ayrı hata** — ilk yazımda karıştırılmıştı,
+mutasyon denemesi ortaya çıkardı.
+
+**Çocukta `spare_fd`:** bir aşama, kendi çıkış borusunun *okuma* ucunu da
+devralır. Kapatılmazsa o tanımlayıcı çocuğa, oradan da `execve` ile çalışan
+programa **sızar**. Ölçüldü: kapatılmadığında ilk aşama `/proc/self/fd` içinde
+`0,1,2` dışında fazladan bir giriş görüyor, bash'te görmüyor. Bu bir asılma
+sebebi *değil*.
+
+**Ana süreçte `fds[1]`:** asılmaya yol açan şey budur. Boru EOF'u *yazma*
+uçları kapandığında görülür; ana süreç yazma ucunu kapatmazsa yazan taraf hiç
+kapanmış sayılmaz ve okuyan aşama sonsuza kadar bekler. Ölçüldü: bu kapatma
+kaldırıldığında iki aşamalı bir hat bile asılıyor.
+
+Ölçülen sonuç: 400 boru hattı üst üste koştuktan sonra kabuğun açık
+tanımlayıcı sayısı **3** (yalnızca 0, 1, 2) ve hiç zombi yok.
+
+### Yönlendirmeler borulardan sonra uygulanır
+
+Çakışma halinde yönlendirme kazanmak zorunda: `ls > f | wc` çıktısını dosyaya
+yazar, `wc`'ye hiçbir şey gitmez. Sıra bu yüzden önemli, ve bash de böyle
+davranıyor (ölçüldü).
+
+Yönlendirmeler **çocukta** uygulanır. Ana süreçte `dup2` yapmak kabuğun kendi
+girdi ve çıktısını bozar ve sonra geri yüklemek gerekir; çocukta yapmak o
+soruyu tamamen ortadan kaldırıyor.
+
+Yönlendirme listesinin kendi sırası da korunur: `> a > b` iki dosyayı da açar,
+çıktıyı `b`'ye bağlar, `a` boş olarak oluşur.
 
 **Çocukta sinyaller sıfırlanır, ve bu zorunlu.** `execve` *yakalanan* sinyalleri
 varsayılana döndürür ama *yok sayılan* sinyalleri yok sayılı bırakır. Kabuk
@@ -258,7 +299,8 @@ src/
   exp_dump.c     genişletilmiş hattı kanonik metne çevirir (test ve ayıklama)
   exec.h         çalıştırma tarafının tipleri ve bildirimleri
   path.c         komut adını çalıştırılabilir bir yola çözer
-  exec.c         fork/execve/waitpid, çıkış kodu semantiği
+  exec.c         boru hattı kurulumu, fork/execve/waitpid, çıkış kodları
+  redir.c        yönlendirmeleri çocuk süreçte uygular
 test/
   run.sh         tek test giriş noktası; make test ve make check bunu çağırır
   test.h         test koşucularının paylaştığı tipler ve iskele
