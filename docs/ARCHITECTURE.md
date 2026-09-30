@@ -178,6 +178,8 @@ sessiz yanlış cevap hatadan kötüdür.
 | Yönlendirme hatası | 1 |
 | Boş komut | 0, hiçbir şey çalışmaz |
 | **Boru hattı** | **son** komutun kodu |
+| `exit` sayısal olmayan argüman | 2, ve kabuk **çıkar** |
+| `exit` fazla argüman | 1, ve kabuk **çıkmaz** |
 
 Son satır gerçek bir durum: `$YOKBOYLE` tek başına yazıldığında genişletme
 hiç alan üretmez, yani çalıştırılacak bir şey yoktur.
@@ -217,6 +219,30 @@ kaldırıldığında iki aşamalı bir hat bile asılıyor.
 
 Ölçülen sonuç: 400 boru hattı üst üste koştuktan sonra kabuğun açık
 tanımlayıcı sayısı **3** (yalnızca 0, 1, 2) ve hiç zombi yok.
+
+### Yerleşikler nerede koşar
+
+| Durum | Nerede | Neden |
+|---|---|---|
+| Tek başına yerleşik | **ana süreç** | `cd`, `export`, `unset`, `exit` kabuğun durumunu değiştirir; çocukta koşarsa değişiklik çocukla birlikte yok olur |
+| Boru hattı içindeki yerleşik | çocuk | Standart davranış; bash'te de `echo x \| cd /tmp` kabuğun dizinini değiştirmiyor (ölçüldü) |
+
+Ana süreçte koşmanın bedeli var: yönlendirme orada `0` ve `1`'i değiştirdiği
+için **önce kaydedilip sonra geri yüklenmek** zorunda. Çocukta bu sorun yoktu
+— çocuk zaten yok oluyordu.
+
+Geri yüklemeden **önce `fflush`** zorunlu. Yerleşiğin tamponda bekleyen
+çıktısı boşaltılmazsa, tanımlayıcılar geri yüklendikten sonra yanlış yere
+yazılır: `pwd > dosya` çıktısını terminale basardı.
+
+Yerleşik olup olmadığına `argv[0]` **genişletildikten sonra** bakılır, böylece
+`CMD=cd` iken `$CMD /tmp` de çalışır; bash da böyle davranıyor.
+
+**`env` yerleşik değil.** Plan listesinde vardı ama yerleşik yazmak bizi
+bash'ten *uzaklaştırırdı*: `/usr/bin/env` zaten PATH'te ve ortamı birebir aynı
+basıyor, çünkü bu kabuk kendi değişken deposunu tutmuyor, doğrudan süreç
+ortamını kullanıyor. Yerleşik yapmanın tek sonucu `env a b` gibi
+kullanımlarda bash'ten farklı davranmak olurdu.
 
 ### Yönlendirmeler borulardan sonra uygulanır
 
@@ -302,8 +328,12 @@ src/
   exec/            çalıştırma
     exec.h         çözümleme sonucu, aşama bağlantıları, bildirimler
     path.c         komut adını çalıştırılabilir bir yola çözer
-    exec.c         boru hattı kurulumu, fork/execve/waitpid
-    redir.c        yönlendirmeleri çocuk süreçte uygular
+    exec.c         ANA süreç tarafı: kim çatallanır, kim beklenir
+    stage.c        ÇOCUK tarafı: boru uçları, yönlendirme, komut
+    redir.c        yönlendirmeleri uygular
+    builtin.c      yerleşik tablosu; echo, pwd, exit
+    builtin_env.c  export, unset
+    builtin_cd.c   cd
   (ai/             sonraki aşamada: sınıflandırıcı, yardımcı süreç istemcisi)
 test/
   test.h           test koşucularının paylaştığı tipler ve iskele

@@ -99,9 +99,19 @@ nax ~/projeler $ echo $?
 1
 ```
 
-Yerleşik komutlar (`cd`, `export`, `unset`, `pwd`…) ve `<<` yönlendirmesi
-henüz yok; ikisi de anlaşılır bir mesaj veriyor. Sıradaki adım yerleşikler,
-ardından AI hattı geliyor.
+**Yerleşikler de çalışıyor** — `cd`, `echo`, `pwd`, `export`, `unset`, `exit`:
+
+```
+nax ~ $ cd projeler
+nax ~/projeler $ export AD=dunya
+nax ~/projeler $ echo -n "merhaba $AD"
+merhaba dunya
+```
+
+`cd` ve `export` ana süreçte koşar, yoksa değişiklik çocukla birlikte yok
+olurdu. `<<` yönlendirmesi henüz yok, anlaşılır bir mesaj veriyor.
+
+Sıradaki: AI hattı.
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 
