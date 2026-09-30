@@ -19,3 +19,6 @@ __pycache__/
 # Duzenleyici / isletim sistemi artiklari
 *.swp
 .DS_Store
+
+# Birim test ikilileri
+test/bin/

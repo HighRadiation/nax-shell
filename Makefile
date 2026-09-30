@@ -42,6 +42,16 @@ ASAN_DEP    = $(ASAN_OBJ:.o=.d)
 
 READLINE_H  = /usr/include/readline/readline.h
 
+# Birim testleri kabuk ikilisini hic baslatmaz, dogrudan modulleri cagirir.
+# Bu yuzden main.c disindaki nesneler ayri bir kume olarak tutulur.
+LIB_SRC     = $(filter-out src/main.c,$(SRC))
+LIB_OBJ     = $(patsubst src/%.c,obj/%.o,$(LIB_SRC))
+LIB_ASAN    = $(patsubst src/%.c,obj-asan/%.o,$(LIB_SRC))
+
+UNIT_SRC    = $(wildcard test/test_*.c)
+UNIT_BIN    = $(patsubst test/test_%.c,test/bin/test_%,$(UNIT_SRC))
+UNIT_BASAN  = $(patsubst test/test_%.c,test/bin/test_%.asan,$(UNIT_SRC))
+
 .PHONY: all asan test check clean readline-check
 
 # Varsayilan hedef: kabugun normal ikilisini uretir.
@@ -79,17 +89,28 @@ obj-asan/%.o: src/%.c | obj-asan
 obj-asan:
 	@mkdir -p obj-asan
 
-# Test betigini normal ikili ile kosar.
-test: all
-	@./test/run.sh
+test/bin:
+	@mkdir -p test/bin
+
+test/bin/test_%: test/test_%.c $(LIB_OBJ) | test/bin
+	@$(CC) $(CFLAGS) $< $(LIB_OBJ) $(LDLIBS) -o $@
+	@printf '  %-9s %s\n' 'link' '$@'
+
+test/bin/test_%.asan: test/test_%.c $(LIB_ASAN) | test/bin
+	@$(CC) $(CSTD) $(WARN) $(ASAN_FLAGS) -Isrc $< $(LIB_ASAN) $(LDLIBS) -o $@
+	@printf '  %-9s %s\n' 'link' '$@'
+
+# Testleri normal ikili ile kosar.
+test: all $(UNIT_BIN)
+	@NAX_UNITS="$(UNIT_BIN)" ./test/run.sh
 
 # Testleri once normal, sonra denetleyicili ikili ile kosar.
-check: test asan
-	@NAX_BIN=./$(ASAN_NAME) ./test/run.sh
+check: test asan $(UNIT_BASAN)
+	@NAX_BIN=./$(ASAN_NAME) NAX_UNITS="$(UNIT_BASAN)" ./test/run.sh
 
 clean:
-	@rm -rf obj obj-asan $(NAME) $(ASAN_NAME)
-	@printf '  %-9s %s\n' 'clean' 'obj obj-asan $(NAME) $(ASAN_NAME)'
+	@rm -rf obj obj-asan test/bin test/__pycache__ $(NAME) $(ASAN_NAME)
+	@printf '  %-9s %s\n' 'clean' 'obj obj-asan test/bin $(NAME) $(ASAN_NAME)'
 
 -include $(DEP)
 -include $(ASAN_DEP)

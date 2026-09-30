@@ -81,6 +81,16 @@ if [ ! -x "$BIN" ]; then
 	exit 1
 fi
 
+# Birim testleri: tablo tabanli, kabuk ikilisini hic baslatmaz.
+# Makefile bunlari NAX_UNITS icinde verir; elle kosuldugunda bos olabilir.
+UNIT_RC=0
+for unit in ${NAX_UNITS:-}; do
+	if [ -x "$unit" ]; then
+		"$unit" || UNIT_RC=1
+		printf "\n"
+	fi
+done
+
 printf "nax testleri (%s)\n" "$BIN"
 
 run_case   "satiri geri yazar"          $'merhaba\n'            "merhaba"
@@ -104,4 +114,4 @@ else
 	printf "\n  ${S}atlandi${N} pty testleri (python3 yok)\n"
 fi
 
-[ "$FAIL" -eq 0 ] && [ "$PTY_RC" -eq 0 ] || exit 1
+[ "$FAIL" -eq 0 ] && [ "$PTY_RC" -eq 0 ] && [ "$UNIT_RC" -eq 0 ] || exit 1
