@@ -1,0 +1,78 @@
+# Ayristirici vaka tablosu.
+#
+# Bicim:  girdi <SEKME> beklenen
+# Beklenen "!" ile baslarsa o hata mesaji beklenir.
+#
+# Kanonik cikti:
+#   sozcuk       [metin]
+#   yonlendirme  <[dosya] >[dosya] >>[dosya] <<[sinirlayici]
+#   komut        (cmd [w1] [w2] >[dosya])
+#   boru hatti   (pipe (cmd ...) (cmd ...))
+#
+# Sozcukler koseli parantez icinde, cunku bir sozcuk bosluk icerebilir:
+# cat "a b" iki degil BIR argumandir.
+
+
+# --- sade komutlar ---
+echo hello	(cmd [echo] [hello])
+ls	(cmd [ls])
+ls -la /tmp	(cmd [ls] [-la] [/tmp])
+
+# --- tirnakli sozcuk TEK argumandir ---
+cat "a b"	(cmd [cat] [a b])
+echo "" x	(cmd [echo] [] [x])
+echo 'a'"b"c	(cmd [echo] [abc])
+echo "a | b"	(cmd [echo] [a | b])
+
+# --- boru hatti ---
+ls | wc	(pipe (cmd [ls]) (cmd [wc]))
+a | b | c	(pipe (cmd [a]) (cmd [b]) (cmd [c]))
+ls -la | grep foo | wc -l	(pipe (cmd [ls] [-la]) (cmd [grep] [foo]) (cmd [wc] [-l]))
+ls|wc	(pipe (cmd [ls]) (cmd [wc]))
+
+# --- yonlendirmeler ---
+cat < in	(cmd [cat] <[in])
+echo a > out	(cmd [echo] [a] >[out])
+echo a >> log	(cmd [echo] [a] >>[log])
+cat << EOF	(cmd [cat] <<[EOF])
+cat < in > out	(cmd [cat] <[in] >[out])
+echo a>b	(cmd [echo] [a] >[b])
+
+# --- yonlendirme sirasi korunur ---
+echo > a > b	(cmd [echo] >[a] >[b])
+cat < a < b	(cmd [cat] <[a] <[b])
+
+# --- yonlendirme komutun basinda ya da ortasinda olabilir ---
+echo a > out b	(cmd [echo] [a] [b] >[out])
+> out echo a	(cmd [echo] [a] >[out])
+< in cat	(cmd [cat] <[in])
+
+# --- argumansiz ama yonlendirmeli komut gecerlidir ---
+> out	(cmd >[out])
+< in	(cmd <[in])
+
+# --- boru ve yonlendirme birlikte ---
+cat < in | wc -l > out	(pipe (cmd [cat] <[in]) (cmd [wc] [-l] >[out]))
+
+# --- boru hatasi ---
+| ls	!boru isaretinin iki yaninda da komut olmali
+ls |	!boru isaretinin iki yaninda da komut olmali
+ls | | wc	!boru isaretinin iki yaninda da komut olmali
+|	!boru isaretinin iki yaninda da komut olmali
+
+# --- yonlendirme hatasi ---
+cat >	!yonlendirmeden sonra dosya adi bekleniyor
+cat > |	!yonlendirmeden sonra dosya adi bekleniyor
+cat < > out	!yonlendirmeden sonra dosya adi bekleniyor
+cat <<	!yonlendirmeden sonra dosya adi bekleniyor
+
+# --- bu asamada desteklenmeyen operatorler anlasilir hata verir ---
+a ; b	!bu asamada desteklenmeyen operator
+a && b	!bu asamada desteklenmeyen operator
+a || b	!bu asamada desteklenmeyen operator
+sleep 1 &	!bu asamada desteklenmeyen operator
+( a )	!bu asamada desteklenmeyen operator
+
+# --- bos girdi agac uretmez ---
+	
+      	
