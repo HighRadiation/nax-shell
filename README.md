@@ -73,12 +73,18 @@ denetleyicilerle yapılır. Sızıntı sıfır olmadan hiçbir aşama bitmiş sa
 
 Çekirdek kabuk kuruluyor. Şu an çalışan: okuma döngüsü, renkli prompt, kalıcı
 geçmiş, `exit`, Ctrl-D ve sinyaller — Ctrl-C yarım satırı atıp temiz bir prompt
-verir, Ctrl-\ yok sayılır. **Sözcük ayırıcı tamam**: tırnaklar, kaçış
-karakteri, operatörler ve kapanmamış tırnak hataları, 44 vakalık bir tabloyla
-doğrulanmış halde.
+verir, Ctrl-\ yok sayılır. **Sözcük ayırıcı ve ayrıştırıcı tamam**: tırnaklar,
+kaçış karakteri, boru hattı, yönlendirmeler ve sözdizimi hataları, 84 vakalık
+tablolarla doğrulanmış halde. Şu an bir satır yazdığında kurulan ağacın şekli
+basılıyor:
 
-Sıradaki: ayrıştırıcı, genişletme, çalıştırıcı. AI hattı onların üstüne
-geliyor.
+```
+nax ~/projeler $ ls -la | grep foo | wc -l
+(pipe (cmd [ls] [-la]) (cmd [grep] [foo]) (cmd [wc] [-l]))
+```
+
+Sıradaki: genişletme (`$VAR`, `$?`, tırnak kaldırma) ve çalıştırıcı. Ağacın
+yerine gerçek komutlar o zaman koşacak. AI hattı onların üstüne geliyor.
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 

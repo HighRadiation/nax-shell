@@ -75,6 +75,29 @@ yoksa ya da zaman aşımı olursa kabuk tek satır uyarı basar ve düz bir kabu
 olarak tam işlevle çalışmaya devam eder. Hiçbir AI arızası bir komutu
 engellemez.
 
+## Dilbilgisi
+
+Şu an ayrıştırılan dil:
+
+```
+boru_hattı  : komut ( '|' komut )*
+komut       : ( sözcük | yönlendirme )+
+yönlendirme : ( '<' | '>' | '>>' | '<<' ) sözcük
+```
+
+Sözcük ayırıcı `;`, `&&`, `||`, `&`, `(`, `)` operatörlerini de tanıyor ama
+ayrıştırıcı henüz kabul etmiyor; anlaşılır bir hata verir. Onları şimdi
+tanımak, sözcük ayırıcıyı ileride ikinci kez açmayı önlüyor.
+
+Bir komut ya en az bir argüman ya da en az bir yönlendirme içermek zorunda.
+Argümansız ama yönlendirmeli komut **geçerlidir**: `> dosya`, dosyayı
+oluşturup hiçbir şey çalıştırmamak demektir. İkisi de boş olan komut ise
+sözdizimi hatasıdır — `ls | | wc` böyle yakalanır.
+
+Yönlendirme komutun başında, ortasında ya da sonunda olabilir; `> out echo a`
+ile `echo a > out` aynı ağacı üretir. Argümanların ve yönlendirmelerin kendi
+içindeki **sırası korunur**, çünkü `> a > b` ile `> b > a` aynı şey değildir.
+
 ## Tırnak kipi: lexer ile genişletme arasındaki sözleşme
 
 Sözcük ayırıcı tırnakları **silmez**, nerede başladıklarını kaydeder. Bir
@@ -110,7 +133,20 @@ serbest bırakır.**
 | token listesi | `lexer.c` (`lex_split`) | çağıran (`lex_free`) |
 | sözcük parçaları | `lexer.c` | `lex_free`, token ile birlikte |
 | tampon metni | `buf.c` (`buf_take`) | çağıran; devredilmeyen tampon `buf_free` |
-| kanonik metin | `lex_dump.c` (`lex_dump`) | çağıran |
+| kanonik metin | `lex_dump.c`, `ast_dump.c` | çağıran |
+| boru hattı ağacı | `parser.c` (`ast_build`) | çağıran (`ast_free`) |
+
+**Ağaç token'ları ödünç alır.** Ağaç düğümleri yalnızca kendi struct'larının
+sahibidir; içerdikleri sözcük token'ları sözcük ayırıcının listesinde kalır.
+Bunun iki sonucu var:
+
+1. Çağıran **ikisini de** bırakmak zorunda: `ast_free` ve `lex_free`.
+2. Token listesi ağaçtan önce bırakılamaz.
+
+Alternatifi ağacın token listesini devralmasıydı. O durumda ayrıştırma yarıda
+hata verdiğinde token'ların bir kısmı ağaçta, bir kısmı listede kalır ve kimin
+neyi bırakacağı her hata yolunda yeniden düşünülmek zorunda kalırdı. Ödünç
+alma bu soruyu tamamen ortadan kaldırıyor — sıra bile önemli değil.
 
 Yeni bir tip eklendiğinde bu tabloya bir satır eklenir ve serbest bırakma
 fonksiyonu tipin yaşadığı modülde durur (`tok_free` sözcük ayırıcıda,
@@ -129,9 +165,13 @@ src/
   buf.c          büyüyebilen metin tamponu (üç modül birlikte kullanır)
   lexer.c        satırı token listesine çevirir
   lex_dump.c     token listesini kanonik metne çevirir (test ve ayıklama)
+  parser.c       token listesini boru hattı ağacına çevirir
+  ast_dump.c     ağacı kanonik metne çevirir (test ve ayıklama)
 test/
   run.sh         tek test giriş noktası; make test ve make check bunu çağırır
+  test.h         test koşucularının paylaştığı tipler
   test_lexer.c   tablo tabanlı sözcük ayırıcı testleri
+  test_parser.c  tablo tabanlı ayrıştırıcı testleri
   cases/*.tsv    vaka tabloları; yeni vaka için yeniden derleme gerekmez
   pty_drive.py   sahte terminal üzerinden etkileşimli yol testleri
 naxd/            AI yardımcı süreci (sonraki aşamada)
