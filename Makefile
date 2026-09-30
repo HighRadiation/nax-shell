@@ -48,6 +48,7 @@ LIB_SRC     = $(filter-out src/main.c,$(SRC))
 LIB_OBJ     = $(patsubst src/%.c,obj/%.o,$(LIB_SRC))
 LIB_ASAN    = $(patsubst src/%.c,obj-asan/%.o,$(LIB_SRC))
 
+UNIT_LIB    = test/harness.c
 UNIT_SRC    = $(wildcard test/test_*.c)
 UNIT_BIN    = $(patsubst test/test_%.c,test/bin/test_%,$(UNIT_SRC))
 UNIT_BASAN  = $(patsubst test/test_%.c,test/bin/test_%.asan,$(UNIT_SRC))
@@ -92,12 +93,12 @@ obj-asan:
 test/bin:
 	@mkdir -p test/bin
 
-test/bin/test_%: test/test_%.c $(LIB_OBJ) | test/bin
-	@$(CC) $(CFLAGS) $< $(LIB_OBJ) $(LDLIBS) -o $@
+test/bin/test_%: test/test_%.c $(UNIT_LIB) $(LIB_OBJ) | test/bin
+	@$(CC) $(CFLAGS) $< $(UNIT_LIB) $(LIB_OBJ) $(LDLIBS) -o $@
 	@printf '  %-9s %s\n' 'link' '$@'
 
-test/bin/test_%.asan: test/test_%.c $(LIB_ASAN) | test/bin
-	@$(CC) $(CSTD) $(WARN) $(ASAN_FLAGS) -Isrc $< $(LIB_ASAN) $(LDLIBS) -o $@
+test/bin/test_%.asan: test/test_%.c $(UNIT_LIB) $(LIB_ASAN) | test/bin
+	@$(CC) $(CSTD) $(WARN) $(ASAN_FLAGS) -Isrc $< $(UNIT_LIB) $(LIB_ASAN) $(LDLIBS) -o $@
 	@printf '  %-9s %s\n' 'link' '$@'
 
 # Testleri normal ikili ile kosar.
