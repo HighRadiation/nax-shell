@@ -12,6 +12,7 @@ dosyada yaşadığı belli olur:
 
 | Önek | Modül |
 |---|---|
+| `buf_` | büyüyebilen metin tamponu |
 | `ln_` | satır okuma, prompt, geçmiş |
 | `cls_` | sınıflandırıcı |
 | `fix_` | yazım düzeltme |
@@ -85,9 +86,26 @@ make asan     # denetleyicili ikiliyi uretir
 make check    # testleri hem normal hem denetleyicili ikilide kosar
 ```
 
-`make check` iki test grubunu da koşar: boru ile beslenenler etkileşimsiz
-yolu, sahte terminal testleri etkileşimli yolu kapsar. Yalnızca birini koşmak
-kodun yarısını ölçmeden bırakır.
+`make check` üç test grubunu da koşar: birim testleri modülleri doğrudan
+çağırır, boru ile beslenenler etkileşimsiz yolu, sahte terminal testleri
+etkileşimli yolu kapsar. Yalnızca birini koşmak kodun bir kısmını ölçmeden
+bırakır.
+
+## Yeşil test kanıt değildir
+
+Bir test grubu ilk koşuda yeşil geldiğinde soru şu olur: gerçekten bir şey
+ölçüyor mu? Cevabı **mutasyon denemesiyle** alınır — koda kasıtlı bir hata
+sokulur ve testin onu yakaladığı görülür:
+
+```
+# ornek: >> operatorunu tanimayan bir lexer testleri patlatmali
+```
+
+Sözcük ayırıcıda altı mutasyon denendi (operatör tanımama, tırnağı yanlış
+kiple işaretleme, kapanmamış tırnağı sessizce geçme, kaçış karakterinin kip
+düşürmemesi, boş tırnağın parça üretmemesi, operatörün sözcüğü bitirmemesi) ve
+her biri 1-7 vaka patlattı. Yeni bir test grubu yazıldığında aynı deneme
+yapılır; yakalamayan bir test grubu yoktur sayılır.
 
 ## Uyarılar
 

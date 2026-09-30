@@ -75,6 +75,28 @@ yoksa ya da zaman aşımı olursa kabuk tek satır uyarı basar ve düz bir kabu
 olarak tam işlevle çalışmaya devam eder. Hiçbir AI arızası bir komutu
 engellemez.
 
+## Tırnak kipi: lexer ile genişletme arasındaki sözleşme
+
+Sözcük ayırıcı tırnakları **silmez**, nerede başladıklarını kaydeder. Bir
+sözcük, her biri tek bir tırnak kipine sahip **parçaların** zinciri olur:
+
+| Kip | Anlamı |
+|---|---|
+| `none` | genişlet ve alan ayırmaya tabi tut |
+| `dq` | genişlet ama alan ayırma |
+| `sq` | hiçbir şey yapma, harfi harfine al |
+
+Kaçış karakteri bir karakteri `sq` kipine **düşürür**. Böylece `\$HOME` ile
+`'$HOME'` aynı sonucu verir ve genişletme aşaması kaçış kontrolü yapmak zorunda
+kalmaz. Aynı mantıkla çift tırnak içindeki `\$` o karakteri kendi parçasına
+ayırıp `sq` yapar.
+
+Bu modelin kazancı: tırnak bilgisi **tek bir yerde** üretilir ve genişletme
+aşaması tırnakları yeniden ayrıştırmak zorunda kalmaz; ne yapacağını parçanın
+kipinden okur. Boş dize sorununu da çözer — `""` gerçek bir boş argümandır
+(tek parça, `dq`, boş metin), ama genişlemeden gelen boş değer argüman
+üretmez.
+
 ## Bellek sahipliği
 
 Sızıntı disiplininin tek kuralı: **her modül kendi ürettiği tipi kendisi
@@ -85,6 +107,10 @@ serbest bırakır.**
 | girdi satırı | `line.c` (`ln_read`) | çağıran (`main.c` döngüsü) |
 | geçmiş yolu | `line.c` (`ln_hist_path`) | `main.c` (`shell_free`) |
 | prompt metni | `line.c` (`build_prompt`) | `line.c`, okuma biter biter |
+| token listesi | `lexer.c` (`lex_split`) | çağıran (`lex_free`) |
+| sözcük parçaları | `lexer.c` | `lex_free`, token ile birlikte |
+| tampon metni | `buf.c` (`buf_take`) | çağıran; devredilmeyen tampon `buf_free` |
+| kanonik metin | `lex_dump.c` (`lex_dump`) | çağıran |
 
 Yeni bir tip eklendiğinde bu tabloya bir satır eklenir ve serbest bırakma
 fonksiyonu tipin yaşadığı modülde durur (`tok_free` sözcük ayırıcıda,
@@ -95,15 +121,21 @@ fonksiyonu tipin yaşadığı modülde durur (`tok_free` sözcük ayırıcıda,
 
 ```
 src/
-  nax.h        ortak tipler ve paylaşılan bildirimler
-  main.c       giriş noktası, okuma döngüsü, kurulum ve kapanış
-  line.c       satır okuma, prompt, geçmiş
-  signal.c     etkileşimli sinyal davranışı (Ctrl-C, Ctrl-\)
+  nax.h          ortak tipler ve paylaşılan bildirimler
+  parse.h        dil tarafının tipleri: tırnak kipi, parça, token
+  main.c         giriş noktası, okuma döngüsü, kurulum ve kapanış
+  line.c         satır okuma, prompt, geçmiş
+  signal.c       etkileşimli sinyal davranışı (Ctrl-C, Ctrl-\)
+  buf.c          büyüyebilen metin tamponu (üç modül birlikte kullanır)
+  lexer.c        satırı token listesine çevirir
+  lex_dump.c     token listesini kanonik metne çevirir (test ve ayıklama)
 test/
-  run.sh       tek test giriş noktası; make test ve make check bunu çağırır
-  pty_drive.py sahte terminal üzerinden etkileşimli yol testleri
-naxd/          AI yardımcı süreci (sonraki aşamada)
-docs/          bu dizin
+  run.sh         tek test giriş noktası; make test ve make check bunu çağırır
+  test_lexer.c   tablo tabanlı sözcük ayırıcı testleri
+  cases/*.tsv    vaka tabloları; yeni vaka için yeniden derleme gerekmez
+  pty_drive.py   sahte terminal üzerinden etkileşimli yol testleri
+naxd/            AI yardımcı süreci (sonraki aşamada)
+docs/            bu dizin
 ```
 
 İki test giriş noktası olmasının sebebi, birinin diğerinin göremediği kodu

@@ -20,6 +20,9 @@ listenin geçmişi de okunabilir kalır.
 | 2026-09-30 | Prompt son komutun çıkış kodunu göstermiyor | `src/line.c` (`build_prompt`) | Bu aşamada hiçbir şey çalıştırılmadığı için kod her zaman sıfır; gösterge ölü kod olurdu |
 | 2026-09-30 | Geçmiş dosyası sınırsız büyüyor; `history_truncate_file` çağrısı yok | `src/line.c` (`ln_hist_save`) | Tek satırlık iş ama bu oturumun konusu değil; geçmiş yönetimi sıradaki aşamada zaten elden geçecek |
 | 2026-09-30 | Etkileşimsiz koşu da geçmiş dosyasını yüklüyor ve yazıyor. Görünür zararı yok (aynı içerik geri yazılıyor) ama gereksiz giriş/çıkış, ve iki eşzamanlı oturum birbirini ezebilir | `src/main.c` (`shell_init`, `shell_free`) | Aynı gerekçe: geçmiş yönetimi sıradaki aşamada toplu ele alınacak |
+| 2026-09-30 | Kanonik çıktı biçimi parça metnindeki `+`, `)` ve boşluğu kaçırmıyor; bu karakterleri içeren bir sözcük vakası okunurken belirsiz görünebilir | `src/lex_dump.c` (`dump_word`) | Mevcut 44 vakanın hiçbirinde belirsizlik yok; kaçış eklemek biçimi okunmaz yapardı. Gerçek bir belirsizlik çıkarsa o zaman eklenir |
+| 2026-09-30 | Vaka dosyası satırları 4096 bayttan uzunsa test koşucusu sessizce bölerek okur | `test/test_lexer.c` (`LINE_MAX_LEN`) | En uzun vaka 60 bayt civarında; sınır aşılırsa fark edilir ve o zaman büyütülür |
+| 2026-09-30 | `&&`, `||`, `;`, `&`, `(`, `)` sözcük ayırıcıda tanınıyor ama ayrıştırıcı henüz desteklemeyecek | `src/lexer.c` → `src/parser.c` | Bunları şimdi tanımak lexer'ı ikinci kez açmayı önlüyor; ayrıştırıcı desteği plandaki yerinde gelecek |
 | 2026-09-30 | Sınıflandırıcıda bilinen açık: PATH'te karşılığı olan bir kelimeyle başlayan doğal dil cümlesi komut sanılabilir | `docs/CLASSIFIER.md` şekil vetosu bölümü | Şekil vetoları riski büyük ölçüde kapatıyor; kalan nadir durum için `nax <metin>` kaçış yolu var |
 
 ## Kapandı
