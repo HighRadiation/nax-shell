@@ -1,22 +1,22 @@
 /*
-** signal.c — etkilesimli kabugun sinyal davranisi.
+** signal.c - etkilesimli kabugun sinyal davranisi.
 **
 ** NEDEN AYRI MODUL:
 **   Sinyal yonetimi kabugun en ince kismidir ve tek bir yerde toplanmasi
 **   gerekir. Buradaki her karar olculerek verildi; gerekceleri asagida.
 **
-** OLCULEN TUZAK 1 — readline kabugu olduruyor:
+** OLCULEN TUZAK 1 - readline kabugu olduruyor:
 **   rl_catch_signals varsayilan olarak 1'dir. readline SIGINT'i kendi
 **   yakalar, ekrani temizler ve sinyali yeniden gonderir; varsayilan eylem
 **   sureci oldurur. Yani hicbir sey yapmazsan Ctrl-C kabugu kapatir.
 **
-** OLCULEN TUZAK 2 — bayrak set etmek tek basina YETMEZ:
+** OLCULEN TUZAK 2 - bayrak set etmek tek basina YETMEZ:
 **   rl_catch_signals'i kapatip isleyicide yalnizca bir bayrak set etmek
 **   kabugu olmekten kurtarir ama satiri atmaz: readline EINTR'de NULL
 **   donmez, okumayi iceride yeniden dener ve yarim satiri tamponda tutar.
 **   Olculdu: "yarim satir" + Ctrl-C + "sonrasi" tek satir olarak birlesti.
 **
-** COZUM — rl_event_hook:
+** COZUM - rl_event_hook:
 **   readline girdi beklerken bu kancayi periyodik olarak cagirir ve bu
 **   cagri NORMAL baglamda olur, sinyal baglaminda degil. Tamponu
 **   temizlemek ve rl_done set etmek orada guvenlidir. Sinyal isleyicisi

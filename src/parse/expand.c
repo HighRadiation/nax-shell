@@ -1,5 +1,5 @@
 /*
-** expand.c — sozcukleri son hallerine, yani alanlara cevirir.
+** expand.c - sozcukleri son hallerine, yani alanlara cevirir.
 **
 ** SIRA (basitlestirilmis POSIX sirasi):
 **   1. ~ genisletmesi   yalnizca sozcugun basindaki tirnaksiz parcada

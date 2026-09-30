@@ -1,5 +1,5 @@
 /*
-** redir.c — yonlendirmeleri cocuk surecte uygular.
+** redir.c - yonlendirmeleri cocuk surecte uygular.
 **
 ** NEDEN COCUKTA:
 **   Yonlendirme dup2 ile 0 ve 1 numarali tanimlayicilari degistirmek

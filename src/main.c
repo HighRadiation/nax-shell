@@ -1,5 +1,5 @@
 /*
-** main.c — giris noktasi ve okuma dongusu.
+** main.c - giris noktasi ve okuma dongusu.
 **
 ** NEDEN VAR:
 **   Kabugun omru burada baslar ve biter: durumu kur, satirlari oku, isle,

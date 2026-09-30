@@ -1,5 +1,5 @@
 /*
-** lex_dump.c — token listesini okunabilir kanonik metne cevirir.
+** lex_dump.c - token listesini okunabilir kanonik metne cevirir.
 **
 ** NEDEN AYRI MODUL:
 **   Bu, sozcuk ayirmadan farkli bir is: ayirma girdiyi yapiya cevirir,

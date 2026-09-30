@@ -1,11 +1,11 @@
 /*
-** exec.h — calistirma tarafinin tipleri ve bildirimleri.
+** exec.h - calistirma tarafinin tipleri ve bildirimleri.
 **
 ** NEDEN AYRI BASLIK:
 **   nax.h kabugun ortak cekirdegi, parse.h dilin tarafi. Calistirma
 **   ikisinden de ayri bir is: agaci TUKETIR ve surec yonetir. Bildirimleri
 **   parse.h'a doldurmak o basligin adini yalan yapardi, nax.h'a koymak ise
-**   mumkun degil — nax.h t_cmd'i bilmiyor ve bilmemeli, cunku parse.h
+**   mumkun degil - nax.h t_cmd'i bilmiyor ve bilmemeli, cunku parse.h
 **   nax.h'i dahil ediyor.
 **
 **   Yerlesik komutlar da bu basliga gelecek.
@@ -55,7 +55,7 @@ typedef enum e_resolve
 **
 ** in_fd    : onceki asamanin okuma ucu; yoksa -1
 ** out_fd   : bu asamanin yazma ucu; yoksa -1
-** spare_fd : cocukta KAPATILMASI gereken uc — kendi cikis borusunun okuma
+** spare_fd : cocukta KAPATILMASI gereken uc - kendi cikis borusunun okuma
 **            ucu; yoksa -1
 **
 ** spare_fd neden var: cocuk kendi cikis borusunun OKUMA ucunu da devralir.
@@ -63,7 +63,7 @@ typedef enum e_resolve
 ** sizar. Olculdu: kapatilmadiginda ilk asama /proc/self/fd icinde 0,1,2
 ** disinda fazladan bir giris goruyor, bash'te gormuyor.
 **
-** DIKKAT — bu ASILMA sebebi DEGIL: boru EOF'u YAZMA uclari kapandiginda
+** DIKKAT - bu ASILMA sebebi DEGIL: boru EOF'u YAZMA uclari kapandiginda
 ** gorulur, okuma ucu degil. Asilmaya yol acan sey ANA surecin fds[1]'i
 ** kapatmamasidir; o zaman yazan taraf hic kapanmis sayilmaz ve okuyan
 ** asama sonsuza kadar bekler. Ikisi ayri hata; ilk yazimda karistirilmisti

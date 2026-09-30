@@ -1,5 +1,5 @@
 /*
-** exp_dump.c — genisletilmis boru hattini kanonik metne cevirir.
+** exp_dump.c - genisletilmis boru hattini kanonik metne cevirir.
 **
 ** NEDEN VAR:
 **   ast_dump agacin SEKLINI gosteriyor, burasi son DEGERLERI. Ikisi ayri
@@ -7,7 +7,7 @@
 **   kuruldu, ve genisletme dogru mu calisti.
 **
 ** BICIM:
-**   ast_dump ile ayni — (cmd [alan] [alan] >[dosya]) ve (pipe ...).
+**   ast_dump ile ayni - (cmd [alan] [alan] >[dosya]) ve (pipe ...).
 **   Ayni bicim, farkli icerik: koseli parantezler artik sozcuk degil,
 **   genisletme sonucu olusan ALANLARI tutuyor.
 **

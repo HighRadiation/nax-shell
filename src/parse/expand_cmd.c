@@ -1,5 +1,5 @@
 /*
-** expand_cmd.c — komut duzeyi genisletme.
+** expand_cmd.c - komut duzeyi genisletme.
 **
 ** NEDEN AYRI MODUL:
 **   expand.c bir SOZCUGU alanlara cevirir; burasi bir KOMUTUN tum

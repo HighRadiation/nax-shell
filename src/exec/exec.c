@@ -1,5 +1,5 @@
 /*
-** exec.c — boru hattini kurar ve calistirir.
+** exec.c - boru hattini kurar ve calistirir.
 **
 ** CIKIS KODU SEMANTIGI (bash olculerek dogrulandi):
 **   normal cikis        cocugun kendi kodu

@@ -1,5 +1,5 @@
 /*
-** parse.h — sozcuk ayirma, ayristirma ve genisletme bildirimleri.
+** parse.h - sozcuk ayirma, ayristirma ve genisletme bildirimleri.
 **
 ** NEDEN AYRI BASLIK:
 **   Kabugun dil tarafi (lexer, ayristirici, genisletme) bir arada calisir

@@ -1,5 +1,5 @@
 /*
-** ast_dump.c — boru hatti agacini okunabilir kanonik metne cevirir.
+** ast_dump.c - boru hatti agacini okunabilir kanonik metne cevirir.
 **
 ** NEDEN AYRI MODUL:
 **   Sozcuk ayirmadaki ayrimin aynisi: parser.c girdiyi yapiya cevirir,

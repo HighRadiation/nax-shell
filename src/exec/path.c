@@ -1,5 +1,5 @@
 /*
-** path.c — komut adini calistirilabilir bir yola cozer.
+** path.c - komut adini calistirilabilir bir yola cozer.
 **
 ** IKI AYRI KURAL, cunku bash de boyle davraniyor (olculdu):
 **
@@ -17,7 +17,7 @@
 ** ONBELLEK YOK:
 **   Cozumleme komut basina bir kez oluyor ve alti dizini access() ile
 **   taramak mikrosaniyeler suruyor. PATH onbellegi siniflandirici icin
-**   anlamli olacak — orada karar milisaniyenin altinda kalmak zorunda —
+**   anlamli olacak - orada karar milisaniyenin altinda kalmak zorunda -
 **   ve o zaman eklenecek. Simdi eklemek olculmemis bir iyilestirme olurdu.
 */
 

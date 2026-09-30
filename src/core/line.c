@@ -1,5 +1,5 @@
 /*
-** line.c — satir okuma, prompt ve gecmis.
+** line.c - satir okuma, prompt ve gecmis.
 **
 ** NEDEN AYRI MODUL:
 **   readline'in tum tuhafliklari (renk kaclarinin \001..\002 ile sarilmasi,

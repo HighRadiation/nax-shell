@@ -1,5 +1,5 @@
 /*
-** nax — ortak tipler ve butun modullerin paylastigi bildirimler.
+** nax - ortak tipler ve butun modullerin paylastigi bildirimler.
 **
 ** NEDEN TEK BASLIK:
 **   Her .c dosyasi icin ayri bir .h yazmak bu boyutta dosya sayisini

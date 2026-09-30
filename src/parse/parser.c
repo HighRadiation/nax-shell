@@ -1,5 +1,5 @@
 /*
-** parser.c — token listesini boru hatti agacina cevirir.
+** parser.c - token listesini boru hatti agacina cevirir.
 **
 ** BU ASAMADAKI DILBILGISI:
 **   boru_hatti  : komut ( '|' komut )*
@@ -10,7 +10,7 @@
 **   ama bu asamada ayristirilmiyorlar; anlasilir bir hata verilir. Onlari
 **   simdi tanimak sozcuk ayiriciyi ikinci kez acmayi onluyor.
 **
-** SAHIPLIK KARARI — agac token'lari ODUNC ALIR:
+** SAHIPLIK KARARI - agac token'lari ODUNC ALIR:
 **   Agac dugumleri yalnizca kendi struct'larinin sahibidir; icerdikleri
 **   sozcuk token'lari sozcuk ayiricinin listesinde kalir.
 **

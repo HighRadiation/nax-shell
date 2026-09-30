@@ -29,9 +29,17 @@ ifeq ($(W),1)
 WARN       += -Werror
 endif
 
-CFLAGS      = $(CSTD) $(WARN) $(OPT) -Isrc
+# NEDEN BIRDEN FAZLA -I:
+#   Kaynaklar src/ altinda alan alan klasorlenmis (core, parse, exec). Her
+#   alanin basligi kendi klasorunde duruyor; bu -I listesi sayesinde
+#   dosyalarda "parse.h" yazmak yeterli, yola gerek kalmiyor. Gruplama
+#   okunabilirlik icin, dahil etme satirlarini uzatmak icin degil.
+INC         = -Isrc -Isrc/parse -Isrc/exec
+CFLAGS      = $(CSTD) $(WARN) $(OPT) $(INC)
 
-SRC         = $(wildcard src/*.c)
+# Alt klasorler de taranir; nesne agaci kaynak agacini AYNALAR, boylece
+# ayni adda iki kaynak dosya olsa bile nesneleri carpismaz.
+SRC         = $(wildcard src/*.c src/*/*.c)
 OBJ         = $(patsubst src/%.c,obj/%.o,$(SRC))
 DEP         = $(OBJ:.o=.d)
 
@@ -69,12 +77,10 @@ $(NAME): $(OBJ)
 	@$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
 	@printf '  %-9s %s\n' 'link' '$@'
 
-obj/%.o: src/%.c | obj
+obj/%.o: src/%.c
+	@mkdir -p $(@D)
 	@$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
-	@printf '  %-9s %s\n' 'cc' '$<'
-
-obj:
-	@mkdir -p obj
+	@printf '  %-9s %s\n' 'cc' '$<' 
 
 # Denetleyicili ikili: sizinti ve tanimsiz davranis bu ikilide yakalanir.
 asan: readline-check $(ASAN_NAME)
@@ -83,12 +89,10 @@ $(ASAN_NAME): $(ASAN_OBJ)
 	@$(CC) $(CSTD) $(WARN) $(ASAN_FLAGS) -Isrc $^ $(LDLIBS) -o $@
 	@printf '  %-9s %s\n' 'link' '$@'
 
-obj-asan/%.o: src/%.c | obj-asan
-	@$(CC) $(CSTD) $(WARN) $(ASAN_FLAGS) -Isrc -MMD -MP -c $< -o $@
-	@printf '  %-9s %s\n' 'cc asan' '$<'
-
-obj-asan:
-	@mkdir -p obj-asan
+obj-asan/%.o: src/%.c
+	@mkdir -p $(@D)
+	@$(CC) $(CSTD) $(WARN) $(ASAN_FLAGS) $(INC) -MMD -MP -c $< -o $@
+	@printf '  %-9s %s\n' 'cc asan' '$<' 
 
 test/bin:
 	@mkdir -p test/bin
@@ -98,7 +102,7 @@ test/bin/test_%: test/test_%.c $(UNIT_LIB) $(LIB_OBJ) | test/bin
 	@printf '  %-9s %s\n' 'link' '$@'
 
 test/bin/test_%.asan: test/test_%.c $(UNIT_LIB) $(LIB_ASAN) | test/bin
-	@$(CC) $(CSTD) $(WARN) $(ASAN_FLAGS) -Isrc $< $(UNIT_LIB) $(LIB_ASAN) $(LDLIBS) -o $@
+	@$(CC) $(CSTD) $(WARN) $(ASAN_FLAGS) $(INC) $< $(UNIT_LIB) $(LIB_ASAN) $(LDLIBS) -o $@
 	@printf '  %-9s %s\n' 'link' '$@'
 
 # Testleri normal ikili ile kosar.

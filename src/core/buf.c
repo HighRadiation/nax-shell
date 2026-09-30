@@ -1,5 +1,5 @@
 /*
-** buf.c — buyuyebilen metin tamponu.
+** buf.c - buyuyebilen metin tamponu.
 **
 ** NEDEN AYRI MODUL:
 **   Sozcuk ayirici parcalari, kanonik yazdirici ciktiyi, genisletme ise

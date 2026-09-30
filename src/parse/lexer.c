@@ -1,5 +1,5 @@
 /*
-** lexer.c — girdi satirini token listesine cevirir.
+** lexer.c - girdi satirini token listesine cevirir.
 **
 ** NEDEN VAR:
 **   Kabuk hattinin ilk asamasi. Buradan sonraki her sey token listesi
