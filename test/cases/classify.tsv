@@ -1,0 +1,122 @@
+# Siniflandirici vaka tablosu.
+#
+# Bicim:  girdi <SEKME> beklenen
+# Beklenen: yol adi, istege bagli olarak ":" ve virgullu veto listesi.
+#   SHELL                     yalnizca yola bakilir
+#   INTENT:HEAD               yol ve veto maskesi TAM eslesmek zorunda
+#   INTENT:NONASCII,STOPWORD
+#
+# FIKSTUR (test_classify.c kuruyor; vakalar buna gore yazildi):
+#   sirket.txt, ASCII disi ikizi, Makefile, those, altdizin/
+#   "it", "all", "the" gibi kelimeler BILINCLI olarak dosya DEGIL.
+#
+# NEDEN FIKSTUR ONEMLI: ASCII disi ve durak kelime vetolari, o sozcuk var
+# olan bir dosyayi adlandiriyorsa tetiklenmez. Ayni satir farkli dizinde
+# farkli siniflandirilir ve bu bir hata degil, tasarim.
+
+
+# --- gercek komutlar kabuk yoluna gider ---
+ls	SHELL
+ls -la	SHELL
+ls altdizin	SHELL
+cat sirket.txt	SHELL
+git status	SHELL
+git log --oneline	SHELL
+git commit -m mesaj	SHELL
+find . -name x	SHELL
+find altdizin	SHELL
+make -n	SHELL
+test -f sirket.txt	SHELL
+cd altdizin	SHELL
+export X=1	SHELL
+pwd	SHELL
+
+# --- operator varsa hicbir veto bakilmaz ---
+echo merhaba | cat	SHELL
+wc -l < sirket.txt	SHELL
+echo a > cikti	SHELL
+cat sirket.txt | wc -l | cat	SHELL
+
+# --- PATH'teki Ingilizce emir kipleri niyet yoluna gider ---
+find all big files	INTENT:WORDBAG,STOPWORD,HEAD
+make it faster	INTENT:STOPWORD
+# "who" bas oldugu icin durak kelime SAYILMAZ; dort ciplak kelime yeter.
+who is using port 3000	INTENT:WORDBAG
+free up space	INTENT:STOPWORD
+open the config	INTENT:STOPWORD
+sort these by date	INTENT:WORDBAG,STOPWORD
+watch the log	INTENT:STOPWORD
+install it	INTENT:STOPWORD
+test the build	INTENT:STOPWORD,HEAD
+
+# --- bas cozulmezse veto bakilmadan niyet ---
+dun degisen dosyalari goster	INTENT
+# Tek sozcuk: kabuk yoluna gider, calistirici 127 uretir. Gerekce
+# classifier.c icinde - kabugun en temel hata mesajini kaybetmemek icin.
+boylebirkomutyok	SHELL
+celar	SHELL
+# Iki ya da daha fazla sozcuk: niyet.
+sil eski loglari	INTENT
+boylebirkomutyok arg1 arg2	INTENT
+
+# --- ASCII disi harf vetosu ---
+git dalimi soyle	INTENT:HEAD
+# Var olmayan dosya adi hicbir vetoyu tetiklemez: bas cozuluyor, sozcuk
+# sade. Kabuk yoluna gider ve cat kendi hatasini verir. Bu dogru.
+cat yokolanbirdosya.txt	SHELL
+
+# --- soru isareti vetosu ---
+ls foo?	SHELL
+# "status" gecerli bir git alt komutu oldugu icin HEAD vetosu HAKLI
+# olarak tetiklenmiyor; soru isareti ve dort ciplak kelime tetikliyor.
+git status nedir ?	INTENT:QUESTION,WORDBAG
+# Belirsiz basli soru: alt komut taninmadigi icin HEAD de tetiklenir.
+git dalim nedir ?	INTENT:QUESTION,WORDBAG,HEAD
+?	EXPLAIN
+  ?  	EXPLAIN
+
+# --- kesme isareti: yapisikken niyet, bosluktan sonra hata ---
+git'e dokunma	INTENT
+don't touch it	INTENT
+cat sirket.txt'in icini	INTENT
+echo 'acik	SYNTAX_ERR
+echo "acik	SYNTAX_ERR
+
+# --- kacis yollari vetolari atlar ---
+\\test the build	SHELL
+\\ls	SHELL
+\\find all big files	SHELL
+
+# --- bos ve coplu satirlar ---
+	EMPTY
+      	EMPTY
+
+# --- ASCII disi ve yol istisnasi ---
+# var olan ASCII disi ad: istisna
+cat şirket.txt	SHELL
+# olmayan ASCII disi ad
+cat yokşirket.txt	INTENT:NONASCII
+# ASCII disi + belirsiz bas
+git dalımı söyle	INTENT:NONASCII,HEAD
+# bas cozulmez
+dün değişen dosyaları göster	INTENT
+# durak kelime ama var olan dosya: istisna
+cat those	SHELL
+
+# --- Asagidaki vakalar mutasyon testi bir bosluk gosterdigi icin eklendi.
+
+# Torbadaki yol istisnasi: dort sade sozcuk ama uc tanesi var olan dosya.
+# Istisna olmasa bu satir kelime torbasi sanilirdi.
+cp those Makefile altdizin	SHELL
+
+# "who" bas oldugu icin durak kelime sayilmaz; secenekli hali komuttur.
+who -b	SHELL
+
+# Operator varsa bas cozulmese bile kabuk yolu; hatayi ayristirici verir.
+a && b	SHELL
+> cikti	SHELL
+boylebirkomutyok | wc -l	SHELL
+
+# Terminalin sizdirdigi fare raporu: ESC ile baslayan CSI dizisi. Filtre
+# olmasa her sizan rapor bir AI cagrisina donusurdu.
+\e[<0;93;14M	EMPTY

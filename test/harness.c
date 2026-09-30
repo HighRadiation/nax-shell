@@ -23,7 +23,13 @@
 
 #define LINE_MAX_LEN 4096
 
-/* Metin icindeki \t ve \\ kacislarini yerinde cozer. */
+/*
+** Metin icindeki \t, \e ve \\ kacislarini yerinde cozer.
+**
+** \e SONRADAN EKLENDI: siniflandiricinin denetim karakteri filtresini
+** sinayan vaka TSV'ye baska turlu yazilamiyordu. Sekme ayirici, satirsonu
+** vaka sonu; ESC ise terminalin sizdirdigi CSI dizilerinin ilk bayti.
+*/
 static void	unescape(char *s)
 {
 	char	*out;
@@ -34,6 +40,11 @@ static void	unescape(char *s)
 		if (*s == '\\' && s[1] == 't')
 		{
 			*out = '\t';
+			s += 2;
+		}
+		else if (*s == '\\' && s[1] == 'e')
+		{
+			*out = 27;
 			s += 2;
 		}
 		else if (*s == '\\' && s[1] == '\\')
