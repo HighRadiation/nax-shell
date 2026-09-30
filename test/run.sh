@@ -319,6 +319,60 @@ run_leak_fd_check
 run_merged "hata ve cikti dogru sirada"   $'echo bir\nls |\necho iki\n' \
            $'bir\nnax: boru isaretinin iki yaninda da komut olmali\niki'
 
+run_case   "cd ve pwd"                    "cd $FIX"$'\n'"pwd"$'\n' "$FIX"
+run_case   "cd sonrasi PWD guncellenir"   "cd $FIX"$'\n''echo $PWD'$'\n' "$FIX"
+run_case   "cd sonrasi OLDPWD guncellenir" "cd $FIX"$'\n''echo $OLDPWD'$'\n' "$PWD"
+run_case   "cd - geri doner"              "cd $FIX"$'\n'"cd -"$'\n' "$PWD"
+run_status "cd olmayan dizin kodu 1"      $'cd yokboylebirdizin\n'      1
+run_stderr "cd sebebi dogru"              $'cd yokboylebirdizin\n'      "cd: yokboylebirdizin: No such file or directory"
+run_stderr "cd dosyaya sebebi dogru"      "cd $FIX/girdi.txt"$'\n'      "Not a directory"
+run_stderr "cd fazla arguman"             $'cd a b\n'                   "cd: too many arguments"
+
+run_case   "echo -n yeni satir yazmaz"    $'echo -n abc\necho SON\n'   "abcSON"
+run_case   "echo -nn de bayrak"           $'echo -nn abc\necho SON\n'  "abcSON"
+run_case   "echo -n-n bayrak degil"       $'echo -n-n abc\n'            "-n-n abc"
+run_case   "echo argumansiz bos satir"    $'echo\necho SON\n'          $'\nSON'
+
+run_case   "export ve genisletme"         $'export NAXX=deger\necho $NAXX\n' "deger"
+run_case   "unset siler"                  $'export NAXX=1\nunset NAXX\necho "[$NAXX]"\n' "[]"
+run_status "export gecersiz ad kodu 1"    $'export 1X=1\n'              1
+run_stderr "export gecersiz ad sebebi"    $'export 1X=1\n'              "not a valid identifier"
+run_status "unset gecersiz ad kodu 0"     $'unset 1X\n'                 0
+
+run_status "exit 7"                       $'exit 7\n'                   7
+# "exit 7" tek basina yazildiginda kabuk zaten EOF ile cikiyor, yani cikis
+# kodu bayragin kurulup kurulmadigini olcmez. Ardindan bir komut gelmesi
+# sart; mutasyon denemesi bu boslugu gosterdi.
+run_case   "exit 7 kabuktan CIKAR"        $'exit 7\necho DEVAM\n'      ""
+run_status "exit -44 mod 256"             $'exit -44\n'                 212
+run_status "exit son durumu kullanir"     $'false\nexit\n'             1
+run_status "exit 300 mod 256"             $'exit 300\n'                 44
+run_status "exit -1 mod 256"              $'exit -1\n'                  255
+run_status "exit abc kodu 2"              $'exit abc\n'                 2
+run_case   "exit abc kabuktan CIKAR"      $'exit abc\necho DEVAM\n'    ""
+run_case   "exit 1 2 kabuktan CIKMAZ"     $'exit 1 2\necho DEVAM\n'    "DEVAM"
+
+# Ana surecte kosan yerlesik yonlendirmeyi uyguluyor VE kabugun kendi
+# ciktisi bozulmadan geri yukleniyor. Ikinci kisim kritik: fflush
+# yapilmadan geri yuklenirse tamponda bekleyen cikti yanlis yere gider.
+run_case   "yerlesik yonlendirmesi"       "pwd > $FIX/p1"$'\n'"cat $FIX/p1"$'\n' "$PWD"
+run_case   "yerlesikten sonra stdout saglam" "pwd > $FIX/p2"$'\n'"echo SONRA"$'\n' "SONRA"
+
+# Boru hattindaki yerlesik COCUKTA kosar, yani kabugun durumunu
+# degistirmez; bash de boyle davraniyor (olculdu).
+run_case   "boru icindeki cd kabugu etkilemez" "cd $FIX"$'\n'"echo x | cd /"$'\n'"pwd"$'\n' "$FIX"
+run_case   "boru icindeki echo kosar"     $'echo merhaba | cat\n'       "merhaba"
+run_case   "boru icindeki export etkisiz" $'echo x | export NAXY=1\necho "[$NAXY]"\n' "[]"
+# Yukaridaki vaka yerlesigin TANINDIGINI olcemez: tanmnmazsa da degisken
+# ayarlanmaz. export'un harici karsiligi olmadigi icin taninmadiginda
+# "command not found" cikar; bu yuzden birlesik cikti bos olmak zorunda.
+# Mutasyon denemesi bu boslugu gosterdi.
+run_merged "boru icinde yerlesik taninir" $'echo x | export NAXY=1\n'   ""
+
+# env yerlesik DEGIL; PATH'teki program kullanilir. Tum ortami bastigi
+# icin tam eslesme yerine satir arayan bir vaka gerekiyor.
+run_case   "env PATH'ten kosar"           $'export NAXZ=bulundu\nenv | grep "^NAXZ="\n' "NAXZ=bulundu"
+
 run_macro_clash_check
 run_norm_check
 run_leak_check
