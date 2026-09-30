@@ -86,6 +86,40 @@ static void	report_route(t_shell *sh, const t_decision *d)
 	sh->last_status = 1;
 }
 
+/*
+** Yerel duzeltme onerisini yazar ve uygunsa bir sonraki prompta hazirlar.
+**
+** ONERI NE ZAMAN TAMPONA KONULMAZ:
+**   1  Onerilen komut geri donusu olmayanlardan biriyse. Tampona konan
+**      oneri tek Enter'la kosar; "rn -rf ." icin "rm -rf ." hazirlamak
+**      refleks bir tusla geri alinamayan silme demek.
+**   2  Satir terminalden gelmiyorsa. Betik modunda duzenleme tamponu
+**      yok, oneri yalnizca bilgi. Bu kosul TESTLE GOZLEMLENEMEZ: betik
+**      modunda on yukleme hicbir sey yapmiyor, yalnizca bir dize
+**      ayrilmis kaliyor. Kaldirilmasi davranisi degistirmiyor; niyet
+**      belirtmek ve bosa ayirma yapmamak icin duruyor.
+**   3  Bas satirin basinda aynen gecmiyorsa; fix_rewrite NULL doner.
+**
+** DURUM KODU 127: hicbir sey kosmadi, yani bash'in "command not found"
+** kodu dogru cevap. Oneri yazilmis olmasi bunu degistirmiyor.
+*/
+static void	report_fix(t_shell *sh, const t_decision *d)
+{
+	char	*fixed;
+
+	fflush(stdout);
+	fprintf(stderr, "%s: %s: boyle bir komut yok\n", NAX_NAME, d->fix.from);
+	fprintf(stderr, "%s: bunu mu demek istediniz: %s\n", NAX_NAME,
+		d->fix.name);
+	sh->last_status = 127;
+	if (fix_is_dangerous(d->fix.name) || sh->interactive == 0)
+		return ;
+	fixed = fix_rewrite(d->text, d->fix.from, d->fix.name);
+	if (fixed != NULL)
+		ln_preload(fixed);
+	free(fixed);
+}
+
 /* Tek bir girdi satirini isler: siniflandirir, sonra yoluna gonderir. */
 static void	handle_line(t_shell *sh, const char *line)
 {
@@ -96,6 +130,8 @@ static void	handle_line(t_shell *sh, const char *line)
 	d = cls_classify(line, &tokens, &err);
 	if (d.route == ROUTE_SHELL)
 		run_tokens(sh, tokens);
+	else if (d.route == ROUTE_FIX)
+		report_fix(sh, &d);
 	else if (d.route == ROUTE_SYNTAX_ERR)
 		report_error(sh, err.message, 2);
 	else if (d.route != ROUTE_EMPTY)
@@ -116,12 +152,20 @@ static void	shell_init(t_shell *sh)
 	ln_hist_load(sh->hist_path);
 }
 
-/* Gecmisi diske yazar ve ayrilan tum bellegi birakir. */
+/*
+** Gecmisi diske yazar ve ayrilan tum bellegi birakir.
+**
+** ln_preload(NULL) SON SATIRDA: kullanici bir oneri aldiktan sonra
+** kabuktan cikarsa hazirlanan metin hic tuketilmemis olur. Statik bir
+** isaretcide durdugu icin denetleyici bunu sizinti saymiyor, ama yine de
+** birakilmamis bir ayirma; projenin kurali sifir sizinti.
+*/
 static void	shell_free(t_shell *sh)
 {
 	ln_hist_save(sh->hist_path);
 	free(sh->hist_path);
 	sh->hist_path = NULL;
+	ln_preload(NULL);
 }
 
 /*
