@@ -69,6 +69,28 @@ void	sig_setup_interactive(void)
 	rl_event_hook = on_readline_wait;
 }
 
+/*
+** Cocuk surecte sinyalleri varsayilana dondurur.
+**
+** NEDEN ZORUNLU:
+**   execve YAKALANAN sinyalleri varsayilana dondurur ama YOK SAYILAN
+**   sinyalleri yok sayili BIRAKIR. Kabuk SIGQUIT'i yok sayiyor;
+**   sifirlanmazsa her cocuk bunu devralir ve Ctrl-\ hicbir komutu
+**   etkilemez. SIGINT'in isleyicisi execve tarafindan zaten sifirlaniyor,
+**   ama niyeti gorunur kilmak icin burada da yazili.
+**
+** BAKIM KURALI:
+**   Kabuk ileride baska bir sinyali yok saymaya baslarsa (ornegin boru
+**   hatlari icin SIGPIPE), o sinyal BURAYA da eklenmek zorunda. Yoksa
+**   cocuklar sessizce devralir; SIGPIPE ornegi ozellikle sinsi, cunku
+**   "yes | head" gibi bir hat yazan taraf olmedigi icin asili kalir.
+*/
+void	sig_reset_child(void)
+{
+	signal(SIGINT, SIG_DFL);
+	signal(SIGQUIT, SIG_DFL);
+}
+
 /* Kesme olup olmadigini soyler ve bayragi sifirlar. */
 int	sig_take_interrupt(void)
 {

@@ -7,18 +7,17 @@
 **   satirin ne anlama geldigi ise siniflandiriciya (classifier.c) gececek.
 **
 ** BU ASAMADA:
-**   Satir sozcuklere ayrilip ayristiriliyor, genisletiliyor ve son
-**   degerlerin kanonik metni basiliyor. Calistirici geldiginde bu basim
-**   onun cagrisiyla degisecek; hattin dogru calistigini gozle gormek ve
-**   birim testlerin yaninda gercek ikilide de kosulmasi icin simdi burada.
+**   Satir sozcuklere ayrilip ayristiriliyor ve CALISTIRILIYOR. Tek komut
+**   gercekten kosuyor; boru hatti ve yonlendirme icin calistirici
+**   anlasilir bir mesaj veriyor.
 **
 ** CIKIS KODLARI:
-**   Sozdizimi hatasi 2, genisletme hatasi 1. Bash de ayni kodlari
-**   kullaniyor ve $? bunlari okuyor.
+**   Sozdizimi hatasi 2. Calistirma tarafindaki kodlar exec.c icinde
+**   yazili. $? hepsini okuyor.
 */
 
 #include "nax.h"
-#include "parse.h"
+#include "exec.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,24 +66,7 @@ static void	report_error(t_shell *sh, const char *message, int status)
 	sh->last_status = status;
 }
 
-/* Agaci genisletir ve son degerlerin kanonik metnini basar. */
-static void	run_pipeline(t_shell *sh, const t_cmd *cmds)
-{
-	t_exp_err	err;
-	char		*shape;
-
-	shape = exp_dump(cmds, sh, &err);
-	if (shape == NULL)
-	{
-		report_error(sh, err.message, 1);
-		return ;
-	}
-	printf("%s\n", shape);
-	free(shape);
-	sh->last_status = 0;
-}
-
-/* Token listesinden boru hattini kurar ve genisletmeye verir. */
+/* Token listesinden boru hattini kurar ve calistiriciya verir. */
 static void	run_tokens(t_shell *sh, const t_token *tokens)
 {
 	t_ast_err	err;
@@ -97,7 +79,7 @@ static void	run_tokens(t_shell *sh, const t_token *tokens)
 			report_error(sh, err.message, 2);
 		return ;
 	}
-	run_pipeline(sh, cmds);
+	ex_run(sh, cmds);
 	ast_free(cmds);
 }
 

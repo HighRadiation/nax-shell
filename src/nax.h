@@ -64,6 +64,7 @@ void	ln_hist_save(const char *path);
 char	*ln_read(const t_shell *sh);
 
 void	sig_setup_interactive(void);
+void	sig_reset_child(void);
 int		sig_take_interrupt(void);
 
 #endif
