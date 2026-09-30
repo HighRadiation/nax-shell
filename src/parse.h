@@ -188,8 +188,92 @@ void		lex_free(t_token *tokens);
 const char	*lex_name(t_tok type);
 char		*lex_dump(const t_token *tokens);
 
+/*
+** Genisletme sonucu olusan tek bir alan.
+**
+** Bir sozcuk BIR alan uretmek zorunda degil: tirnaksiz bir degiskenin
+** degeri bosluk iceriyorsa birden fazla alana bolunur, bos bir degere
+** genisleyen tirnaksiz sozcuk ise HIC alan uretmez.
+*/
+typedef struct s_field
+{
+	char			*text;
+	struct s_field	*next;
+}	t_field;
+
+/* Genisletilmis yonlendirme: turu ve cozulmus dosya adi. */
+typedef struct s_xredir
+{
+	t_tok			type;
+	char			*path;
+	struct s_xredir	*next;
+}	t_xredir;
+
+/*
+** Bir komutun genisletilmis hali.
+**
+** Boru hattinin tamami icin paralel bir agac KURULMAZ; calistirici her
+** komutu calistirmadan hemen once genisletir, kullanir ve birakir. Bu
+** yuzden burada next alani yok.
+**
+** args ve redirs bu yapinin SAHIP oldugu bellektir; xcmd_free birakir.
+*/
+typedef struct s_xcmd
+{
+	t_field		*args;
+	t_xredir	*redirs;
+}	t_xcmd;
+
+/*
+** Genisletme hatasi.
+**
+** message sabit bir metne isaret eder, sahiplik devretmez.
+** at, hataya yol acan sozcuk token'idir.
+*/
+typedef struct s_exp_err
+{
+	const char		*message;
+	const t_token	*at;
+}	t_exp_err;
+
+/*
+** Genisletme sirasindaki tum gecici durum.
+**
+** Yalnizca expand.c kullanir; yapi tanimlari norm geregi basliklarda durur.
+**
+** sh         : degisken ve son durum degerlerinin okundugu kabuk
+** word       : genisletilmekte olan sozcuk; hata bildiriminde kullanilir
+** buf        : uzerinde calisilan alanin metni burada birikir
+** head, tail : uretilmekte olan alan listesi
+** emit       : SIRADAKI alan bos kalsa bile uretilmeli mi
+** err        : hata bildirimi icin cagiranin verdigi yer
+**
+** emit SOZCUK BASINA DEGIL ALAN BASINA tutulur ve her alan uretildiginde
+** sifirlanir. Gerekcesi: TSP="a " iken "$TSP\"\"" iki alan uretir, [a] ve
+** bos olan. Bayrak sozcuk basina olsaydi ikinci alan kaybolurdu. Bash'in
+** davranisi olculerek dogrulandi.
+*/
+typedef struct s_expander
+{
+	const t_shell	*sh;
+	const t_token	*word;
+	t_buf			buf;
+	t_field			*head;
+	t_field			*tail;
+	int				emit;
+	t_exp_err		*err;
+}	t_expander;
+
 t_cmd		*ast_build(const t_token *tokens, t_ast_err *err);
 void		ast_free(t_cmd *cmds);
 char		*ast_dump(const t_cmd *cmds);
+
+t_field		*exp_word(const t_token *word, const t_shell *sh,
+				t_exp_err *err);
+int			exp_cmd(const t_cmd *cmd, const t_shell *sh, t_xcmd *out,
+				t_exp_err *err);
+void		field_free(t_field *fields);
+void		xcmd_free(t_xcmd *xcmd);
+char		*exp_dump(const t_cmd *cmds, const t_shell *sh, t_exp_err *err);
 
 #endif
