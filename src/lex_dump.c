@@ -82,24 +82,35 @@ static int	dump_word(t_buf *buf, const t_seg *segs)
 	return (buf_push(buf, ')'));
 }
 
+/* Token listesini bosluklarla ayirarak tampona yazar. */
+static int	dump_tokens(t_buf *buf, const t_token *tokens)
+{
+	while (tokens != NULL)
+	{
+		if (tokens->type == T_WORD)
+		{
+			if (dump_word(buf, tokens->segs) == 0)
+				return (0);
+		}
+		else if (buf_push_str(buf, lex_name(tokens->type)) == 0)
+			return (0);
+		tokens = tokens->next;
+		if (tokens != NULL && buf_push(buf, ' ') == 0)
+			return (0);
+	}
+	return (1);
+}
+
 /* Token listesini kanonik metne cevirir; cagiran serbest birakir. */
 char	*lex_dump(const t_token *tokens)
 {
 	t_buf	buf;
 
 	buf_init(&buf);
-	while (tokens != NULL)
+	if (dump_tokens(&buf, tokens) == 0)
 	{
-		if (tokens->type == T_WORD)
-		{
-			if (dump_word(&buf, tokens->segs) == 0)
-				return (NULL);
-		}
-		else if (buf_push_str(&buf, lex_name(tokens->type)) == 0)
-			return (NULL);
-		tokens = tokens->next;
-		if (tokens != NULL && buf_push(&buf, ' ') == 0)
-			return (NULL);
+		buf_free(&buf);
+		return (NULL);
 	}
 	if (buf.data == NULL)
 		return (strdup(""));
