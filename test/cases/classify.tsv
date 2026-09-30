@@ -49,13 +49,24 @@ watch the log	INTENT:STOPWORD
 install it	INTENT:STOPWORD
 test the build	INTENT:STOPWORD,HEAD
 
-# --- bas cozulmezse veto bakilmadan niyet ---
+# --- bas cozulmezse ---
+# ONCE vetolara bakilir. Yerel duzeltme yalnizca satir kabuk seklindeyse
+# denenir; gerekce olculdu, "dun" sozcugunun "du" komutuna uzakligi 1.
+# Veto once bakilmasa bu satir disk kullanimi komutu sanilirdi.
 dun degisen dosyalari goster	INTENT
-# Tek sozcuk: kabuk yoluna gider, calistirici 127 uretir. Gerekce
-# classifier.c icinde - kabugun en temel hata mesajini kaybetmemek icin.
+
+# Yerel duzeltme bulundu. Vakalar YERLESIK yazim hatasi kullaniyor, cunku
+# yerlesikler PATH icerigine bagli degil; ayni satir her ortamda FIX verir.
+ehco merhaba	FIX
+exprot A=1	FIX
+pwdd	FIX
+
+# Aday yok ve tek sozcuk: kabuk yoluna gider, calistirici 127 uretir.
+# Gerekce classifier.c icinde - kabugun en temel hata mesajini kaybetmemek.
 boylebirkomutyok	SHELL
-celar	SHELL
-# Iki ya da daha fazla sozcuk: niyet.
+
+# Aday yok ve iki ya da daha fazla sozcuk: niyet. "sil" sozcugu icin
+# yerel aday bulunmadigi olculdu, o yuzden bu satir duzeltmeye takilmiyor.
 sil eski loglari	INTENT
 boylebirkomutyok arg1 arg2	INTENT
 

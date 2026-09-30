@@ -90,6 +90,28 @@ run_status() {
 }
 
 # Girdiyi kosar ve hata ciktisinda beklenen metni arar.
+# Bir metnin stderr'de GECMEDIGINI dogrular.
+#
+# NEDEN GEREKLI: bazi kurallar bir seyin YAPILMAMASI. "Calistirilamayan
+# dosya onerilmez" kurali, cikan mesaji degil cikmayan adi olcmek
+# demek; "icerir" bicimindeki yardimcilarla bu yazilamiyor.
+run_stderr_absent() {
+	local name="$1" input="$2" unwanted="$3" got
+
+	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 timeout "$CASE_TIMEOUT" "$BIN" 2>&1 >/dev/null)"
+	case "$got" in
+		*"$unwanted"*)
+			FAIL=$((FAIL + 1))
+			printf "  ${R}patladi${N} %s\n" "$name"
+			printf "    cikmamasi gereken: %s\n" "$unwanted"
+			printf "    gelen            : %s\n" "$got"
+			;;
+		*)
+			PASS=$((PASS + 1))
+			printf "  ${G}gecti${N}   %s\n" "$name"
+			;;
+	esac
+}
 run_stderr() {
 	local name="$1" input="$2" want="$3" got
 
@@ -368,6 +390,40 @@ run_case   "boru icindeki export etkisiz" $'echo x | export NAXY=1\necho "[$NAXY
 # "command not found" cikar; bu yuzden birlesik cikti bos olmak zorunda.
 # Mutasyon denemesi bu boslugu gosterdi.
 run_merged "boru icinde yerlesik taninir" $'echo x | export NAXY=1\n'   ""
+
+# --- yerel yazim duzeltmesi ---
+# Vakalar YERLESIK yazim hatasi kullaniyor: yerlesikler PATH icerigine
+# bagli olmadigi icin sonuc her ortamda ayni.
+run_stderr "yazim hatasi oneri veriyor"   $'ehco selam\n' "bunu mu demek istediniz: echo"
+# Mesaj BASIN kendisini yazmali, tum satiri degil; bash da boyle yapiyor.
+run_stderr "hata mesaji basi adlandirir"  $'ehco selam\n' "ehco: boyle bir komut yok"
+# Hicbir sey kosmadi, yani dogru kod 127. Oneri yazilmis olmasi bunu
+# degistirmiyor. Mutasyon denemesi bu boslugu gosterdi.
+run_status "oneri sonrasi durum 127"      $'ehco selam\n' 127
+# Betik modunda oneri yalnizca bilgi; duzeltilmis komut KENDILIGINDEN
+# kosmaz, cunku boyle bir kabuk kullanicinin yazmadigi seyi calistirir.
+run_case   "oneri kendiliginden kosmaz"   $'ehco kosmamali\n' ""
+
+# PATH'te okunabilen ama CALISTIRILAMAYAN dosyalar var; bunlari komut
+# olarak onermek yanlis olur. Fikstur dizininde izinsiz bir dosya var ve
+# yazilan sozcuk ona 1 uzaklikta; oneri cikmamali, 127 cikmali.
+mkdir -p "$FIX/yol"
+: > "$FIX/yol/zzqqxx"
+chmod 644 "$FIX/yol/zzqqxx"
+# PATH'i kabugun KENDISI daraltiyor, boylece aday kumesi tek dosyadan
+# olusuyor. Ilk yazimda bu satir yoktu ve vaka bosa geciyordu: mutasyon
+# denemesi dogrulamayi silmenin hicbir testi bozmadigini gosterdi.
+run_stderr_absent "calistirilamayan aday adi gecmez" \
+	"export PATH=$FIX/yol"$'\nzzqqxy\n' "zzqqxx"
+run_status "calistirilamayan aday onerilmez" \
+	"export PATH=$FIX/yol"$'\nzzqqxy\n' 127
+
+# Yerlesik taramasini olcmek icin harici karsiligi OLMAYAN bir yerlesik
+# gerekiyor: "ehco" icin PATH'te /bin/echo var, yani yerlesikler hic
+# taranmasa da ayni oneri cikar. "export" boyle bir program degil.
+# Yerlesikler taranmazsa en yakin aday 2 uzaklikta "expr" oluyor.
+run_stderr "yerlesikler de aday olarak taranir" $'exprot A=1\n' \
+	"bunu mu demek istediniz: export"
 
 # env yerlesik DEGIL; PATH'teki program kullanilir. Tum ortami bastigi
 # icin tam eslesme yerine satir arayan bir vaka gerekiyor.

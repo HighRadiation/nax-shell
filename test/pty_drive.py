@@ -31,8 +31,10 @@ import os
 import pty
 import re
 import select
+import shutil
 import signal
 import sys
+import tempfile
 import time
 
 PROMPT = "$ "
@@ -305,6 +307,142 @@ def case_sigquit_ignored(binary, rep):
     return sh.screen()
 
 
+def case_fix_preload(binary, rep):
+    """Yazim hatasinin duzeltilmisi bir sonraki prompta hazir geliyor."""
+    sh = Shell(binary)
+    sh.ask(b"ehco onyukleme-vakasi\n")
+    suggested = sh.wait_for("bunu mu demek istediniz: echo")
+    # Tamponda duzeltilmis satir gorunur: yazilan + hazirlanan = iki kez.
+    preloaded = sh.wait_for("echo onyukleme-vakasi", skip=0)
+    sh.send(b"\n")
+    # Enter'dan sonra komut gercekten kosar; ciktisi ucuncu gorunum olur.
+    ran = sh.wait_for("onyukleme-vakasi", skip=2)
+    sh.ask(b"exit\n")
+    alive, info = sh.close()
+    rep.check("yazim hatasi icin oneri yazildi", suggested, sh.screen()[-300:])
+    rep.check("oneri tampona hazir geldi", preloaded, sh.screen()[-300:])
+    rep.check("Enter duzeltilmis komutu kostu", ran, sh.screen()[-300:])
+    # Oneri BIR KEZ gelmeli. Kanca metni birakmazsa her promptta yeniden
+    # yazilir ve sonraki "exit" satirinin basina eklenir; o zaman kabuk
+    # hicbir zaman kapanmaz. Mutasyon denemesi bu boslugu gosterdi.
+    rep.check("oneri yalnizca bir kez geldi", not alive, info)
+    return sh.screen()
+
+
+def case_fix_danger_not_preloaded(binary, rep):
+    """
+    Geri donusu olmayan komut ONERILIR ama tampona KONULMAZ.
+
+    Tasarimin en onemli guvenlik kurali bu: tampona konan oneri tek
+    Enter'la kosar. "chmdo x" icin "chmod x" hazirlanmis olsa refleks bir
+    tus izinleri degistirirdi.
+    """
+    sh = Shell(binary)
+    sh.ask(b"chmdo tehlike-vakasi\n")
+    suggested = sh.wait_for("bunu mu demek istediniz: chmod")
+    sh.quiet()
+    # Tam satir yalniz tampona konulmussa ekranda gorunur; oneri satiri
+    # komut adini yaziyor ama argumani yazmiyor.
+    loaded = "chmod tehlike-vakasi" in sh.screen()
+    sh.send(b"\n")
+    sh.quiet()
+    after = sh.screen()
+    sh.ask(b"echo tehlike-sonrasi\n")
+    alive = sh.wait_for("tehlike-sonrasi", skip=1)
+    sh.ask(b"exit\n")
+    sh.close()
+    rep.check("riskli komut icin de oneri yazildi", suggested,
+              sh.screen()[-300:])
+    rep.check("riskli oneri tampona KONULMADI", not loaded,
+              sh.screen()[-400:])
+    rep.check("bos Enter hicbir sey kosturmadi",
+              "chmod tehlike-vakasi" not in after, after[-400:])
+    rep.check("riskli oneri sonrasi kabuk calismaya devam etti", alive,
+              sh.screen()[-300:])
+    return sh.screen()
+
+
+def case_fix_history_ranking(binary, rep):
+    """
+    Esit uzaklikta iki aday varsa gecmiste kullanilan kazanir.
+
+    KONTROLLU PATH SART: siralamayi olcmek icin ayni uzaklikta TAM iki
+    aday gerekiyor; gercek PATH'te bunu garanti etmek mumkun degil.
+    Fikstur iki calistirilabilir dosya kuruyor ve her oturumda birini
+    kullaniyor. Iki oturum birlikte kanit oluyor: dizin okuma sirasi
+    hangisini once verirse versin, oturumlardan biri gercekten siralamayi
+    sinamis olur.
+
+    HOME her oturumda ayri, cunku gecmis dosyasi HOME'dan tureiyor ve
+    oturumlar birbirinin gecmisini gormemeli.
+    """
+    base = tempfile.mkdtemp(prefix="nax_pty_gecmis_")
+    bindir = os.path.join(base, "bin")
+    os.mkdir(bindir)
+    for name in ("aaqqx1", "aaqqx2"):
+        path = os.path.join(bindir, name)
+        with open(path, "w") as handle:
+            handle.write("#!/bin/sh\necho %s-kostu\n" % name)
+        os.chmod(path, 0o755)
+
+    screens = []
+    won = {}
+    for used in ("aaqqx1", "aaqqx2"):
+        home = os.path.join(base, "home-" + used)
+        os.mkdir(home)
+        sh = Shell(binary, {"PATH": bindir + ":" + os.environ.get("PATH", ""),
+                            "HOME": home})
+        # Kullanilmayan aday gecmiste ARGUMAN olarak birkac kez geciyor.
+        # Sayim basa bakmiyorsa bu satirlar onu one gecirir ve oturum
+        # yanlis adayi onerir; mutasyon denemesi bu boslugu gosterdi.
+        other = "aaqqx2" if used == "aaqqx1" else "aaqqx1"
+        for _ in range(3):
+            sh.ask(("echo %s\n" % other).encode())
+            sh.quiet()
+        sh.ask(("%s\n" % used).encode())
+        sh.wait_for("%s-kostu" % used)
+        sh.ask(b"aaqqx3\n")
+        sh.wait_for("bunu mu demek istediniz:")
+        sh.quiet()
+        won[used] = ("bunu mu demek istediniz: %s" % used) in sh.screen()
+        # Tamponda oneri hazir bekliyor; Ctrl-C ile atilmadan exit yazilsa
+        # satirin basina eklenir ve kabuk kapanmaz.
+        sh.send(b"\x03")
+        sh.ask(b"exit\n")
+        sh.close()
+        screens.append(sh.screen())
+    shutil.rmtree(base, ignore_errors=True)
+    rep.check("esit uzaklikta gecmiste kullanilan aday kazanir",
+              won["aaqqx1"] and won["aaqqx2"],
+              "aaqqx1 kazandi=%s aaqqx2 kazandi=%s" % (won["aaqqx1"],
+                                                       won["aaqqx2"]))
+    return "".join(screens)
+
+
+def case_fix_quoted_head_not_preloaded(binary, rep):
+    """
+    Bas satirin basinda aynen gecmiyorsa satir yeniden yazilmaz.
+
+    NEDEN: token listesi satirdaki KONUMU tasimiyor. Tirnakli bir bas
+    ("ehco" gibi) icin sozcugun metni ile satirdaki yazimi farkli
+    uzunlukta; oneri korumasiz birlestirilirse tampona bozuk bir satir
+    gelir. Olculdu: koruma kalkinca tampona "echoo\" selam" yaziliyor.
+    """
+    sh = Shell(binary)
+    sh.ask(b'"ehco" selam\n')
+    suggested = sh.wait_for("bunu mu demek istediniz: echo")
+    sh.quiet()
+    garbled = "echoo" in sh.screen()
+    sh.ask(b"exit\n")
+    alive, info = sh.close()
+    rep.check("tirnakli bas icin de oneri yazildi", suggested,
+              sh.screen()[-300:])
+    rep.check("tirnakli basta bozuk satir tampona konulmadi", not garbled,
+              sh.screen()[-300:])
+    rep.check("tirnakli bas sonrasi kabuk duzgun kapandi", not alive, info)
+    return sh.screen()
+
+
 def case_eof(binary, rep):
     """Ctrl-D gercek dosya sonu olarak taninir."""
     sh = Shell(binary)
@@ -332,6 +470,10 @@ def main():
         case_sigint_repeated,
         case_sigquit_ignored,
         case_eof,
+        case_fix_preload,
+        case_fix_danger_not_preloaded,
+        case_fix_history_ranking,
+        case_fix_quoted_head_not_preloaded,
     ):
         screens.append(case(binary, rep))
 
