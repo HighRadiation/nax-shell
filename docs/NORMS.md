@@ -19,6 +19,8 @@ dosyada yaşadığı belli olur:
 | `path_` | PATH çözümleme |
 | `lex_` | sözcüklere ayırma |
 | `ast_` | ayrıştırıcı |
+| `field_` | genişletme sonucu alanlar |
+| `xcmd_` | genişletilmiş komut |
 | `exp_` | genişletme |
 | `ex_` | çalıştırıcı |
 | `bi_` | yerleşik komutlar |

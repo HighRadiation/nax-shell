@@ -120,6 +120,51 @@ kipinden okur. Boş dize sorununu da çözer — `""` gerçek bir boş argümand
 (tek parça, `dq`, boş metin), ama genişlemeden gelen boş değer argüman
 üretmez.
 
+## Genişletme
+
+Sıra (basitleştirilmiş POSIX sırası):
+
+1. `~` genişletmesi — yalnızca sözcüğün **ilk** tırnaksız parçasında
+2. `$` genişletmesi — `$NAME`, `${NAME}`, `$?`
+3. Alan ayırma — **yalnızca** tırnaksız genişletmeden gelen metinde
+4. Tırnak kaldırma — sözcük ayırıcı zaten yaptı, burada iş kalmadı
+
+Dördüncü adımın boş olması tırnak kipi sözleşmesinin karşılığı: tırnaklar
+lexer'da silindi, yerine parça kipi kaldı. Genişletme tırnak ayrıştırmıyor,
+ne yapacağını parçanın kipinden okuyor.
+
+**Alan ayırmanın ince noktası.** Harfi harfine yazılmış metin yeniden
+bölünmez — sözcük ayırıcı onu zaten boşluklardan bölmüştü. Yalnızca
+genişletmeden *gelen* metin bölünür:
+
+```
+X="a b"
+echo $X      → iki alan
+echo "$X"    → tek alan
+```
+
+**Boş alan kuralı.** Bir bayrak (`emit`) sözcük başına değil **alan başına**
+tutulur ve her alan üretildiğinde sıfırlanır. Bayrağı kuran şey harfi harfine
+ya da tırnaklı içerik; genişletmeden gelen karakterler kurmaz:
+
+| Girdi | Alan sayısı |
+|---|---|
+| `echo $YOK` | 0 — sözcük kaybolur |
+| `echo "$YOK"` | 1, boş |
+| `TSP="a "; echo $TSP""` | 2 — `a` ve boş olan |
+
+Üçü de bash ölçülerek doğrulandı. Bayrak sözcük başına tutulduğunda üçüncüsü
+kayboluyordu; bu hatayı mutasyon denemesi yakaladı.
+
+**Belirsiz yönlendirme.** Yönlendirme hedefi tam olarak bir alan üretmek
+zorunda. `> $YOK` neyi yönlendireceğini, `> $IKI_KELIME` hangisine
+yönlendireceğini söylemiyor; ikisi de hata.
+
+**Değişken adı doğrulanır.** `${...}` içindeki ad geçerli bir isim değilse
+hata verilir. Doğrulama olmadan `${VAR:-varsayılan}` gibi desteklenmeyen bir
+biçim `VAR:-varsayılan` adını arar, bulamaz ve **sessizce boşa genişler** —
+sessiz yanlış cevap hatadan kötüdür.
+
 ## Bellek sahipliği
 
 Sızıntı disiplininin tek kuralı: **her modül kendi ürettiği tipi kendisi
@@ -135,6 +180,8 @@ serbest bırakır.**
 | tampon metni | `buf.c` (`buf_take`) | çağıran; devredilmeyen tampon `buf_free` |
 | kanonik metin | `lex_dump.c`, `ast_dump.c` | çağıran |
 | boru hattı ağacı | `parser.c` (`ast_build`) | çağıran (`ast_free`) |
+| alan listesi | `expand.c` (`exp_word`) | çağıran (`field_free`) |
+| genişletilmiş komut | `expand_cmd.c` (`exp_cmd`) | çağıran (`xcmd_free`) |
 
 **Ağaç token'ları ödünç alır.** Ağaç düğümleri yalnızca kendi struct'larının
 sahibidir; içerdikleri sözcük token'ları sözcük ayırıcının listesinde kalır.
@@ -167,11 +214,16 @@ src/
   lex_dump.c     token listesini kanonik metne çevirir (test ve ayıklama)
   parser.c       token listesini boru hattı ağacına çevirir
   ast_dump.c     ağacı kanonik metne çevirir (test ve ayıklama)
+  expand.c       bir sözcüğü alanlara çevirir ($VAR, $?, ~, alan ayırma)
+  expand_cmd.c   bir komutun tüm argüman ve yönlendirmelerini genişletir
+  exp_dump.c     genişletilmiş hattı kanonik metne çevirir (test ve ayıklama)
 test/
   run.sh         tek test giriş noktası; make test ve make check bunu çağırır
-  test.h         test koşucularının paylaştığı tipler
+  test.h         test koşucularının paylaştığı tipler ve iskele
+  harness.c      vaka dosyası okuma, kaçış çözme, özet basma
   test_lexer.c   tablo tabanlı sözcük ayırıcı testleri
   test_parser.c  tablo tabanlı ayrıştırıcı testleri
+  test_expand.c  tablo tabanlı genişletme testleri
   cases/*.tsv    vaka tabloları; yeni vaka için yeniden derleme gerekmez
   pty_drive.py   sahte terminal üzerinden etkileşimli yol testleri
 naxd/            AI yardımcı süreci (sonraki aşamada)
