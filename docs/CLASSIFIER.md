@@ -40,15 +40,37 @@ free up space
 ```
 
 Bu yüzden baş çözülse bile aşağıdaki vetolardan biri geçerse satır niyet
-yoluna gider:
+yoluna gider.
+
+**Vetolardan önce gelen tek kural:** satırda kabuk operatörü (`|`, `>`, `<`,
+`>>`, `&&`) varsa hiçbir vetoya bakılmaz, satır kabuk sayılır. Boru ve
+yönlendirme doğal dilde geçmez, bu yüzden baş hiç çözülmese bile güçlü bir
+komut işaretidir. Bu kural sonradan eklendi: olmadan `a && b` ve `> dosya`
+satırları niyet sanılıyor, kabuğun sözdizimi hatası hiç görünmüyordu.
 
 | Veto | Kural |
 |---|---|
-| V1 | Satır `?` ile bitiyor |
-| V2 | Bir sözcük ASCII dışı harf içeriyor (ç ğ ı ö ş ü). **İstisna:** o sözcük çalışma dizininde var olan bir dosyaysa veto uygulanmaz — `cat şirket.txt` çalışır |
-| V3 | Çıplak kelime torbası: sözcük sayısı ≥ 4 **ve** hiçbiri `-` ile başlamıyor **ve** hiçbiri `/ . * = $ ~` içermiyor **ve** hiçbiri var olan bir yol değil **ve** özel karakter yok |
-| V4 | Küçük bir durak kelime listesinden (`bana, göster, listele, hangi, nerede, neden, nasıl, the, all, my, me, files, why, how`) en az bir eşleşme ve sözcük sayısı ≥ 3 |
-| V5 | Baş, "belirsiz başlar" tablosunda ve başa özel doğrulayıcı başarısız: `git` → alt komut listesinde değil; `make` → dizinde derleme dosyası ya da hedef yok; `find` → ilk argüman bir yol değil; `test` → ifade şeklinde değil |
+| V1 | Satır `?` ile bitiyor. **Şart:** `?` işaretinden önce boşluk var ya da satır en az üç sözcük. Aksi halde `ls foo?` gibi joker karakterli bir komut soru sanılırdı |
+| V2 | Bir sözcük ASCII dışı bayt içeriyor (ç ğ ı ö ş ü). **Baş dahil sayılır:** Türkçe karakterli bir baş hiçbir komuta karşılık gelmiyor. **İstisna:** o sözcük var olan bir şeyi adlandırıyorsa veto uygulanmaz — `cat şirket.txt` çalışır |
+| V3 | Çıplak kelime torbası: sözcük sayısı ≥ 4 **ve** hiçbiri `-` ile başlamıyor **ve** hiçbiri `/ . * = $ ~ [ ] % { } , :` içermiyor **ve** hiçbiri var olan bir yol değil |
+| V4 | Durak kelime listesinden en az bir eşleşme ve sözcük sayısı ≥ 2. **Baş sayılmaz** ve var olan yollar sayılmaz |
+| V5 | Baş, kendi doğrulayıcısı olan bir baş ve doğrulayıcı başarısız: `git` → argüman alt komut listesinde değil; `find` ve `test` → argüman var olan bir yolu adlandırmıyor; `make` → dizinde `Makefile` yok |
+
+V3'ün karakter kümesi ölçülerek genişletildi. İlk yazımda yalnızca `/.*=$~`
+vardı ve `printf "[%s]" a b c` satırı dört çıplak kelime sanılıp niyet yoluna
+gidiyordu. Köşeli parantez, yüzde, süslü parantez, virgül ve iki nokta doğal
+dilde geçmez; biçim dizelerinde ve argümanlarda geçer.
+
+### V4'ün iki sınırı
+
+**Baş sayılmaz.** `who` ve `which` hem gerçek komut hem soru kelimesidir. Baş
+olarak geçtiğinde komuttur — bu sınır olmasa `who -b` satırı niyet sanılırdı.
+Buna karşılık `who is using port 3000` satırında `who` baş olduğu için durak
+kelime sayılmaz ama satır zaten V3'e takılır.
+
+**Tek harfli tanımlayıcılar listede yok.** `a` ve `an` bilinçli olarak
+dışarıda: tek harfli kelimeler dosya adı ve argüman olarak sık geçer. Listede
+oldukları sürece `cd a b` satırı niyet sanılıyordu.
 
 Veto tetiklendiğinde satır **sessizce** niyet yoluna gider. `naxd`'nin sistem
 isteminde şu kural bulunur: *"gelen metin zaten geçerli bir kabuk komutuysa
@@ -81,12 +103,33 @@ eşitlikleri bozar.
 
 | Durum | Sorun | Savunma |
 |---|---|---|
-| `git dalımı söyle` | `git` PATH'te | V5 (alt komut değil) + V2 |
-| `find all big files` | `find` PATH'te | V3 + V4 |
+| `git dalımı söyle` | `git` PATH'te | V5 (alt komut değil) + V2. ASCII yazımı `git dalimi soyle` yalnızca V5'e takılır |
+| `find all big files` | `find` PATH'te | Üçü birden: V3 (dört çıplak kelime) + V4 (`all`) + V5 (`all` bir yol değil) |
 | `dun degisen dosyalari goster` | ASCII yazılmış Türkçe; `dun` çözülmez ve `du`'ya uzaklığı 1 | Düzeltme yalnızca satır kabuk şeklindeyse çalışır; 4 çıplak kelime bu koşulu bozar |
 | `git'e dokunma`, `don't touch it` | Kapanmamış tırnak → devam satırı beklerken kilitlenme | Devam moduna yalnızca satırda özel karakter varsa ya da baş çözülüyorsa girilir |
 | Terminalin stdin'e sızdırdığı fare raporu | Her sızan rapor bir AI çağrısına dönüşürdü | Aşama 0 denetim karakteri içeren satırı düşürür |
 | Betik modu (terminal değil) | — | AI tamamen kapalı; çözülmeyen baş `command not found` ve çıkış kodu 127 |
+
+### Sonradan ölçülen yanlış pozitifler
+
+Aşağıdaki dört satır sınıflandırıcı ilk kez kabuğa bağlandığında **komut
+olmasına rağmen niyet sanıldı.** Hepsini bütünleşik testler yakaladı, yani
+korpus tek başına yetmedi: korpus sınıflandırıcının kendi diliyle yazılmış,
+bütünleşik testler ise kabuğun gerçek davranışını ölçüyor.
+
+| Satır | Neden yanlış sınıflandı | Düzeltme |
+|---|---|---|
+| `printf "[%s]" a b c` | `[%s]` çıplak kelime sanıldı → V3 | V3'ün karakter kümesine `[ ] % { } , :` eklendi |
+| `cd a b` | `a` durak kelime listesindeydi → V4 | Tek harfli tanımlayıcılar listeden çıkarıldı |
+| `a && b` | Baş çözülmüyor, iki sözcükten fazla | Operatör kuralı: operatör varsa kabuk |
+| `> dosya` | İlk token sözcük değil, baş "çözülmedi" sayıldı | Aynı operatör kuralı |
+
+Bir de kod bulgusu: `veto_words` içinde "argüman görünümlü sözcükler durak
+kelime sayılmasın" diye bir koruma vardı. Mutasyon testi onu silmenin hiçbir
+testi bozmadığını gösterdi — çünkü **ulaşılamazdı.** Durak kelimelerin
+hiçbirinde `-` öneki ya da yol karakteri yok, yani `is_stop_word` doğruyken o
+koruma her zaman yanlış dönüyordu. Test edilemeyen ölü kodu tutmak yerine
+silindi.
 
 ## Kaçış yolları
 

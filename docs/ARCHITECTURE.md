@@ -334,7 +334,11 @@ src/
     builtin.c      yerleşik tablosu; echo, pwd, exit
     builtin_env.c  export, unset
     builtin_cd.c   cd
-  (ai/             sonraki aşamada: sınıflandırıcı, yardımcı süreç istemcisi)
+  ai/              satır komut mu niyet mi
+    ai.h           yol, veto maskesi, karar tipleri
+    classifier.c   karar sırası: ön filtre, baş çözümü, yol seçimi
+    veto.c         şekil vetoları: baş çözülse bile satır doğal dil mi
+  (ai/ içinde sonraki aşamada: yerel yazım düzeltmesi, yardımcı süreç istemcisi)
 test/
   test.h           test koşucularının paylaştığı tipler ve iskele
   harness.c        vaka dosyası okuma, kaçış çözme, özet basma
@@ -342,6 +346,7 @@ test/
   test_lexer.c     tablo tabanlı sözcük ayırıcı testleri
   test_parser.c    tablo tabanlı ayrıştırıcı testleri
   test_expand.c    tablo tabanlı genişletme testleri
+  test_classify.c  tablo tabanlı sınıflandırıcı testleri; kendi fikstürünü kurar
   cases/*.tsv      vaka tabloları; yeni vaka için yeniden derleme gerekmez
   pty_drive.py     sahte terminal üzerinden etkileşimli yol testleri
 naxd/              AI yardımcı süreci (sonraki aşamada)
