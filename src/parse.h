@@ -107,9 +107,89 @@ typedef struct s_lexer
 	t_lex_err	*err;
 }	t_lexer;
 
+/*
+** Komutun bir argumani.
+**
+** word, sozcuk ayiricinin urettigi token listesine ISARET EDER; sahibi
+** degildir. Sahiplik kurali agacin tamaminda ayni: agac token'lari
+** odunc alir, birakmaz. Gerekcesi parser.c dosyasinin basinda yazili.
+*/
+typedef struct s_arg
+{
+	const t_token	*word;
+	struct s_arg	*next;
+}	t_arg;
+
+/*
+** Bir yonlendirme: turu ve hedefi.
+**
+** type yalnizca T_REDIR_IN, T_REDIR_OUT, T_APPEND ya da T_HEREDOC olur.
+** target da odunc alinmis bir sozcuk token'idir.
+*/
+typedef struct s_redir
+{
+	t_tok			type;
+	const t_token	*target;
+	struct s_redir	*next;
+}	t_redir;
+
+/*
+** Boru hattindaki tek bir komut.
+**
+** args   : argumanlar, yazildiklari sirada
+** redirs : yonlendirmeler, yazildiklari sirada
+** next   : boru hattindaki sonraki komut
+**
+** Bir komut ya en az bir arguman ya da en az bir yonlendirme icermek
+** zorunda; ikisi de bos olan komut sozdizimi hatasidir.
+*/
+typedef struct s_cmd
+{
+	t_arg			*args;
+	t_redir			*redirs;
+	struct s_cmd	*next;
+}	t_cmd;
+
+/*
+** Ayristirma hatasi.
+**
+** message sabit bir metne isaret eder, sahiplik devretmez.
+** at, hataya yol acan token'dir; satir sonunda bitmisse NULL olur.
+*/
+typedef struct s_ast_err
+{
+	const char		*message;
+	const t_token	*at;
+}	t_ast_err;
+
+/*
+** Ayristirma sirasindaki tum gecici durum.
+**
+** Yalnizca parser.c kullanir; yapi tanimlari norm geregi basliklarda durur.
+**
+** tok        : okunmakta olan token
+** head, tail : uretilmekte olan boru hatti
+** arg_tail   : uzerinde calisilan komutun son argumani
+** redir_tail : uzerinde calisilan komutun son yonlendirmesi
+** err        : hata bildirimi icin cagiranin verdigi yer
+*/
+typedef struct s_parser
+{
+	const t_token	*tok;
+	t_cmd			*head;
+	t_cmd			*tail;
+	t_arg			*arg_tail;
+	t_redir			*redir_tail;
+	t_ast_err		*err;
+}	t_parser;
+
 t_token		*lex_split(const char *line, t_lex_err *err);
 void		lex_free(t_token *tokens);
 const char	*lex_name(t_tok type);
 char		*lex_dump(const t_token *tokens);
+
+t_cmd		*ast_build(const t_token *tokens, t_ast_err *err);
+void		ast_free(t_cmd *cmds);
+char		*ast_dump(const t_cmd *cmds);
 
 #endif
