@@ -1,4 +1,4 @@
-# nax
+# NAX
 
 AI'ı terminalin *yanına* değil, kabuğun *dilinin içine* koyan bir komut kabuğu.
 
