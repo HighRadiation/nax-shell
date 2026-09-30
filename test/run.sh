@@ -26,6 +26,11 @@ BIN="${NAX_BIN:-./nax}"
 PASS=0
 FAIL=0
 
+# Genisletme vakalarinin okudugu degiskenler. Birim testler kendi ortamini
+# kuruyor; burada amac genisletmenin GERCEK ikilide de calistigini gormek.
+export NAX_TV=deger
+export NAX_TS="a b"
+
 # Tek bir vakayi kosar: girdiyi ikiliye verir, ciktiyi beklenenle karsilastirir.
 run_case() {
 	local name="$1" input="$2" want="$3" got
@@ -146,6 +151,13 @@ run_status "temiz cikis kodu sifir"      $'merhaba\nexit\n'      0
 run_status "EOF ile cikis kodu sifir"    $'merhaba\n'            0
 run_status "sozdizimi hatasi kodu 2"     $'ls |\n'               2
 run_status "tirnak hatasi kodu 2"        $"echo 'x\n"            2
+run_case   "degisken genisletilir"        $'echo $NAX_TV\n'      "(cmd [echo] [deger])"
+run_case   "tirnaksiz deger bolunur"     $'echo $NAX_TS\n'      "(cmd [echo] [a] [b])"
+run_case   "tirnakli deger bolunmez"     $'echo "$NAX_TS"\n'    "(cmd [echo] [a b])"
+run_case   "tanimsiz degisken alan uretmez" $'echo $NAX_YOK\n'  "(cmd [echo])"
+run_case   "son durum sonraki satirda okunur" $'ls |\necho $?\n' "(cmd [echo] [2])"
+run_stderr "belirsiz yonlendirme bildirilir" $'cat > $NAX_TS\n'  "belirsiz yonlendirme"
+run_status "belirsiz yonlendirme kodu 1" $'cat > $NAX_TS\n'      1
 run_merged "hata ve cikti dogru sirada"  $'echo bir\nls |\necho iki\n' \
            $'(cmd [echo] [bir])\nnax: boru isaretinin iki yaninda da komut olmali\n(cmd [echo] [iki])'
 run_leak_check

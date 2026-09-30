@@ -7,10 +7,14 @@
 **   satirin ne anlama geldigi ise siniflandiriciya (classifier.c) gececek.
 **
 ** BU ASAMADA:
-**   Satir sozcuklere ayrilip ayristiriliyor, sonra uretilen boru hattinin
-**   kanonik metni basiliyor. Calistirici geldiginde bu basim onun
-**   cagrisiyla degisecek; agacin dogru kuruldugunu gozle gormek ve hattin
-**   gercek ikilide de test edilmesi icin simdi burada.
+**   Satir sozcuklere ayrilip ayristiriliyor, genisletiliyor ve son
+**   degerlerin kanonik metni basiliyor. Calistirici geldiginde bu basim
+**   onun cagrisiyla degisecek; hattin dogru calistigini gozle gormek ve
+**   birim testlerin yaninda gercek ikilide de kosulmasi icin simdi burada.
+**
+** CIKIS KODLARI:
+**   Sozdizimi hatasi 2, genisletme hatasi 1. Bash de ayni kodlari
+**   kullaniyor ve $? bunlari okuyor.
 */
 
 #include "nax.h"
@@ -47,40 +51,54 @@ static int	is_exit_request(const char *line)
 }
 
 /*
-** Sozdizimi hatasini kullaniciya bildirir ve cikis kodunu 2 yapar.
+** Hatayi kullaniciya bildirir ve verilen cikis kodunu ayarlar.
 **
 ** NEDEN ONCE fflush:
 **   stdout boruya yazarken blok tamponlu, stderr ise tamponsuz. Tamponu
 **   bosaltmadan hata yazmak, "nax < betik > log 2>&1" gibi bir kullanimda
 **   hatalarin ciktidan once gorunmesine yol acar; olculdu.
 */
-static void	report_syntax_error(t_shell *sh, const char *message)
+static void	report_error(t_shell *sh, const char *message, int status)
 {
 	fflush(stdout);
+	if (message == NULL)
+		message = "bilinmeyen hata";
 	fprintf(stderr, "%s: %s\n", NAX_NAME, message);
-	sh->last_status = 2;
+	sh->last_status = status;
 }
 
-/* Token listesinden boru hattini kurar ve kanonik metnini basar. */
+/* Agaci genisletir ve son degerlerin kanonik metnini basar. */
+static void	run_pipeline(t_shell *sh, const t_cmd *cmds)
+{
+	t_exp_err	err;
+	char		*shape;
+
+	shape = exp_dump(cmds, sh, &err);
+	if (shape == NULL)
+	{
+		report_error(sh, err.message, 1);
+		return ;
+	}
+	printf("%s\n", shape);
+	free(shape);
+	sh->last_status = 0;
+}
+
+/* Token listesinden boru hattini kurar ve genisletmeye verir. */
 static void	run_tokens(t_shell *sh, const t_token *tokens)
 {
 	t_ast_err	err;
 	t_cmd		*cmds;
-	char		*shape;
 
 	cmds = ast_build(tokens, &err);
 	if (cmds == NULL)
 	{
 		if (err.message != NULL)
-			report_syntax_error(sh, err.message);
+			report_error(sh, err.message, 2);
 		return ;
 	}
-	shape = ast_dump(cmds);
-	if (shape != NULL)
-		printf("%s\n", shape);
-	free(shape);
+	run_pipeline(sh, cmds);
 	ast_free(cmds);
-	sh->last_status = 0;
 }
 
 /* Tek bir girdi satirini isler: ayirir, ayristirir, sonucu basar. */
@@ -99,7 +117,7 @@ static void	handle_line(t_shell *sh, const char *line)
 	tokens = lex_split(line, &err);
 	if (tokens == NULL && err.message != NULL)
 	{
-		report_syntax_error(sh, err.message);
+		report_error(sh, err.message, 2);
 		return ;
 	}
 	run_tokens(sh, tokens);
