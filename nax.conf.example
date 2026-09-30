@@ -1,0 +1,52 @@
+# nax yapilandirmasi — ornek dosya.
+#
+# KULLANIM:
+#   cp nax.conf.example nax.conf
+#   chmod 600 nax.conf
+#   api_key satirini doldur
+#
+# nax.conf .gitignore icindedir; anahtar asla depoya girmez.
+# Bu dosyayi yalnizca naxd okur, kabuk (C tarafi) okumaz.
+# Dosya her istekte degisiklik icin kontrol edilir: kaydettigin an gecerli
+# olur, kabugu yeniden baslatmak gerekmez.
+
+# ---------------------------------------------------------------------------
+# Bulut saglayici — varsayilan yol.
+# provider: groq | openrouter | openai | gemini | nvidia | anthropic
+# Ilk bes tanesi ayni OpenAI uyumlu bicimi konusur, tek kod yolu kullanir.
+# anthropic ayri bir bicim konusur, ayri adaptor ile ele alinir.
+# ---------------------------------------------------------------------------
+provider       = groq
+base_url       = https://api.groq.com/openai/v1
+api_key        =
+
+# ---------------------------------------------------------------------------
+# Gorev basina model.
+# Niyeti tek komuta cevirmek dar bir istir; kucuk ve hizli model daha iyidir,
+# cunku burada gecikme kalitenin parcasidir. Hata aciklamak akil ister,
+# buyuk model bedelini hak eder.
+# ---------------------------------------------------------------------------
+model_intent   = llama-3.3-70b-versatile
+model_explain  = llama-3.3-70b-versatile
+
+# ---------------------------------------------------------------------------
+# Yerel model — opsiyon, temel yol degil.
+# local_url'nin 127.0.0.1 olmasi ZORUNLU DEGIL. Kabuk GPU'su olmayan bir
+# makinede kosarken, guclu makinede "ollama serve" calisir ve buraya o
+# makinenin adresi yazilir (ornegin Tailscale adresi).
+# use_local = true yazip kaydetmek yerel modele gecirir.
+# ---------------------------------------------------------------------------
+use_local      = false
+local_url      = http://127.0.0.1:11434/v1
+local_model    = qwen2.5-coder:7b
+
+# ---------------------------------------------------------------------------
+# Dusme ve sureler.
+# local_fallback, bulut cagrisi iki kez ust uste patlarsa yerel modele gecer.
+# Tetikleyici "internet var mi" degil, "cagri patladi mi": gercek hayatta
+# API arizasi, kota bitmesi ve yavaslama, internetin gitmesinden cok daha
+# sik olur ve mekanizma ayni.
+# ---------------------------------------------------------------------------
+local_fallback = true
+timeout        = 15
+spinner        = 4

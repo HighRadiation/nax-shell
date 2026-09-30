@@ -1,0 +1,21 @@
+# Uretilen ikililer
+/nax
+/nax-asan
+
+# Derleme cikti dizinleri
+obj/
+obj-asan/
+*.o
+*.d
+
+# Gizli yapilandirma: anahtar icerir, asla commit edilmez.
+# Ornegi nax.conf.example olarak takip edilir.
+nax.conf
+
+# Python
+__pycache__/
+*.pyc
+
+# Duzenleyici / isletim sistemi artiklari
+*.swp
+.DS_Store
