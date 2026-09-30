@@ -50,9 +50,39 @@ typedef enum e_resolve
 	RES_IS_DIR
 }	t_resolve;
 
+/*
+** Boru hattinda bir asamanin dosya tanimlayici baglantilari.
+**
+** in_fd    : onceki asamanin okuma ucu; yoksa -1
+** out_fd   : bu asamanin yazma ucu; yoksa -1
+** spare_fd : cocukta KAPATILMASI gereken uc — kendi cikis borusunun okuma
+**            ucu; yoksa -1
+**
+** spare_fd neden var: cocuk kendi cikis borusunun OKUMA ucunu da devralir.
+** Kapatilmazsa o fd cocuga, oradan da execve ile calistirilan programa
+** sizar. Olculdu: kapatilmadiginda ilk asama /proc/self/fd icinde 0,1,2
+** disinda fazladan bir giris goruyor, bash'te gormuyor.
+**
+** DIKKAT — bu ASILMA sebebi DEGIL: boru EOF'u YAZMA uclari kapandiginda
+** gorulur, okuma ucu degil. Asilmaya yol acan sey ANA surecin fds[1]'i
+** kapatmamasidir; o zaman yazan taraf hic kapanmis sayilmaz ve okuyan
+** asama sonsuza kadar bekler. Ikisi ayri hata; ilk yazimda karistirilmisti
+** ve mutasyon denemesi bunu ortaya cikardi.
+*/
+typedef struct s_stage
+{
+	int	in_fd;
+	int	out_fd;
+	int	spare_fd;
+}	t_stage;
+
 t_resolve	path_resolve(const char *name, char **out);
 const char	*path_reason(t_resolve status);
 int			path_code(t_resolve status);
+
+void		ex_warn(const char *message);
+void		ex_warn_name(const char *name, const char *reason);
+int			redir_apply(const t_xredir *redirs);
 
 void		ex_run(t_shell *sh, const t_cmd *cmds);
 
