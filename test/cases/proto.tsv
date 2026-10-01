@@ -43,6 +43,9 @@ P:	ERR:EMPTY
 P:WAT\tid=1	ERR:BAD_TYPE
 # Tip adlari buyuk harf; kucuk harfli ad taninmaz.
 P:ready\tid=1	ERR:BAD_TYPE
+# "UNKNOWN" bir tip ADI degil, tanimama durumunun kendisi. Tel uzerinde
+# gecerli sayilsa taninmayan kayit sessizce kabul edilirdi.
+P:UNKNOWN\tid=1	ERR:BAD_TYPE
 # Esittir isareti olmayan alan.
 P:OK\tid=1\tbozuk	ERR:BAD_FIELD
 # Bos anahtar.
@@ -72,9 +75,15 @@ B:READY|id=0|version=1.2|key=abc	READY\tid=0\tversion=1.2\tkey=abc
 B:INTENT|id=7|text=dun degisen dosyalar	INTENT\tid=7\ttext=b64:ZHVuIGRlZ2lzZW4gZG9zeWFsYXI=
 # Bos deger kodlanir.
 B:ERR|id=2|message=	ERR\tid=2\tmessage=b64:
-# "b64:" ile BASLAYAN deger kodlanmak ZORUNDA, yoksa cozen taraf
-# onu kodlanmis sanip bozuk veri uretir. Bicimin kendi kacis sorunu.
-B:OK|id=1|text=b64:QQ==	OK\tid=1\ttext=b64:YjY0OlFRPT0=
+# "b64:" ile BASLAYAN deger kodlanmak ZORUNDA, yoksa cozen taraf onu
+# kodlanmis sanip bozuk veri uretir. Bicimin kendi kacis sorunu.
+#
+# DEGER DOLGUSUZ SECILDI: ilk yazimda "b64:QQ==" vardi ve o deger "="
+# icerdigi icin ZATEN sade sayilmiyordu, yani kural hic olculmuyordu.
+# Mutasyon testi gosterdi: oneki denetimi silindiginde tek vaka patlamadi.
+B:OK|id=1|text=b64:QQQQ	OK\tid=1\ttext=b64:YjY0OlFRUVE=
+# Kodlanmis hali cozuldugunde degerin kendisi geri gelmeli.
+P:OK\tid=1\ttext=b64:YjY0OlFRUVE=	OK|id=1|text=b64:QQQQ
 # Sekme iceren deger kodlanir.
 B:OK|id=1|text=bir\tiki	OK\tid=1\ttext=b64:YmlyCWlraQ==
 # Taninmayan tip kurulamaz.

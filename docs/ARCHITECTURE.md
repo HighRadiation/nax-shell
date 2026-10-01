@@ -339,7 +339,10 @@ src/
     classifier.c   karar sırası: ön filtre, baş çözümü, yol seçimi
     veto.c         şekil vetoları: baş çözülse bile satır doğal dil mi
     fix.c          yerel yazım düzeltmesi; AI'a gitmeden öneri
-  (ai/ içinde sonraki aşamada: yardımcı süreç istemcisi ve protokolü)
+    proto.h        tel biçiminin tipleri: kayıt, alan, hata
+    b64.c          serbest metin alanları için base64
+    proto.c        kayıt kurma ve çözme
+  (ai/ içinde sonraki aşamada: satır okuma ve yardımcı süreç gözetimi)
 test/
   test.h           test koşucularının paylaştığı tipler ve iskele
   harness.c        vaka dosyası okuma, kaçış çözme, özet basma
@@ -348,6 +351,7 @@ test/
   test_parser.c    tablo tabanlı ayrıştırıcı testleri
   test_expand.c    tablo tabanlı genişletme testleri
   test_classify.c  tablo tabanlı sınıflandırıcı testleri; kendi fikstürünü kurar
+  test_proto.c     tablo tabanlı protokol testleri; kurma ve çözme bir arada
   cases/*.tsv      vaka tabloları; yeni vaka için yeniden derleme gerekmez
   pty_drive.py     sahte terminal üzerinden etkileşimli yol testleri
 naxd/              AI yardımcı süreci (sonraki aşamada)

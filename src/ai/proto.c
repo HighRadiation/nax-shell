@@ -56,7 +56,14 @@ const char	*proto_type_name(t_ftype type)
 	return (names[0]);
 }
 
-/* Addan tipe cevirir; taninmayan ad FR_UNKNOWN verir. */
+/*
+** Addan tipe cevirir; taninmayan ad FR_UNKNOWN verir.
+**
+** Arama birden basliyor cunku "UNKNOWN" tel uzerinde bir ad degil,
+** tanimama durumunun kendisi. Sifirdan baslamak da ayni sonucu verirdi -
+** eslesme FR_UNKNOWN donerdi ve cagiran onu zaten hata sayiyor - yani bu
+** secim davranisi degil niyeti anlatiyor.
+*/
 t_ftype	proto_type_from(const char *name)
 {
 	const char	*const	*names;

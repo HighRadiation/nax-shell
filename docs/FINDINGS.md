@@ -40,6 +40,8 @@ listenin geçmişi de okunabilir kalır.
 | 2026-09-30 | `fix_offer` içindeki uzunluk kontrolü **testle gözlemlenemiyor**: `fix_distance` eşikten uzun adlara zaten -1 dönüyor ve o da bir satır önce eleniyor | `src/ai/fix.c` | Kaldırılmadı. Hemen altındaki `memcpy`'nin ön koşulu bu; bir bellek yazmasının güvenliğini uzaktaki bir işlevin sözleşmesine bağlamak istemiyorum. Mutasyon testi kaçtığı için burada kayıtlı — yeşil test bu satırı kapsamıyor |
 | 2026-09-30 | Öneriyi tampona koymadan önceki `sh->interactive == 0` kontrolü **gözlemlenemiyor**: betik modunda ön yükleme hiçbir şey yapmıyor, yalnızca bir dize ayrılmış kalıyor (statik göstericide durduğu için sızıntı olarak da raporlanmıyor) | `src/main.c` `report_fix` | Kaldırılmadı; niyet belirtiyor ve boşa ayırma yapmıyor. Davranış farkı olmadığı için testi de yok |
 
+| 2026-10-01 | base64 çözücüsündeki "uzunluk dördün katı olmalı" kontrolü **testle gözlemlenemiyor**: dördün katı olmayan dizgide son dörtlü NUL sonlandırıcısını okur, o da alfabede olmadığı için çözme yine başarısız olur | `src/ai/b64.c` | Kaldırılmadı. Biçim kuralını okuyanın aradığı yerde söylüyor ve doğruluğu "sonlandırıcı bizi kurtarır" akıl yürütmesine bağlamıyor. Mutasyon testi kaçtığı için burada kayıtlı |
+
 ## Kapandı
 
 | Tarih | Ne | Nerede kapandı |

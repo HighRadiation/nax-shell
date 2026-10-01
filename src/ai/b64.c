@@ -17,6 +17,13 @@
 **   karakter. Gevsek bir cozucu bozuk cerceveyi sessizce kabul eder;
 **   oysa bozuk cerceve yardimci surecin saglikli olmadiginin isareti ve
 **   gorulmesi gerekiyor.
+**
+**   Uzunluk kontrolu TESTLE GOZLEMLENEMIYOR: dordun kati olmayan bir
+**   dizgide son dortlu NUL sonlandiricisini okur, o da alfabede
+**   olmadigi icin cozme yine basarisiz olur. Kontrol yine duruyor,
+**   cunku bicim kuralini okuyanin aradigi yerde soyluyor ve dogrulugu
+**   "sonlandirici bizi kurtarir" akil yurutmesine baglamiyor.
+**   FINDINGS.md icinde kayitli.
 */
 
 #include "proto.h"
