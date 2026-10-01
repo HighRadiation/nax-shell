@@ -322,6 +322,13 @@ static int	wait_writable(t_naxd *nx, long deadline)
 	return (ready > 0);
 }
 
+/* Yazma basarisizligini kaydeder ve her zaman 0 doner. */
+static int	write_failed(t_naxd *nx)
+{
+	nx->state = AI_OFF;
+	return (0);
+}
+
 /*
 ** Satiri tamamen yazar; basarida 1.
 **
@@ -332,6 +339,11 @@ static int	wait_writable(t_naxd *nx, long deadline)
 ** oldugu icin buyuk bir kayit tek seferde gitmeyebilir. Dongusuz bir
 ** yazim kaydin yarisini gonderip basarili sayardi ve karsi taraf asla
 ** tam satir gormezdi.
+**
+** BASARISIZLIK TEK YERDE ISARETLENIR: iki cikis yolu da write_failed'e
+** gidiyor. Ilk yazimda iki ayri atama vardi ve biri gereksizdi - cevap
+** bekleyen yol zaten naxd_ask icinde isaretliyor. Mutasyon testi
+** ikisinden birini silmenin hicbir vakayi bozmadigini gosterdi.
 */
 int	naxd_write(t_naxd *nx, const char *line)
 {
@@ -354,14 +366,10 @@ int	naxd_write(t_naxd *nx, const char *line)
 		{
 			if (wait_writable(nx, deadline))
 				continue ;
-			nx->state = AI_OFF;
-			return (0);
+			return (write_failed(nx));
 		}
 		if (wrote <= 0)
-		{
-			nx->state = AI_OFF;
-			return (0);
-		}
+			return (write_failed(nx));
 		done += (size_t)wrote;
 	}
 	return (1);

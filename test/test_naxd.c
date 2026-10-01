@@ -292,6 +292,9 @@ static int	check_backoff_delays_retry(void)
 **
 ** Kayit boru tamponundan BUYUK olmak zorunda, yoksa yazma tek seferde
 ** biter ve tikanma hic yasanmaz.
+**
+** DURUM KAPANISTAN ONCE OKUNUYOR: naxd_close zaten sifirliyor, yani
+** sonra bakmak her zaman "kapali" gorurdu ve o yari hicbir sey olcmezdi.
 */
 static int	check_deaf_write_does_not_hang(void)
 {
@@ -301,6 +304,7 @@ static int	check_deaf_write_does_not_hang(void)
 	t_field	field;
 	t_askst	state;
 	char	*big;
+	int		marked;
 
 	build_argv(argv, (char *)"deaf", (char *)"0.1");
 	naxd_init(&nx, argv, log_path());
@@ -317,10 +321,11 @@ static int	check_deaf_write_does_not_hang(void)
 	field.value = big;
 	proto_blank(&reply);
 	state = naxd_ask(&nx, FR_INTENT, &field, 1, &reply, on_tick);
+	marked = (naxd_alive(&nx) == 0);
 	proto_free(&reply);
 	free(big);
 	naxd_close(&nx);
-	return (state == ASK_DEAD && nx.state == AI_OFF);
+	return (state == ASK_DEAD && marked);
 }
 
 /*
