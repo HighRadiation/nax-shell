@@ -1,0 +1,96 @@
+# Tel biciminin kurulmasi ve cozulmesi.
+#
+# Vaka turleri girdinin onekinde: P: cozme, B: kurma, C: C icindeki
+# adli kontrol. Bicimin tamami test_proto.c basliginda anlatiliyor.
+#
+# Sekme girdide \t olarak yazilir: iskele girdi ile beklenen alani
+# ilk GERCEK sekmeden boler, kacis cozmesi ondan sonra olur.
+
+# --- cozme: duzgun kayitlar ---
+# Alansiz kayit gecerli.
+P:BYE	BYE
+P:READY\tid=0\tversion=1\tkey=abc	READY|id=0|version=1|key=abc
+P:OK\tid=7\tkind=request\tdanger=0	OK|id=7|kind=request|danger=0
+# Sade degerler okunabilir kaliyor: bolu, nokta ve iki nokta serbest.
+P:EVENT\tid=3\tbranch=feature/x\tms=12.5	EVENT|id=3|branch=feature/x|ms=12.5
+P:NEED\tid=4\tprovide=cwd_ls,git_status	NEED|id=4|provide=cwd_ls,git_status
+
+# --- cozme: kodlanmis degerler ---
+# Bosluklu metin kodlanmis gelir ve aynen cozulur.
+P:INTENT\tid=7\ttext=b64:ZHVuIGRlZ2lzZW4gZG9zeWFsYXJpIGdvc3Rlcg==	INTENT|id=7|text=dun degisen dosyalari goster
+# Sekme iceren deger cerceveyi bozmuyor; kodlamanin asil sebebi bu.
+P:OK\tid=1\ttext=b64:YmlyCWlraQ==	OK|id=1|text=bir<TAB>iki
+P:OK\tid=1\ttext=b64:YmlyCmlraQ==	OK|id=1|text=bir<NL>iki
+# Bos kodlanmis deger bos dizgiye cozulur: "deger yok" ile
+# "deger bos" ayrimi korunuyor.
+P:ERR\tid=2\tmessage=b64:	ERR|id=2|message=
+P:OK\tid=1\tcmd=b64:ZmluZCAuIC1uYW1lICcqLmxvZyc=	OK|id=1|cmd=find . -name '*.log'
+# Alfabenin son iki harfi "+" ve "/". Bu vaka olmadan o iki konum hic
+# olculmuyordu: mutasyon testi ikisini yer degistirdiginde hicbir vaka
+# patlamadi, cunku korpustaki hicbir kodlanmis deger bunlari uretmiyordu.
+P:OK\tid=1\ttext=b64:Pz8/Pz9+	OK|id=1|text=?????~
+B:OK|id=1|text=?????~	OK\tid=1\ttext=b64:Pz8/Pz9+
+
+# --- cozme: ayristirma ayrintilari ---
+# Deger esittir isareti icerebilir: ilk esittir anahtari ayirir,
+# gerisi degerin parcasi. Kurma tarafi bunu kodlar ama cozme
+# tarafi gelen satiri yine dogru anlamali.
+P:OK\tid=1\ttext=a=b	OK|id=1|text=a=b
+P:HELLO\tid=0	HELLO|id=0
+
+# --- cozme: hatalar ---
+P:	ERR:EMPTY
+P:WAT\tid=1	ERR:BAD_TYPE
+# Tip adlari buyuk harf; kucuk harfli ad taninmaz.
+P:ready\tid=1	ERR:BAD_TYPE
+# Esittir isareti olmayan alan.
+P:OK\tid=1\tbozuk	ERR:BAD_FIELD
+# Bos anahtar.
+P:OK\tid=1\t=deger	ERR:BAD_FIELD
+# Anahtarda bosluk.
+P:OK\tid=1\tbir iki=3	ERR:BAD_FIELD
+# Uzunluk dordun kati degil.
+P:OK\tid=1\ttext=b64:QQQ	ERR:BAD_B64
+# Alfabede olmayan karakter.
+P:OK\tid=1\ttext=b64:QQ!=	ERR:BAD_B64
+# Dolgudan sonra veri.
+P:OK\tid=1\ttext=b64:QQ=A	ERR:BAD_B64
+# Dolgu ORTADA: ilk dortlu eksik cozulup devam ediyor. Dolgu yalnizca son
+# dortlude olabilir, aksi halde iki ayri kodlama birlestirilmis demektir.
+P:OK\tid=1\ttext=b64:QQ==QQ==	ERR:BAD_B64
+# Cozulen veride gomulu NUL. Tum alanlar metin oldugu icin bu bir
+# ihlal; sessizce kesmek degerin yarisini kaybettirirdi.
+P:OK\tid=1\ttext=b64:QQBB	ERR:NUL
+# On alti alandan fazlasi.
+P:OK\tk0=0\tk1=1\tk2=2\tk3=3\tk4=4\tk5=5\tk6=6\tk7=7\tk8=8\tk9=9\tk10=10\tk11=11\tk12=12\tk13=13\tk14=14\tk15=15\tk16=16	ERR:TOO_MANY
+
+# --- kurma ---
+B:BYE|id=1	BYE\tid=1
+# Sade degerler kodlanmaz.
+B:READY|id=0|version=1.2|key=abc	READY\tid=0\tversion=1.2\tkey=abc
+# Bosluk sade sayilmaz, kodlanir.
+B:INTENT|id=7|text=dun degisen dosyalar	INTENT\tid=7\ttext=b64:ZHVuIGRlZ2lzZW4gZG9zeWFsYXI=
+# Bos deger kodlanir.
+B:ERR|id=2|message=	ERR\tid=2\tmessage=b64:
+# "b64:" ile BASLAYAN deger kodlanmak ZORUNDA, yoksa cozen taraf
+# onu kodlanmis sanip bozuk veri uretir. Bicimin kendi kacis sorunu.
+B:OK|id=1|text=b64:QQ==	OK\tid=1\ttext=b64:YjY0OlFRPT0=
+# Sekme iceren deger kodlanir.
+B:OK|id=1|text=bir\tiki	OK\tid=1\ttext=b64:YmlyCWlraQ==
+# Taninmayan tip kurulamaz.
+B:WAT|id=1	NULL
+# Negatif kimlik bicimsel olarak gecerli; anlamli olup olmadigina
+# cagri tarafi karar verir.
+B:OK|id=-1|kind=question	OK\tid=-1\tkind=question
+
+# --- tabloda anlatilamayan kontroller ---
+# Sinirin biri ustu reddedilir, siniri tam tutan reddedilmez.
+C:too_long	ok
+# Yenisatir iceren deger kurulup aynen cozulur.
+C:newline_round_trip	ok
+# Iki kez serbest birakma guvenli, olmayan alan NULL.
+C:free_and_missing	ok
+# Sondaki yenisatir yok sayilir; ayni cozucu akistan gelen satiri da
+# ciplak dizgiyi de kabul etsin diye. Tabloda yazilamiyor, cunku vaka
+# dosyasina gercek yenisatir konulamaz.
+C:trailing_newline	ok
