@@ -23,6 +23,20 @@
 **   yalnizca bir bayrak set eder; sinyal baglaminda guvenli olmayan tek
 **   bir cagri bile yapilmaz.
 **
+** SIGPIPE NEDEN YOK SAYILIYOR:
+**   Yardimci surec oldugunde kabuk onun borusuna yazmaya calisir.
+**   Varsayilan davranis kabugu OLDURMEK olurdu; yok sayildiginda yazma
+**   EPIPE hatasi dondurur ve kabuk bunu normal bir hata gibi ele alir.
+**   Yani AI'in olumu kabugu goturmez.
+**
+**   Cocuk tarafi sig_reset_child icinde temizliyor ve orada elle tutulan
+**   bir liste YOK; gerekcesi o islevin basinda.
+**
+**   TESTI SAHTE TERMINALDE KOSMAK ZORUNDA: bu islev yalnizca etkilesimli
+**   kipte cagriliyor, yani boruyla beslenen bir kabukta devralinacak bir
+**   sey olmuyor. Ilk yazimda vaka boru grubundaydi ve sifirlama kasten
+**   silindiginde patlamadi.
+**
 ** SA_RESTART BILINCLI OLARAK YOK:
 **   Bloke eden cagrilarin EINTR donmesi isteniyor. Bunun bedeli var:
 **   calistirici geldiginde waitpid, yardimci surec beklemesi geldiginde
@@ -35,7 +49,31 @@
 #include <unistd.h>
 #include <readline/readline.h>
 
+#define SIG_HIGHEST 31
+
 static volatile sig_atomic_t	g_interrupted;
+static char						g_inherited[SIG_HIGHEST + 1];
+
+/*
+** Kabuga GIRILIRKEN yok sayilan sinyalleri kaydeder.
+**
+** Acilista, readline kurulmadan once cagrilmak zorunda: readline kendi
+** adina sinyal yok sayiyor ve o dagilim "devralinan" sayilmamali.
+*/
+void	sig_snapshot_inherited(void)
+{
+	struct sigaction	old;
+	int					sig;
+
+	sig = 1;
+	while (sig <= SIG_HIGHEST)
+	{
+		if (sig != SIGKILL && sig != SIGSTOP
+			&& sigaction(sig, NULL, &old) == 0)
+			g_inherited[sig] = (old.sa_handler == SIG_IGN);
+		sig++;
+	}
+}
 
 /* SIGINT isleyicisi; sinyal baglaminda guvenli olan tek isi yapar. */
 static void	on_sigint(int sig)
@@ -65,30 +103,51 @@ void	sig_setup_interactive(void)
 	sa.sa_flags = 0;
 	sigaction(SIGINT, &sa, NULL);
 	signal(SIGQUIT, SIG_IGN);
+	signal(SIGPIPE, SIG_IGN);
 	rl_catch_signals = 0;
 	rl_event_hook = on_readline_wait;
 }
 
 /*
-** Cocuk surecte sinyalleri varsayilana dondurur.
+** Cocuk surecte sinyal dagilimini duzeltir.
 **
 ** NEDEN ZORUNLU:
 **   execve YAKALANAN sinyalleri varsayilana dondurur ama YOK SAYILAN
-**   sinyalleri yok sayili BIRAKIR. Kabuk SIGQUIT'i yok sayiyor;
-**   sifirlanmazsa her cocuk bunu devralir ve Ctrl-\ hicbir komutu
-**   etkilemez. SIGINT'in isleyicisi execve tarafindan zaten sifirlaniyor,
-**   ama niyeti gorunur kilmak icin burada da yazili.
+**   sinyalleri yok sayili BIRAKIR. Sifirlanmazsa her cocuk kabugun yok
+**   saydiklarini devralir; SIGPIPE ornegi ozellikle sinsi, cunku
+**   "yes | head" gibi bir hatta yazan taraf olmez.
 **
-** BAKIM KURALI:
-**   Kabuk ileride baska bir sinyali yok saymaya baslarsa (ornegin boru
-**   hatlari icin SIGPIPE), o sinyal BURAYA da eklenmek zorunda. Yoksa
-**   cocuklar sessizce devralir; SIGPIPE ornegi ozellikle sinsi, cunku
-**   "yes | head" gibi bir hat yazan taraf olmedigi icin asili kalir.
+** NEDEN ELLE TUTULAN LISTE DEGIL:
+**   Ilk yazim yalnizca kabugun kendi yok saydiklarini sifirliyordu ve
+**   "yeni bir sinyal yok saymaya baslarsan buraya ekle" diye bir bakim
+**   kurali vardi. O kural YETERSIZ: olculdu, readline kabuk adina
+**   SIGPIPE ve SIGXFSZ'yi yok sayiyor. Yani cocuklar bizim hic
+**   yazmadigimiz bir dagilimi devraliyordu. Artik tum sinyaller
+**   geziliyor ve hatirlanacak liste yok.
+**
+** DEVRALINAN YOK SAYMA KORUNUR:
+**   Kabuk SIGPIPE yok sayili halde baslatildiysa cocuklar da onu yok
+**   sayili gorur. Bash boyle davraniyor (olculdu: yok sayili girildiginde
+**   cocuk maskesi 0x1000, varsayilan girildiginde 0). Bu yuzden acilista
+**   bir anlik goruntu alinir ve burada yalnizca SONRADAN eklenenler
+**   temizlenir.
 */
 void	sig_reset_child(void)
 {
-	signal(SIGINT, SIG_DFL);
-	signal(SIGQUIT, SIG_DFL);
+	int	sig;
+
+	sig = 1;
+	while (sig <= SIG_HIGHEST)
+	{
+		if (sig != SIGKILL && sig != SIGSTOP)
+		{
+			if (g_inherited[sig])
+				signal(sig, SIG_IGN);
+			else
+				signal(sig, SIG_DFL);
+		}
+		sig++;
+	}
 }
 
 /* Kesme olup olmadigini soyler ve bayragi sifirlar. */

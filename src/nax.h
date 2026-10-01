@@ -66,6 +66,7 @@ int		ln_head_uses(const char *name);
 void	ln_preload(const char *text);
 
 void	sig_setup_interactive(void);
+void	sig_snapshot_inherited(void);
 void	sig_reset_child(void);
 int		sig_take_interrupt(void);
 

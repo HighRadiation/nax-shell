@@ -145,6 +145,7 @@ static void	shell_init(t_shell *sh)
 	sh->last_status = 0;
 	sh->interactive = isatty(STDIN_FILENO);
 	sh->exiting = 0;
+	sig_snapshot_inherited();
 	if (sh->interactive)
 		sig_setup_interactive();
 	ln_setup();

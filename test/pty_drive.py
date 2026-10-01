@@ -60,6 +60,17 @@ class Shell:
         self.seen_prompts = 0
         self.pid, self.fd = pty.fork()
         if self.pid == 0:
+            # Sinyal dagilimi TEMIZLENIR. Testleri baslatan surec zinciri
+            # bazi sinyalleri yok sayiyor (olculdu: bash SIGPIPE'i, python
+            # ek olarak SIGXFSZ'yi) ve kabuk devralinan yok saymayi
+            # korumak ZORUNDA - bash da boyle davraniyor. Temizlemezsek
+            # "cocuga ne siziyor" sorusu baslatana gore degisirdi.
+            for num in range(1, 32):
+                if num not in (signal.SIGKILL, signal.SIGSTOP):
+                    try:
+                        signal.signal(num, signal.SIG_DFL)
+                    except (OSError, ValueError, RuntimeError):
+                        pass
             os.environ["TERM"] = "xterm-256color"
             os.environ["ASAN_OPTIONS"] = "detect_leaks=1"
             if env:
@@ -443,6 +454,65 @@ def case_fix_quoted_head_not_preloaded(binary, rep):
     return sh.screen()
 
 
+def expected_child_mask():
+    """
+    Fiksturun temizliginden SONRA cocuga kalmasi gereken maske.
+
+    SABIT SIFIR YAZILAMAZ: testleri baslatan surec zinciri bazi
+    sinyalleri yok sayiyor ve bu zincir ortama gore degisiyor; olculdu,
+    "make" altinda maske 0x180000000, dogrudan kosumda 0. Ustelik 32 ve
+    uzeri sinyaller glibc'nin kendi kullanimina ayrilmis ve Python
+    bunlarin dagilimini degistiremiyor.
+
+    Fikstur 1-31 arasini varsayilana dondurdugu icin beklenen maske,
+    bu surecin maskesinin ALT 31 BITI TEMIZLENMIS hali.
+    """
+    value = 0
+    with open("/proc/self/status") as handle:
+        for line in handle:
+            if line.startswith("SigIgn:"):
+                value = int(line.split()[1], 16)
+    return "%016x" % (value & ~((1 << 31) - 1))
+
+
+def case_child_signal_mask(binary, rep):
+    """
+    Cocuk, kabugun yok saydigi sinyalleri DEVRALMAMALI.
+
+    execve yakalanan sinyalleri varsayilana dondurur ama yok sayilanlari
+    yok sayili birakir. Kabuk etkilesimli kipte SIGPIPE'i yok sayiyor
+    (yardimci surec oldugunde yazma kabugu oldurmesin diye); cocukta
+    sifirlanmazsa "yes | head" gibi bir hatta yazan taraf olmez.
+
+    VAKA SAHTE TERMINALDE OLMAK ZORUNDA: sinyalleri kuran islev yalnizca
+    etkilesimli kipte cagriliyor. Boru grubundaki benzeri bu kurali
+    koruyamiyor, cunku orada yok sayilan sinyal hic yok.
+
+    Tek bir sinyal degil MASKENIN TAMAMI olculuyor: kabuk ya da kullandigi
+    bir kutuphane sonradan baska bir sinyali yok saymaya baslarsa burasi
+    patlar. Elle tutulan bir listeye guvenilmiyor.
+
+    Fikstur sinyal dagilimini temizleyerek basliyor ve beklenen maske
+    ondan TURETILIYOR; sabit sifir yazmak "make check" altinda patliyordu.
+    Devralinan yok saymanin KORUNDUGU ayri bir vakada, boru grubunda
+    olculuyor.
+    """
+    want = expected_child_mask()
+    sh = Shell(binary)
+    sh.ask(b"grep SigIgn /proc/self/status\n")
+    clean = sh.wait_for("SigIgn:\t" + want)
+
+    sh.ask(b"yes | head -1\n")
+    piped = sh.wait_for("y", skip=1)
+    sh.ask(b"exit\n")
+    alive, info = sh.close()
+    rep.check("cocuk fazladan yok sayilan sinyal gormuyor", clean,
+              "beklenen SigIgn: " + want + " | " + sh.screen()[-300:])
+    rep.check("kapanan boruda yazan taraf olur", piped, sh.screen()[-300:])
+    rep.check("sinyal vakasi sonrasi kabuk duzgun kapandi", not alive, info)
+    return sh.screen()
+
+
 def case_eof(binary, rep):
     """Ctrl-D gercek dosya sonu olarak taninir."""
     sh = Shell(binary)
@@ -474,6 +544,7 @@ def main():
         case_fix_danger_not_preloaded,
         case_fix_history_ranking,
         case_fix_quoted_head_not_preloaded,
+        case_child_signal_mask,
     ):
         screens.append(case(binary, rep))
 

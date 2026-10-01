@@ -95,6 +95,58 @@ run_status() {
 # NEDEN GEREKLI: bazi kurallar bir seyin YAPILMAMASI. "Calistirilamayan
 # dosya onerilmez" kurali, cikan mesaji degil cikmayan adi olcmek
 # demek; "icerir" bicimindeki yardimcilarla bu yazilamiyor.
+# Iki maskeyi karsilastirip sonucu basar.
+report_mask() {
+	local name="$1" want="$2" got="$3"
+
+	if [ "$got" = "$want" ]; then
+		PASS=$((PASS + 1))
+		printf "  ${G}gecti${N}   %s\n" "$name"
+	else
+		FAIL=$((FAIL + 1))
+		printf "  ${R}patladi${N} %s\n" "$name"
+		printf "    beklenen: %s\n" "$want"
+		printf "    gelen   : %s\n" "$got"
+	fi
+}
+
+# Cocuk, kabugun DEVRALDIGINDAN fazlasini gormemeli.
+#
+# BEKLENEN MASKE SABIT YAZILAMAZ. Testleri baslatan surec zinciri bazi
+# sinyalleri yok sayiyor ve bu zincir ortama gore degisiyor; olculdu,
+# "make" altinda maske 0x180000000, dogrudan kosumda 0. Ilk yazimda sifir
+# bekleniyordu ve "make check" altinda patladi - kodda bir sorun
+# olmadigi halde.
+#
+# Dogru soru mutlak deger degil: ayni sekilde baslatilan DOGRUDAN bir
+# cocuk ile nax'in cocugu AYNI maskeyi gormeli. Fark varsa kabuk bir sey
+# ekliyor ya da devralinani kaybediyor demektir.
+run_signal_mask_check() {
+	local want got
+
+	want="$(timeout "$CASE_TIMEOUT" grep SigIgn /proc/self/status)"
+	got="$(printf 'grep SigIgn /proc/self/status\n' \
+		| timeout "$CASE_TIMEOUT" "$BIN" 2>/dev/null)"
+	report_mask "cocuk fazladan yok sayilan sinyal gormuyor" "$want" "$got"
+}
+
+# Devralinan yok sayma korunur.
+#
+# "trap '' PIPE" alt kabukta SIGPIPE'i yok sayili yapar ve nax bunu
+# devralir. Olcum yine goreli: iki taraf da AYNI tuzak altinda olculuyor,
+# yani beklenen maske SIGPIPE bitini kendiliginden iceriyor.
+#
+# Bu vaka "her seyi varsayilana dondur" yaklasimini reddediyor; bash da
+# devralinani koruyor (olculdu).
+run_inherited_ignore_check() {
+	local want got
+
+	want="$(trap '' PIPE; timeout "$CASE_TIMEOUT" grep SigIgn /proc/self/status)"
+	got="$(trap '' PIPE; printf 'grep SigIgn /proc/self/status\n' \
+		| timeout "$CASE_TIMEOUT" "$BIN" 2>/dev/null)"
+	report_mask "devralinan yok sayma cocuga gecer" "$want" "$got"
+}
+
 run_stderr_absent() {
 	local name="$1" input="$2" unwanted="$3" got
 
@@ -390,6 +442,12 @@ run_case   "boru icindeki export etkisiz" $'echo x | export NAXY=1\necho "[$NAXY
 # "command not found" cikar; bu yuzden birlesik cikti bos olmak zorunda.
 # Mutasyon denemesi bu boslugu gosterdi.
 run_merged "boru icinde yerlesik taninir" $'echo x | export NAXY=1\n'   ""
+
+# --- cocuga sizan sinyal davranisi ---
+run_signal_mask_check
+run_inherited_ignore_check
+# Yazan taraf kapanan boruda gercekten oluyor; hat asili kalmiyor.
+run_case   "kapanan boruda yazan taraf olur"  $'yes | head -1\n' "y"
 
 # --- yerel yazim duzeltmesi ---
 # Vakalar YERLESIK yazim hatasi kullaniyor: yerlesikler PATH icerigine
