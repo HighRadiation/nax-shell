@@ -148,6 +148,7 @@ int			b64_decode_inplace(char *text, size_t *out_len);
 char		*proto_build(t_ftype type, long id, const t_field *fields,
 				size_t n);
 t_perr		proto_parse(const char *line, t_frame *out);
+void		proto_blank(t_frame *frame);
 void		proto_free(t_frame *frame);
 const char	*proto_field(const t_frame *frame, const char *key);
 const char	*proto_type_name(t_ftype type);

@@ -67,6 +67,8 @@ void	ln_preload(const char *text);
 
 void	sig_setup_interactive(void);
 void	sig_snapshot_inherited(void);
+void	sig_set_wake_fd(int fd);
+void	sig_ignore_sigpipe(void);
 void	sig_reset_child(void);
 int		sig_take_interrupt(void);
 

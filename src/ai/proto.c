@@ -272,9 +272,7 @@ t_perr	proto_parse(const char *line, t_frame *out)
 {
 	size_t	len;
 
-	out->type = FR_UNKNOWN;
-	out->buf = NULL;
-	out->count = 0;
+	proto_blank(out);
 	if (line == NULL)
 		return (PE_EMPTY);
 	len = strlen(line);
@@ -290,6 +288,22 @@ t_perr	proto_parse(const char *line, t_frame *out)
 	memcpy(out->buf, line, len);
 	out->buf[len] = '\0';
 	return (split_frame(out));
+}
+
+/*
+** Cerceveyi BOS duruma getirir; hicbir sey serbest BIRAKMAZ.
+**
+** NEDEN AYRI ISLEV: cozme ve bekleme islevleri kendilerine verilen
+** cerceveyi bastan kuruyor. Kurulmamis bir cerceve ile cagrildiklarinda
+** proto_free cagirmak cop isaretciyi serbest birakmak olurdu. Sozlesme
+** su: bu islevler cerceveyi KURAR, eski icerigi cagiran birakmis olmak
+** zorunda.
+*/
+void	proto_blank(t_frame *frame)
+{
+	frame->type = FR_UNKNOWN;
+	frame->buf = NULL;
+	frame->count = 0;
 }
 
 /* Cercevenin tamponunu birakir; iki kez cagrilmasi guvenli. */

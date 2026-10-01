@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""
+fake_naxd.py - yardimci surecin yerine gecen, KASTEN KOTU davranan taklit.
+
+NEDEN GERCEK MODELDEN ONCE BU:
+    Bu asamanin sorusu "cevap dogru mu" degil, "karsi taraf olur, donar ya
+    da sacmalarsa kabuk saglam kaliyor mu". Gercek bir modelle bu
+    sorulari uretmek hem yavas hem rastgele; taklitle her biri istege
+    gore uretilebiliyor.
+
+KIP ARGUMANLA SECILIR: fake_naxd.py <kip> [gecikme_saniye]
+
+    Gecikme, "slow" ve "slow_ready" kiplerinin bekleme suresi. Testler
+    kisa deger veriyor; varsayilan insan olcegine gore secildi.
+
+    ok              Duzgun davranir: READY verir, her INTENT'e OK doner.
+    no_ready        Hic READY gondermez; acilis zaman asimina ugramali.
+    slow_ready      READY'yi gec gonderir.
+    slow            READY verir ama cevaplari gec gonderir; gosterge
+                    esigini gecer.
+    silent          READY verir, sonra hicbir istege cevap vermez.
+    die_at_start    READY'den once cikar.
+    die_after_ready READY verir ve hemen cikar.
+    die_mid_reply   Cevabin ORTASINDA, yenisatir yazmadan cikar.
+    garbage         Cozulemeyen satir gonderir.
+    bad_type        Taninmayan tip gonderir.
+    wrong_id        Baska bir kimlikle cevap verir; sessizce atilmali.
+    stale_then_ok   Once BIR ONCEKI kimlikle, sonra dogru kimlikle cevap
+                    verir; ilki atilmali.
+    huge            Bir mebibayttan uzun satir gonderir.
+    noisy_stderr    Hata cikisina bol bol yazar; terminale sizmamali.
+
+CIKTI TAMPONLANMAZ: her satir hemen gonderilir, yoksa kabuk bekledigi
+cevabi tamponda kalmis olabilir diye zaman asimina ugrardi.
+"""
+
+import base64
+import sys
+import time
+
+
+def send(line):
+    sys.stdout.write(line + "\n")
+    sys.stdout.flush()
+
+
+def b64(text):
+    return "b64:" + base64.b64encode(text.encode()).decode()
+
+
+def read_frames():
+    for raw in sys.stdin:
+        line = raw.rstrip("\n")
+        if not line:
+            continue
+        parts = line.split("\t")
+        fields = {}
+        for part in parts[1:]:
+            if "=" in part:
+                key, value = part.split("=", 1)
+                fields[key] = value
+        yield parts[0], fields
+
+
+def mode_ok(kind, fields):
+    ident = fields.get("id", "0")
+    if kind == "INTENT":
+        send("OK\tid=%s\tkind=request\tcmd=%s\tdanger=0"
+             % (ident, b64("ls -la")))
+    elif kind == "EXPLAIN":
+        send("OK\tid=%s\tkind=question\ttext=%s"
+             % (ident, b64("komut bulunamadi")))
+    elif kind == "BYE":
+        sys.exit(0)
+
+
+def main():
+    mode = sys.argv[1] if len(sys.argv) > 1 else "ok"
+    delay = float(sys.argv[2]) if len(sys.argv) > 2 else 5.0
+
+    if mode == "die_at_start":
+        sys.exit(3)
+    if mode == "noisy_stderr":
+        for i in range(200):
+            sys.stderr.write("taklit gurultu satiri %d\n" % i)
+        sys.stderr.flush()
+    if mode == "slow_ready":
+        time.sleep(delay)
+    if mode != "no_ready":
+        send("READY\tid=0\tversion=1\tkey=taklit")
+    if mode == "die_after_ready":
+        sys.exit(0)
+
+    for kind, fields in read_frames():
+        ident = fields.get("id", "0")
+        if kind == "BYE":
+            return
+        if kind == "CANCEL":
+            continue
+        if mode == "silent" or mode == "no_ready":
+            continue
+        if mode == "die_mid_reply":
+            sys.stdout.write("OK\tid=%s\tkind=request\tcmd=b64:" % ident)
+            sys.stdout.flush()
+            sys.exit(0)
+        if mode == "garbage":
+            send("bu satir hicbir seye benzemiyor")
+            continue
+        if mode == "bad_type":
+            send("WAT\tid=%s" % ident)
+            continue
+        if mode == "wrong_id":
+            send("OK\tid=9999\tkind=request\tcmd=%s\tdanger=0" % b64("ls"))
+            continue
+        if mode == "stale_then_ok":
+            # Eski kimlik GELEN kimlikten turetiliyor. Sabit "1" yazmak
+            # ilk istegin kimligiyle cakisiyordu, yani "eski" cevap
+            # dogru cevap sayiliyordu ve vaka hicbir sey olcmuyordu.
+            send("OK\tid=%d\tkind=request\tcmd=%s\tdanger=0"
+                 % (int(ident) - 1, b64("eski")))
+            send("OK\tid=%s\tkind=request\tcmd=%s\tdanger=0"
+                 % (ident, b64("yeni")))
+            continue
+        if mode == "huge":
+            send("OK\tid=%s\tkind=question\ttext=b64:%s"
+                 % (ident, "QQ" * 600000))
+            continue
+        if mode == "slow":
+            time.sleep(delay)
+        mode_ok(kind, fields)
+
+
+if __name__ == "__main__":
+    main()

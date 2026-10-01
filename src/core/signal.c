@@ -23,6 +23,9 @@
 **   yalnizca bir bayrak set eder; sinyal baglaminda guvenli olmayan tek
 **   bir cagri bile yapilmaz.
 **
+**   TEK ISTISNA bir boruya bir bayt yazmak ve o da guvenli: yardimci
+**   surecin cevabi beklenirken poll'un uyanmasi baska yolla saglanamiyor.
+**
 ** SIGPIPE NEDEN YOK SAYILIYOR:
 **   Yardimci surec oldugunde kabuk onun borusuna yazmaya calisir.
 **   Varsayilan davranis kabugu OLDURMEK olurdu; yok sayildiginda yazma
@@ -52,7 +55,35 @@
 #define SIG_HIGHEST 31
 
 static volatile sig_atomic_t	g_interrupted;
+static volatile sig_atomic_t	g_wake_fd = -1;
 static char						g_inherited[SIG_HIGHEST + 1];
+
+/*
+** SIGPIPE'i yok sayar.
+**
+** NEDEN AYRI ISLEV: yardimci surece yazmanin dogrulugu buna BAGLI -
+** olmus bir surecin borusuna yazmak varsayilan davranista sureci
+** oldurur. Istemci bu garantiyi uzaktaki bir cagirana birakmamali, o
+** yuzden baglantiyi acarken kendisi cagiriyor. Etkilesimli kurulum da
+** cagiriyor, cunku oturum boyu gecerli olmasi isteniyor.
+*/
+void	sig_ignore_sigpipe(void)
+{
+	signal(SIGPIPE, SIG_IGN);
+}
+
+/*
+** Kesme geldiginde bir bayt yazilacak tanimlayiciyi kaydeder.
+**
+** NEDEN GEREKLI: yardimci surecin cevabi beklenirken poll iki
+** tanimlayiciyi birden gozluyor. Kullanici Ctrl-C'ye bastiginda poll'un
+** uyanmasi gerekiyor ve sinyal baglaminda guvenle yapilabilecek tek is
+** bir boruya yazmak. Negatif deger "kimse beklemiyor" demek.
+*/
+void	sig_set_wake_fd(int fd)
+{
+	g_wake_fd = fd;
+}
 
 /*
 ** Kabuga GIRILIRKEN yok sayilan sinyalleri kaydeder.
@@ -78,8 +109,16 @@ void	sig_snapshot_inherited(void)
 /* SIGINT isleyicisi; sinyal baglaminda guvenli olan tek isi yapar. */
 static void	on_sigint(int sig)
 {
+	char	byte;
+	ssize_t	done;
+
 	(void)sig;
 	g_interrupted = 1;
+	byte = 1;
+	done = 0;
+	if (g_wake_fd >= 0)
+		done = write(g_wake_fd, &byte, 1);
+	(void)done;
 }
 
 /* readline girdi beklerken normal baglamda cagrilir; satiri iptal eder. */
@@ -103,7 +142,7 @@ void	sig_setup_interactive(void)
 	sa.sa_flags = 0;
 	sigaction(SIGINT, &sa, NULL);
 	signal(SIGQUIT, SIG_IGN);
-	signal(SIGPIPE, SIG_IGN);
+	sig_ignore_sigpipe();
 	rl_catch_signals = 0;
 	rl_event_hook = on_readline_wait;
 }

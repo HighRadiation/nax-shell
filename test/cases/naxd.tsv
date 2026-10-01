@@ -1,0 +1,56 @@
+# Yardimci surecle konusmanin dayanikliligi.
+#
+# Girdi taklidin kipi; bicimin tamami test_naxd.c basliginda. Kipler
+# test/fake_naxd.py basliginda anlatiliyor.
+#
+# ASIL OLCULEN SEY her satirin sonundaki ALIVE: karsi taraf ne yaparsa
+# yapsin kabuk tarafi saglam kaliyor ve kapanabiliyor.
+
+# --- mutlu yol ---
+ok	OPEN:ok;ASK:OK;CMD:ls -la;ALIVE
+
+# --- acilis basarisizliklari ---
+# READY hic gelmezse acilis zaman asimina ugrar.
+no_ready	OPEN:fail;ALIVE
+# Surec READY'den once cikarsa acilis basarisiz olur.
+die_at_start	OPEN:fail;ALIVE
+# READY gec gelirse, sinirin altinda kaldigi surece kabul edilir.
+slow_ready:0.3	OPEN:ok;ASK:OK;CMD:ls -la;ALIVE
+
+# --- surecin olmesi ---
+# READY verip hemen cikan surec: istek olu baglantiya gider.
+die_after_ready	OPEN:ok;ASK:DEAD;ALIVE
+# Cevabin ORTASINDA olmek: yarim satir atilir ve olum goruluyor.
+die_mid_reply	OPEN:ok;ASK:DEAD;ALIVE
+
+# --- bozuk konusma ---
+# Cozulemeyen satir ihlal sayilir.
+garbage	OPEN:ok;ASK:PROTOCOL;ALIVE
+# Taninmayan tip de ihlal.
+bad_type	OPEN:ok;ASK:PROTOCOL;ALIVE
+# Bir mebibayttan uzun satir ihlal.
+huge	OPEN:ok;ASK:PROTOCOL;ALIVE
+
+# --- kimlik disiplini ---
+# Baska kimlikle gelen cevap SESSIZCE atilir, yani istek zaman asimina
+# ugrar. Atilmasa kullanici baska bir sorunun cevabini gorurdu. Beklemek
+# gosterge esigini de gectigi icin TICK de olaylarda.
+wrong_id	OPEN:ok;TICK;ASK:TIMEOUT;ALIVE
+# Once eski kimlik, sonra dogru kimlik: eski atilir, dogru kabul edilir.
+stale_then_ok	OPEN:ok;ASK:OK;CMD:yeni;ALIVE
+
+# --- zaman ---
+# Hic cevap vermeyen surec zaman asimina ugrar; kabuk kilitlenmez. Yine
+# gosterge esigi gecildigi icin TICK bekleniyor.
+silent	OPEN:ok;TICK;ASK:TIMEOUT;ALIVE
+# Gecikmeli cevap gosterge esigini geciyor: once TICK, sonra cevap.
+slow:0.4	OPEN:ok;TICK;ASK:OK;CMD:ls -la;ALIVE
+
+# --- tabloda anlatilamayanlar ---
+C:stderr_goes_to_log	ok
+C:gives_up_after_three	ok
+# Kendine boruya gelen bayt beklemeyi keser; iptal zaman asimindan once
+# gorulmeli.
+C:cancel_wakes_wait	ok
+# Yeniden deneme araliklari: ilki beklemez, ikincisi bekler.
+C:backoff_delays_retry	ok
