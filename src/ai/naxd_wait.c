@@ -200,6 +200,15 @@ static void	send_cancel(t_naxd *nx, long id)
 **
 ** Zaman asimi ve iptalde CANCEL gonderilir: karsi taraf bos yere
 ** calismaya devam etmesin ve gec gelen cevabi uretmesin diye.
+**
+** OLUM VE IHLAL BAGLANTIYI KAPATIR. Ilk yazimda yalnizca YAZMA yolu
+** durumu guncelliyordu; okuma tarafinda dosya sonu gorulerek anlasilan
+** olum durumu degistirmiyordu ve naxd_alive olmus bir surece "hazir"
+** diyordu. Ihlal de kapatiyor, cunku bicim bozuk konusan sureci yeniden
+** baslatmayi gerektiriyor.
+**
+** ZAMAN ASIMI KAPATMAZ: gec cevap veren surec bozuk degil, yavas. CANCEL
+** gonderilip devam ediliyor.
 */
 t_askst	naxd_ask(t_naxd *nx, t_ftype type, const t_field *fields, size_t n,
 		t_frame *reply, t_tick_fn tick)
@@ -222,5 +231,7 @@ t_askst	naxd_ask(t_naxd *nx, t_ftype type, const t_field *fields, size_t n,
 	free(line);
 	if (state == ASK_TIMEOUT || state == ASK_CANCEL)
 		send_cancel(nx, id);
+	if (state == ASK_DEAD || state == ASK_PROTOCOL)
+		nx->state = AI_OFF;
 	return (state);
 }

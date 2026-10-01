@@ -16,6 +16,7 @@
 **     TICK                      Bekleme uzadi gostergesi tetiklendi
 **     ASK:<sonuc>               Istegin sonucu (OK, DEAD, TIMEOUT...)
 **     CMD:<metin>               Gelen onerinin icerigi
+**     STATE:ready | STATE:off   Istek sonrasi baglantinin durumu
 **     ALIVE                     Her seyden sonra kabuk tarafi saglam
 **
 ** ZAMAN ASIMLARI KISALTILIYOR:
@@ -32,6 +33,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
+#include <sys/time.h>
 
 #define TEST_TICK_MS 150
 #define TEST_LIMIT_MS 1200
@@ -95,6 +98,10 @@ static void	do_ask(t_naxd *nx, char *out, size_t cap)
 			cmd = proto_field(&reply, "text");
 		record(out, cap, "CMD", cmd);
 	}
+	if (naxd_alive(nx))
+		record(out, cap, "STATE", "ready");
+	else
+		record(out, cap, "STATE", "off");
 	proto_free(&reply);
 }
 
@@ -275,6 +282,182 @@ static int	check_backoff_delays_retry(void)
 	return (first == 1 && second == 2 && nx.fails == 2);
 }
 
+/*
+** Sagir surece buyuk kayit yazmak kilitlenmemeli.
+**
+** Yardimci surec stdin'i hic okumadiginda boru doluyor. Yazma sinirli
+** beklenmezse surec write icinde asili kalir ve okuma tarafindaki zaman
+** asimi hic devreye girmez - yani kabuk kilitlenir. Dogru davranis:
+** sure dolunca surec olu sayilir ve kabuk devam eder.
+**
+** Kayit boru tamponundan BUYUK olmak zorunda, yoksa yazma tek seferde
+** biter ve tikanma hic yasanmaz.
+*/
+static int	check_deaf_write_does_not_hang(void)
+{
+	t_naxd	nx;
+	char	*argv[5];
+	t_frame	reply;
+	t_field	field;
+	t_askst	state;
+	char	*big;
+
+	build_argv(argv, (char *)"deaf", (char *)"0.1");
+	naxd_init(&nx, argv, log_path());
+	nx.tick_ms = TEST_TICK_MS;
+	nx.limit_ms = TEST_LIMIT_MS;
+	if (naxd_open(&nx) == 0)
+		return (0);
+	big = malloc(300000);
+	if (big == NULL)
+		return (0);
+	memset(big, 'k', 299999);
+	big[299999] = '\0';
+	field.key = "text";
+	field.value = big;
+	proto_blank(&reply);
+	state = naxd_ask(&nx, FR_INTENT, &field, 1, &reply, on_tick);
+	proto_free(&reply);
+	free(big);
+	naxd_close(&nx);
+	return (state == ASK_DEAD && nx.state == AI_OFF);
+}
+
+/*
+** Cevap beklenmeyen gonderim de olumu gormeli.
+**
+** EVENT ve BYE gibi kayitlar cevap beklemiyor, yani naxd_ask'in olum
+** isaretlemesi onlari KAPSAMIYOR. Yazma yolunun kendi isaretlemesi bu
+** durumda tek koruma; olmasa kabuk olmus bir surece olay gondermeye
+** devam ederdi.
+**
+** Mutasyon testi bu boslugu gosterdi: yazma yolundaki isaretleme
+** silindiginde hicbir vaka patlamiyordu.
+**
+** DURUM KAPANISTAN ONCE OKUNUYOR: naxd_close zaten durumu sifirliyor,
+** yani sonra bakmak her zaman "kapali" gorurdu ve vaka yine hicbir sey
+** olcmezdi. Ilk yazim boyleydi.
+*/
+static int	check_event_write_marks_dead(void)
+{
+	t_naxd	nx;
+	char	*argv[5];
+	t_field	field;
+	int		sent;
+	int		marked;
+
+	build_argv(argv, (char *)"die_after_ready", (char *)"0.1");
+	naxd_init(&nx, argv, log_path());
+	nx.tick_ms = TEST_TICK_MS;
+	nx.limit_ms = TEST_LIMIT_MS;
+	if (naxd_open(&nx) == 0)
+		return (0);
+	usleep(200000);
+	field.key = "cmd";
+	field.value = "ls";
+	sent = naxd_send(&nx, FR_EVENT, &field, 1);
+	if (sent)
+		sent = naxd_send(&nx, FR_EVENT, &field, 1);
+	marked = (naxd_alive(&nx) == 0);
+	naxd_close(&nx);
+	return (sent == 0 && marked);
+}
+
+/*
+** Gecici tikanma baglantiyi OLDURMEMELI.
+**
+** Yardimci surec bir sure okumayip sonra okumaya baslarsa boru gecici
+** olarak doluyor. Dogru davranis yazilabilir olmasini beklemek; hemen
+** vazgecmek, buyuk bir baglam gonderildiginde baglantiyi her seferinde
+** koparirdi.
+**
+** Sagir surec vakasiyla ayni kayit boyutu kullaniliyor, tek fark karsi
+** tarafin sonunda OKUMASI.
+*/
+static int	check_late_reader_recovers(void)
+{
+	t_naxd	nx;
+	char	*argv[5];
+	t_frame	reply;
+	t_field	field;
+	t_askst	state;
+	char	*big;
+
+	build_argv(argv, (char *)"late_reader", (char *)"0.3");
+	naxd_init(&nx, argv, log_path());
+	nx.tick_ms = TEST_TICK_MS;
+	nx.limit_ms = TEST_LIMIT_MS * 3;
+	if (naxd_open(&nx) == 0)
+		return (0);
+	big = malloc(300000);
+	if (big == NULL)
+		return (0);
+	memset(big, 'k', 299999);
+	big[299999] = '\0';
+	field.key = "text";
+	field.value = big;
+	proto_blank(&reply);
+	state = naxd_ask(&nx, FR_INTENT, &field, 1, &reply, on_tick);
+	proto_free(&reply);
+	free(big);
+	naxd_close(&nx);
+	return (state == ASK_OK);
+}
+
+/*
+** Poll sinyalle kesilse de zaman asimi uzamamali.
+**
+** Yuz elli milisaniyede bir SIGALRM gonderiliyor, yani poll on kadar kez
+** EINTR ile donuyor. Iki sey birlikte olculuyor:
+**   - EINTR olum sayilmiyor (sonuc DEAD degil TIMEOUT)
+**   - sayac her kesilmede bastan BASLAMIYOR; aksi halde toplam sure
+**     sinirin katlarina cikardi
+*/
+static void	on_alarm(int sig)
+{
+	(void)sig;
+}
+
+static int	check_eintr_does_not_extend(void)
+{
+	t_naxd				nx;
+	char				*argv[5];
+	t_frame				reply;
+	t_field				field;
+	t_askst				state;
+	struct itimerval	timer;
+	struct sigaction	sa;
+	long				spent;
+
+	build_argv(argv, (char *)"silent", (char *)"0.1");
+	naxd_init(&nx, argv, log_path());
+	nx.tick_ms = TEST_TICK_MS;
+	nx.limit_ms = TEST_LIMIT_MS;
+	if (naxd_open(&nx) == 0)
+		return (0);
+	sa.sa_handler = on_alarm;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGALRM, &sa, NULL);
+	timer.it_value.tv_sec = 0;
+	timer.it_value.tv_usec = 150000;
+	timer.it_interval.tv_sec = 0;
+	timer.it_interval.tv_usec = 150000;
+	setitimer(ITIMER_REAL, &timer, NULL);
+	field.key = "text";
+	field.value = "bir sey";
+	proto_blank(&reply);
+	spent = naxd_now_ms();
+	state = naxd_ask(&nx, FR_INTENT, &field, 1, &reply, on_tick);
+	spent = naxd_now_ms() - spent;
+	timer.it_value.tv_usec = 0;
+	timer.it_interval.tv_usec = 0;
+	setitimer(ITIMER_REAL, &timer, NULL);
+	proto_free(&reply);
+	naxd_close(&nx);
+	return (state == ASK_TIMEOUT && spent < TEST_LIMIT_MS * 2);
+}
+
 /* Adi verilen kontrolu kosar. */
 static void	case_check(t_score *score, int no, char *input, char *want)
 {
@@ -288,6 +471,14 @@ static void	case_check(t_score *score, int no, char *input, char *want)
 		ok = check_cancel_wakes_wait();
 	else if (strcmp(input, "backoff_delays_retry") == 0)
 		ok = check_backoff_delays_retry();
+	else if (strcmp(input, "deaf_write_does_not_hang") == 0)
+		ok = check_deaf_write_does_not_hang();
+	else if (strcmp(input, "eintr_does_not_extend") == 0)
+		ok = check_eintr_does_not_extend();
+	else if (strcmp(input, "late_reader_recovers") == 0)
+		ok = check_late_reader_recovers();
+	else if (strcmp(input, "event_write_marks_dead") == 0)
+		ok = check_event_write_marks_dead();
 	else
 	{
 		report_fail(score, no, input, want, "boyle bir kontrol yok");

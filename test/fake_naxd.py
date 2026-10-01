@@ -29,6 +29,13 @@ KIP ARGUMANLA SECILIR: fake_naxd.py <kip> [gecikme_saniye]
                     verir; ilki atilmali.
     huge            Bir mebibayttan uzun satir gonderir.
     noisy_stderr    Hata cikisina bol bol yazar; terminale sizmamali.
+    deaf            READY verir, sonra stdin'i HIC OKUMAZ. Boru dolunca
+                    kabugun yazmasi tikanir; sinirli beklememesi
+                    kilitlenme demek olurdu.
+    echo_request    Kabuktan gelen tipi AYNEN geri gonderir. Gecerli ama
+                    yanlis YONDE bir tip; ihlal sayilmali.
+    late_reader     READY verir, bir sure BEKLER, sonra normal okur. Boru
+                    gecici olarak dolar; bu baglantiyi OLDURMEMELI.
 
 CIKTI TAMPONLANMAZ: her satir hemen gonderilir, yoksa kabuk bekledigi
 cevabi tamponda kalmis olabilir diye zaman asimina ugrardi.
@@ -91,6 +98,12 @@ def main():
     if mode == "die_after_ready":
         sys.exit(0)
 
+    if mode == "deaf":
+        time.sleep(60)
+        return
+    if mode == "late_reader":
+        time.sleep(delay)
+
     for kind, fields in read_frames():
         ident = fields.get("id", "0")
         if kind == "BYE":
@@ -108,6 +121,9 @@ def main():
             continue
         if mode == "bad_type":
             send("WAT\tid=%s" % ident)
+            continue
+        if mode == "echo_request":
+            send("%s\tid=%s" % (kind, ident))
             continue
         if mode == "wrong_id":
             send("OK\tid=9999\tkind=request\tcmd=%s\tdanger=0" % b64("ls"))

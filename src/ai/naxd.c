@@ -13,6 +13,13 @@
 **   kaydediliyor; o ana kadar gelen istek "su an yok" cevabi aliyor ve
 **   kabuk akici kaliyor.
 **
+** YAZMA UCU BLOKE OLMAYAN KIPTE:
+**   Yardimci surec okumayi birakirsa boru dolar. Bloke eden bir yazma o
+**   noktada kabugu sonsuza kadar kilitlerdi ve okuma tarafindaki zaman
+**   asimi hic devreye girmezdi - cunku surec write icinde asili kalir.
+**   Bu yuzden yazma da sinirli beklenir ve sure dolarsa surec olu
+**   sayilir. Mutasyon testi bu acigi gosterdi.
+**
 ** SIGPIPE'I ISTEMCI KENDI YOK SAYAR:
 **   Olmus surece yazmak varsayilan davranista yazan sureci oldurur.
 **   Bu modulun dogrulugu buna bagli, o yuzden garanti uzaktaki bir
@@ -36,6 +43,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <poll.h>
 #include <time.h>
 
 /* Tek yonlu bir sayac; milisaniye. */
@@ -178,6 +186,7 @@ static int	spawn(t_naxd *nx)
 		return (0);
 	}
 	nx->in_fd = to_child[1];
+	fcntl(nx->in_fd, F_SETFL, O_NONBLOCK);
 	rd_init(&nx->out, from_child[0]);
 	nx->state = AI_STARTING;
 	return (1);
@@ -283,26 +292,71 @@ void	naxd_close(t_naxd *nx)
 }
 
 /*
+** Yazma ucunun bosalmasini sinirli sure bekler; yazilabilirse 1.
+**
+** NEDEN GEREKLI: yardimci surec okumayi birakirsa boru dolar ve write
+** SONSUZA KADAR bloke olur. O anda zaman asimi islemiyor, cunku zaman
+** asimi okuma tarafindaki poll'de. Kabugun hicbir kosulda
+** kilitlenmemesi bu asamanin tek amaci, o yuzden yazma da sinirli
+** beklenir.
+**
+** EINTR'de yazilabilir sayilir: karar bir sonraki yazma denemesine
+** birakiliyor ve son tarih zaten mutlak, yani sinyal yagmuru sureyi
+** uzatamaz.
+*/
+static int	wait_writable(t_naxd *nx, long deadline)
+{
+	struct pollfd	pfd;
+	int				ready;
+	long			left;
+
+	left = deadline - naxd_now_ms();
+	if (left <= 0)
+		return (0);
+	pfd.fd = nx->in_fd;
+	pfd.events = POLLOUT;
+	pfd.revents = 0;
+	ready = poll(&pfd, 1, (int)left);
+	if (ready < 0 && errno == EINTR)
+		return (1);
+	return (ready > 0);
+}
+
+/*
 ** Satiri tamamen yazar; basarida 1.
 **
 ** Kirik boruda SIGPIPE yok sayili oldugu icin EPIPE doner ve surec olu
-** isaretlenir. Kismi yazma normaldir, dongu sart.
+** isaretlenir.
+**
+** KISMI YAZMA NORMALDIR, DONGU SART: yazma ucu bloke olmayan kipte
+** oldugu icin buyuk bir kayit tek seferde gitmeyebilir. Dongusuz bir
+** yazim kaydin yarisini gonderip basarili sayardi ve karsi taraf asla
+** tam satir gormezdi.
 */
 int	naxd_write(t_naxd *nx, const char *line)
 {
 	size_t	len;
 	size_t	done;
 	ssize_t	wrote;
+	long	deadline;
 
 	if (nx->in_fd < 0)
 		return (0);
 	len = strlen(line);
 	done = 0;
+	deadline = naxd_now_ms() + nx->limit_ms;
 	while (done < len)
 	{
 		wrote = write(nx->in_fd, line + done, len - done);
 		if (wrote < 0 && errno == EINTR)
 			continue ;
+		if (wrote < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+		{
+			if (wait_writable(nx, deadline))
+				continue ;
+			nx->state = AI_OFF;
+			return (0);
+		}
 		if (wrote <= 0)
 		{
 			nx->state = AI_OFF;
