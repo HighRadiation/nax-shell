@@ -87,6 +87,23 @@ static void	chomp(char *line)
 	}
 }
 
+/*
+** Metni ciktinin sonuna ekler; tasarsa sessizce kesilir.
+**
+** NEDEN ISKELEDE: birden fazla test dosyasi beklenen degeri parca parca
+** kuruyor. Her birinde ayni ekleme islevini tutmak, modulerlik kuralinin
+** yasakladigi sey - ayni is iki yerde.
+*/
+void	test_append(char *out, size_t cap, const char *text)
+{
+	size_t	len;
+
+	len = strlen(out);
+	if (len + 1 >= cap)
+		return ;
+	snprintf(out + len, cap - len, "%s", text);
+}
+
 /* Basarisiz vakayi beklenen ve gelen degerlerle birlikte basar. */
 void	report_fail(t_score *score, int no, const char *input,
 		const char *want, const char *got)

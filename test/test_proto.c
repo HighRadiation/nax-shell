@@ -26,17 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Metni ciktinin sonuna ekler; tasarsa sessizce kesilir. */
-static void	append_text(char *out, size_t cap, const char *text)
-{
-	size_t	len;
-
-	len = strlen(out);
-	if (len + 1 >= cap)
-		return ;
-	snprintf(out + len, cap - len, "%s", text);
-}
-
 /* Degeri denetim karakterlerini gorunur yaparak ekler. */
 static void	append_value(char *out, size_t cap, const char *value)
 {
@@ -47,20 +36,20 @@ static void	append_value(char *out, size_t cap, const char *value)
 	while (value[i] != '\0')
 	{
 		if (value[i] == '\t')
-			append_text(out, cap, "<TAB>");
+			test_append(out, cap, "<TAB>");
 		else if (value[i] == '\n')
-			append_text(out, cap, "<NL>");
+			test_append(out, cap, "<NL>");
 		else if ((unsigned char)value[i] < 0x20)
 		{
 			snprintf(piece, sizeof(piece), "<%02x>",
 				(unsigned char)value[i]);
-			append_text(out, cap, piece);
+			test_append(out, cap, piece);
 		}
 		else
 		{
 			piece[0] = value[i];
 			piece[1] = '\0';
-			append_text(out, cap, piece);
+			test_append(out, cap, piece);
 		}
 		i++;
 	}
@@ -72,13 +61,13 @@ static void	dump_frame(const t_frame *frame, char *out, size_t cap)
 	size_t	i;
 
 	out[0] = '\0';
-	append_text(out, cap, proto_type_name(frame->type));
+	test_append(out, cap, proto_type_name(frame->type));
 	i = 0;
 	while (i < frame->count)
 	{
-		append_text(out, cap, "|");
-		append_text(out, cap, frame->fields[i].key);
-		append_text(out, cap, "=");
+		test_append(out, cap, "|");
+		test_append(out, cap, frame->fields[i].key);
+		test_append(out, cap, "=");
 		append_value(out, cap, frame->fields[i].value);
 		i++;
 	}

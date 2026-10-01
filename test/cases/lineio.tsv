@@ -1,0 +1,45 @@
+# Akistan tam kayit satirlari toplamak.
+#
+# Her vaka bir SENARYO: boruya sirayla yazilan parcalar ve urettikleri
+# olay dizisi. Parcalar "|" ile ayrilir, "<NL>" bir yenisatir baytidir,
+# tek basina "~" olan parca yazma ucunu kapatir.
+#
+# Bicimin tamami test_lineio.c basliginda anlatiliyor.
+
+# --- temel ---
+# Tam satir tek parcada gelir.
+BIR<NL>|~	LINE:BIR;EOF
+# Bir okumada birden fazla satir; hicbiri kaybolmamali.
+BIR<NL>IKI<NL>UC<NL>|~	LINE:BIR;LINE:IKI;LINE:UC;EOF
+# Bos satir gecerli bir satirdir.
+<NL>|~	LINE:;EOF
+
+# --- yarim satir ---
+# Satir iki parcaya bolunmus: ilk parca olay uretmez, ikincisi tamamlar.
+BIR|LER<NL>|~	LINE:BIRLER;EOF
+# Uc parcaya bolunmus satir.
+A|B|C<NL>|~	LINE:ABC;EOF
+# Parca sinirinin satir sinirindan bagimsiz oldugu durum: ilk parca bir
+# tam satir ve bir yarim satir iceriyor.
+BIR<NL>IK|I<NL>|~	LINE:BIR;LINE:IKI;EOF
+
+# --- akis bitisi ---
+# Akis bittiginde ELDE KALAN YARIM SATIR ATILIR. Tamamlanma sansi olmayan
+# bir kayit cozulemez; saklamak, surec yeniden dogdugunda eski yarimin
+# yeni veriye eklenmesi olurdu.
+BIR<NL>YARIM|~	LINE:BIR;EOF
+# Hic veri gelmeden akis biterse yalnizca bitis.
+~	EOF
+# Yalniz yarim satir gelip akis biterse hicbir satir verilmez.
+YARIM|~	EOF
+
+# --- sekme ve icerik ---
+# Kayit satirlari sekme iceriyor; okuyucu icerige bakmaz, yalnizca
+# yenisatir arar.
+OK\tid=1\tkind=request<NL>|~	LINE:OK\tid=1\tkind=request;EOF
+
+# --- tabloda anlatilamayan sinir vakalari ---
+# Bir mebibayttan fazla yazmak boru tamponunu asar ve yazma bloke olurdu;
+# bu iki vaka gecici dosya uzerinden kosuyor.
+C:too_long_then_recover	ok
+C:exact_limit	ok

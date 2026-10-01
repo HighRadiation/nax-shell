@@ -11,6 +11,8 @@
 #ifndef TEST_H
 # define TEST_H
 
+# include <stddef.h>
+
 # define TEST_GREEN "\033[0;32m"
 # define TEST_RED "\033[0;31m"
 # define TEST_OFF "\033[0m"
@@ -30,6 +32,7 @@ typedef struct s_score
 */
 typedef void	(*t_case_fn)(t_score *score, int no, char *input, char *want);
 
+void	test_append(char *out, size_t cap, const char *text);
 void	report_fail(t_score *score, int no, const char *input,
 			const char *want, const char *got);
 int		harness_run(const char *path, const char *title, t_case_fn fn);

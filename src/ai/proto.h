@@ -95,6 +95,53 @@ typedef struct s_frame
 	size_t	count;
 }	t_frame;
 
+/*
+** Okuma tamponunun dort durumu.
+**
+** Bicimin dayaniklilik kurallari bunlarin AYRI olmasini gerektiriyor:
+**
+**   RD_LINE      tam bir satir hazir
+**   RD_MORE      satir yarim; daha veri gerekiyor
+**   RD_EOF       akis bitti. Elde yarim satir kaldiysa ATILIR, cunku
+**                yarim bir kayit cozulemez ve tamamlanma sansi yok
+**   RD_TOO_LONG  satir sinirini asti; protokol ihlali
+**   RD_ERROR     okuma hatasi
+**
+** "Yarim satir" ile "akis bitti"yi tek degerde birlestirmek, bekleyen
+** isteginin iptal edilmesi gerekip gerekmedigini belirsiz kilardi.
+*/
+typedef enum e_readst
+{
+	RD_LINE,
+	RD_MORE,
+	RD_EOF,
+	RD_TOO_LONG,
+	RD_ERROR
+}	t_readst;
+
+/*
+** Satir tabanli okuma tamponu.
+**
+** pending ONEMLI: rd_take dondurdugu satiri tamponun ICINDE gosterir ve
+** o satiri hemen atmaz, cunku atmak memmove ile veriyi kaydirmak ve
+** cagiranin elindeki isaretciyi gecersiz kilmak olurdu. Atma islemi bir
+** SONRAKI rd_take cagrisinin basinda yapiliyor.
+**
+** drop, asiri uzun satirin kalanini atlama kipi: sinir asildiginda
+** tampon bosaltilir ve bir sonraki yenisatira kadar gelen her sey
+** atilir. Satir tabanli olmanin asil kazanci bu kurtarma yetenegi.
+*/
+typedef struct s_reader
+{
+	int		fd;
+	char	*data;
+	size_t	len;
+	size_t	cap;
+	size_t	pending;
+	int		drop;
+	int		ended;
+}	t_reader;
+
 char		*b64_encode(const unsigned char *in, size_t n);
 int			b64_decode_inplace(char *text, size_t *out_len);
 
@@ -106,5 +153,11 @@ const char	*proto_field(const t_frame *frame, const char *key);
 const char	*proto_type_name(t_ftype type);
 t_ftype		proto_type_from(const char *name);
 const char	*proto_err_name(t_perr err);
+
+void		rd_init(t_reader *reader, int fd);
+void		rd_free(t_reader *reader);
+t_readst	rd_feed(t_reader *reader);
+t_readst	rd_take(t_reader *reader, char **line);
+const char	*rd_state_name(t_readst state);
 
 #endif
