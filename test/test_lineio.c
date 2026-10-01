@@ -257,6 +257,91 @@ static int	check_exact_limit(void)
 	return (first_line_len(fd, &got) == RD_LINE && got == n);
 }
 
+/* Icerigi dosyaya yazip olaylari toplar; tamponun son kapasitesini verir. */
+static int	play_file(const char *data, size_t n, char *out, size_t cap,
+		size_t *end_cap)
+{
+	t_reader	reader;
+	int			fd;
+
+	fd = temp_fd(data, n);
+	if (fd < 0)
+		return (0);
+	rd_init(&reader, fd);
+	drain(&reader, out, cap, 4096);
+	*end_cap = reader.cap;
+	rd_free(&reader);
+	close(fd);
+	return (1);
+}
+
+/*
+** Tamponu TASIRAN satirda atlama kipi kurulur ve kalan atlanir.
+**
+** NEDEN AYRI VAKA: bir mebibayt arti bir baytlik satir tamponun icine
+** SIGIYOR, yani yenisatir bulunuyor ve "satir uzun" karari rd_take'in
+** kendi dalinda veriliyor. Atlama kipi ise ancak tampon DOLDUGU ve
+** yenisatir hic gorulmedigi zaman devreye giriyor. Mutasyon testi bu
+** ayrimi gosterdi: atlama kipi silindiginde tek vaka patlamiyordu.
+**
+** Ayrica tamponun sinirsiz buyumedigi olculuyor. Olay dizisi bunu
+** gostermiyor - kotu davranan bir surec yenisatir hic gondermezse
+** kapasite sinirsiz artardi ve bu yalnizca bellekte gorulur.
+*/
+static int	check_drop_mode_recovers(void)
+{
+	char	*data;
+	char	got[256];
+	size_t	n;
+	size_t	end_cap;
+
+	n = (size_t)PROTO_MAX_LINE * 3;
+	data = malloc(n + 8);
+	if (data == NULL)
+		return (0);
+	memset(data, 'x', n);
+	memcpy(data + n, "\nSONRA\n", 7);
+	got[0] = '\0';
+	if (play_file(data, n + 7, got, sizeof(got), &end_cap) == 0)
+	{
+		free(data);
+		return (0);
+	}
+	free(data);
+	return (strcmp(got, "TOOLONG;LINE:SONRA;EOF") == 0
+		&& end_cap <= PROTO_MAX_LINE + 2);
+}
+
+/*
+** Sinirin bir ustunde, yenisatir hic gelmeden akis biterse.
+**
+** Dogru cevap TOOLONG, ardindan akis bitisi. Ilk yazimda atlama kipi
+** tamamlanamadiginda RD_MORE donuyordu ve bu vaka SONSUZ DONGUYE
+** giriyordu: aranan yenisatir asla gelmeyecekken cagiran surekli "daha
+** veri gerekiyor" cevabi aliyordu.
+*/
+static int	check_over_limit_then_eof(void)
+{
+	char	*data;
+	char	got[256];
+	size_t	n;
+	size_t	end_cap;
+
+	n = PROTO_MAX_LINE + 1;
+	data = malloc(n + 2);
+	if (data == NULL)
+		return (0);
+	memset(data, 'z', n);
+	got[0] = '\0';
+	if (play_file(data, n, got, sizeof(got), &end_cap) == 0)
+	{
+		free(data);
+		return (0);
+	}
+	free(data);
+	return (strcmp(got, "TOOLONG;EOF") == 0);
+}
+
 /* Adi verilen kontrolu kosar. */
 static void	case_check(t_score *score, int no, char *input, char *want)
 {
@@ -266,6 +351,10 @@ static void	case_check(t_score *score, int no, char *input, char *want)
 		ok = check_too_long_then_recover();
 	else if (strcmp(input, "exact_limit") == 0)
 		ok = check_exact_limit();
+	else if (strcmp(input, "drop_mode_recovers") == 0)
+		ok = check_drop_mode_recovers();
+	else if (strcmp(input, "over_limit_then_eof") == 0)
+		ok = check_over_limit_then_eof();
 	else
 	{
 		report_fail(score, no, input, want, "boyle bir kontrol yok");

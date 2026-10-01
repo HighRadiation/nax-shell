@@ -43,3 +43,9 @@ OK\tid=1\tkind=request<NL>|~	LINE:OK\tid=1\tkind=request;EOF
 # bu iki vaka gecici dosya uzerinden kosuyor.
 C:too_long_then_recover	ok
 C:exact_limit	ok
+# Tamponu TASIRAN satir: atlama kipi devreye girer, kalan atlanir ve
+# sonraki satir normal okunur. Ayrica tamponun sinirsiz buyumedigi
+# olculuyor; bunu olay dizisi gostermiyor, yalnizca kapasite gosteriyor.
+C:drop_mode_recovers	ok
+# Sinirin bir ustunde, yenisatir hic gelmeden akis biterse.
+C:over_limit_then_eof	ok

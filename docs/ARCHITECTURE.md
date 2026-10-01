@@ -342,7 +342,8 @@ src/
     proto.h        tel biçiminin tipleri: kayıt, alan, hata
     b64.c          serbest metin alanları için base64
     proto.c        kayıt kurma ve çözme
-  (ai/ içinde sonraki aşamada: satır okuma ve yardımcı süreç gözetimi)
+    lineio.c       akıştan tam kayıt satırları toplama
+  (ai/ içinde sonraki aşamada: yardımcı sürecin başlatılması ve gözetimi)
 test/
   test.h           test koşucularının paylaştığı tipler ve iskele
   harness.c        vaka dosyası okuma, kaçış çözme, özet basma
@@ -352,6 +353,7 @@ test/
   test_expand.c    tablo tabanlı genişletme testleri
   test_classify.c  tablo tabanlı sınıflandırıcı testleri; kendi fikstürünü kurar
   test_proto.c     tablo tabanlı protokol testleri; kurma ve çözme bir arada
+  test_lineio.c    senaryo tabanlı satır okuma testleri; parçalı veri
   cases/*.tsv      vaka tabloları; yeni vaka için yeniden derleme gerekmez
   pty_drive.py     sahte terminal üzerinden etkileşimli yol testleri
 naxd/              AI yardımcı süreci (sonraki aşamada)

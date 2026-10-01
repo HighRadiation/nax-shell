@@ -83,23 +83,27 @@ const char	*rd_state_name(t_readst state)
 ** yani asiri uzun satir "okuma hatasi" gibi gorunuyordu. Oysa dogru
 ** cevap RD_TOO_LONG ve o karari veren yer rd_no_newline. Sinir mantigi
 ** tek yerde durmali.
+**
+** KIRPMA TEK YERDE: ilk yazimda iki kirpma vardi, biri istenen boyuta
+** biri hesaplanan boyuta. Mutasyon testi ilkini silmenin hicbir testi
+** bozmadigini gosterdi - ikincisi onu zaten golgeliyordu. Simdi kirpma
+** bir kez yapiliyor ve "zaten sinirdayiz" kontrolu ONDAN SONRA geliyor,
+** boylece sinira ulasmis tampon icin bosa realloc cagrilmiyor.
 */
 static int	rd_grow(t_reader *reader, size_t need)
 {
 	size_t	want;
 	char	*bigger;
 
-	if (need > PROTO_MAX_LINE + 2)
-		need = PROTO_MAX_LINE + 2;
-	if (need <= reader->cap)
-		return (1);
-	want = reader->cap;
+	want = reader->cap * 2;
 	if (want < RD_CHUNK)
 		want = RD_CHUNK;
-	while (want < need)
-		want *= 2;
+	if (want < need)
+		want = need;
 	if (want > PROTO_MAX_LINE + 2)
 		want = PROTO_MAX_LINE + 2;
+	if (want <= reader->cap)
+		return (1);
 	bigger = realloc(reader->data, want);
 	if (bigger == NULL)
 		return (0);
@@ -144,6 +148,10 @@ static t_readst	rd_no_newline(t_reader *reader)
 ** oldugu icin okuma veri dondurecek; sinyal tam o anda geldiyse bu bir
 ** hata degil, yarida kesilmis bir sistem cagrisi. Iptal istegi ayri bir
 ** tanimlayicidan gozlendigi icin burada donup durmak riski yok.
+**
+** BASTAKI "bitti mi" KONTROLU davranisi degistirmiyor - kapanmis bir
+** akistan yeniden okumak da sifir dondurur - ama poll dongusunde akis
+** bittikten sonra her uyanista bir sistem cagrisi yapmayi onluyor.
 */
 t_readst	rd_feed(t_reader *reader)
 {
@@ -192,6 +200,18 @@ static int	rd_drain_drop(t_reader *reader)
 **
 ** Donen satir tamponun ICINE isaret eder ve BIR SONRAKI rd_take
 ** cagrisina kadar gecerlidir. Cagiran satiri saklayacaksa kopyalamali.
+**
+** ATLAMA KIPINDE AKIS BITISI: kip tamamlanamadiginda dogrudan RD_MORE
+** donmek SONSUZ DONGU uretiyordu - akis bitmisse aranan yenisatir asla
+** gelmez ve cagiran surekli "daha veri gerekiyor" cevabi alirdi. Bu
+** yuzden karar yine rd_no_newline'a birakiliyor; o, akis bitmisse
+** RD_EOF veriyor.
+**
+** BASTAKI NULL KONTROLU: ilk okumadan once tampon henuz ayrilmamis
+** oluyor ve standart memchr'a NULL gecirilmesini yasakliyor. Pratikte
+** sayac sifirken dokunulmadigi icin bu TESTLE GOZLEMLENEMIYOR; kontrol
+** yine duruyor, cunku dogruluk kutuphanenin hosgorusune
+** birakilmamali.
 */
 t_readst	rd_take(t_reader *reader, char **line)
 {
@@ -205,8 +225,8 @@ t_readst	rd_take(t_reader *reader, char **line)
 		reader->pending = 0;
 	}
 	if (reader->drop && rd_drain_drop(reader) == 0)
-		return (RD_MORE);
-	if (reader->len == 0)
+		return (rd_no_newline(reader));
+	if (reader->data == NULL || reader->len == 0)
 		return (rd_no_newline(reader));
 	nl = memchr(reader->data, '\n', reader->len);
 	if (nl == NULL)
