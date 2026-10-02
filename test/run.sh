@@ -421,7 +421,9 @@ run_stderr "yetki sebebi dogru"           "$FIX/kosmaz.txt"$'\n' "Permission den
 run_stderr "olmayan yol sebebi dogru"     $'/yok/boyle\n'       "No such file or directory"
 run_stderr "boru hatasi bildirilir"       $'ls |\n'             "boru isaretinin iki yaninda"
 run_stderr "kapanmamis tirnak bildirilir" "echo 'x"$'\n'       "kapanmamis tek tirnak"
-run_stderr "desteklenmeyen operator"      $'a && b\n'           "desteklenmeyen operator"
+# "a && b" ARTIK DESTEKLENIYOR; buradaki vaka halen desteklenmeyen bir
+# yapiya tasindi. Artalan isareti ve parantez vakalari asagida.
+run_stderr "parantez desteklenmiyor"      $'( a )\n'              "desteklenmeyen operator"
 # Belirsiz yonlendirme vakasi burada YOK: calistirici bu asamada
 # yonlendirmeyi genisletmeden once reddediyor, yani hata mesaji hic
 # olusmuyor. Birim testler (test/cases/expand.tsv) bunu kapsiyor; boru ve
@@ -517,6 +519,30 @@ run_case   "boru icindeki export etkisiz" $'echo x | export NAXY=1\necho "[$NAXY
 # "command not found" cikar; bu yuzden birlesik cikti bos olmak zorunda.
 # Mutasyon denemesi bu boslugu gosterdi.
 run_merged "boru icinde yerlesik taninir" $'echo x | export NAXY=1\n'   ""
+
+# --- boru hatti listesi: ; && || ---
+# Anlamlarin tamami bash ile karsilastirilarak olculdu.
+run_case   "noktali virgul ikisini de kosar" $'echo bir ; echo iki\n' "bir
+iki"
+run_case   "ve baglantisi basariliysa kosar" $'true && echo gorundu\n' "gorundu"
+run_case   "ve baglantisi basarisizsa atlar" $'false && echo gorunmez\n' ""
+run_case   "veya baglantisi basarisizsa kosar" $'false || echo yedek\n' "yedek"
+run_case   "veya baglantisi basariliysa atlar" $'true || echo gorunmez\n' ""
+# ATLANAN HATTIN DURUMU DEGISMEZ: kosan son sey false oldugu icin 1.
+# Bash da boyle davraniyor (olculdu).
+run_case   "atlanan hat durumu degistirmez"  $'false && true ; echo $?\n' "1"
+run_case   "zincir soldan saga degerlendirilir" $'false || echo a && echo b\n' "a
+b"
+# Baglanti boru hattini boler, komutu degil.
+run_case   "boru ve baglanti birlikte"       $'printf "x\\ny\\n" | wc -l && echo bitti\n' "2
+bitti"
+# Yonlendirme hattin kendi komutuna ait kaliyor.
+run_case   "liste icinde yonlendirme"        "echo ic > $FIX/l1 && cat $FIX/l1"$'\n' "ic"
+# Hatali liste anlasilir hata veriyor ve durum 2 oluyor.
+run_stderr "operator yaninda komut yoksa"    $'echo a &&\n' "operatorun iki yaninda da komut olmali"
+run_status "liste sozdizimi hatasi durumu 2" $'echo a &&\n' 2
+# Artalan isareti ve parantez halen desteklenmiyor; anlasilir mesaj.
+run_stderr "artalan isareti desteklenmiyor"  $'sleep 1 &\n' "desteklenmeyen operator"
 
 # --- baglam ve gizlilik ---
 # "nax ctx" bir sonraki istekte gidecek baytlari basar. Gizlilik iddiasini

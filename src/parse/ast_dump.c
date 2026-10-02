@@ -12,8 +12,11 @@
 **   yonlendirme  <[dosya]  >[dosya]  >>[dosya]  <<[sinirlayici]
 **   komut        (cmd [w1] [w2] >[dosya])
 **   boru hatti   (pipe (cmd ...) (cmd ...))
+**   liste        (list (cmd ...) && (cmd ...))
 **
-**   Tek komutluk boru hattinda (pipe ...) sarmalayicisi yazilmaz.
+**   Tek komutluk boru hattinda (pipe ...), tek hatlik listede (list ...)
+**   sarmalayicisi yazilmaz. Boylece yeni katmanlar eklendiginde eski
+**   vakalarin dokumu degismiyor.
 **
 ** NEDEN SOZCUKLER KOSELI PARANTEZ ICINDE:
 **   Bir sozcuk bosluk icerebilir: cat "a b" iki degil BIR argumandir.
@@ -107,13 +110,51 @@ static int	dump_pipeline(t_buf *buf, const t_cmd *cmds)
 	return (1);
 }
 
-/* Boru hattini kanonik metne cevirir; cagiran serbest birakir. */
-char	*ast_dump(const t_cmd *cmds)
+static const char	*join_text(t_join join)
+{
+	if (join == J_SEMI)
+		return (" ; ");
+	if (join == J_AND)
+		return (" && ");
+	if (join == J_OR)
+		return (" || ");
+	return ("");
+}
+
+/*
+** Boru hatti listesini yazar.
+**
+** TEK HATLIK LISTEDE "(list ...)" SARMALAYICISI YAZILMAZ. Boylece
+** operator icermeyen girdilerin dokumu, bu katman eklenmeden onceki
+** haliyle birebir ayni kaliyor ve mevcut vakalarin hicbiri degismiyor.
+*/
+static int	dump_list(t_buf *buf, const t_pipeline *list)
+{
+	int	many;
+
+	many = (list != NULL && list->next != NULL);
+	if (many && buf_push_str(buf, "(list ") == 0)
+		return (0);
+	while (list != NULL)
+	{
+		if (buf_push_str(buf, join_text(list->join)) == 0)
+			return (0);
+		if (dump_pipeline(buf, list->cmds) == 0)
+			return (0);
+		list = list->next;
+	}
+	if (many && buf_push(buf, ')') == 0)
+		return (0);
+	return (1);
+}
+
+/* Boru hatti listesini kanonik metne cevirir; cagiran serbest birakir. */
+char	*ast_dump(const t_pipeline *list)
 {
 	t_buf	buf;
 
 	buf_init(&buf);
-	if (dump_pipeline(&buf, cmds) == 0)
+	if (dump_list(&buf, list) == 0)
 	{
 		buf_free(&buf);
 		return (NULL);

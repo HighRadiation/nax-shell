@@ -40,12 +40,12 @@ static void	setup_env(void)
 }
 
 /* Girdiyi agaca cevirir; hata halinde bildirip NULL doner. */
-static t_cmd	*build(t_score *score, int no, const char *input,
+static t_pipeline	*build(t_score *score, int no, const char *input,
 		const char *want, t_token **tokens)
 {
 	t_lex_err	lerr;
 	t_ast_err	aerr;
-	t_cmd		*cmds;
+	t_pipeline	*list;
 
 	*tokens = lex_split(input, &lerr);
 	if (*tokens == NULL && lerr.message != NULL)
@@ -53,15 +53,15 @@ static t_cmd	*build(t_score *score, int no, const char *input,
 		report_fail(score, no, input, want, lerr.message);
 		return (NULL);
 	}
-	cmds = ast_build(*tokens, &aerr);
-	if (cmds == NULL && aerr.message != NULL)
+	list = ast_build(*tokens, &aerr);
+	if (list == NULL && aerr.message != NULL)
 	{
 		report_fail(score, no, input, want, aerr.message);
 		lex_free(*tokens);
 		*tokens = NULL;
 		return (NULL);
 	}
-	return (cmds);
+	return (list);
 }
 
 /* Hata beklenen bir vakayi dogrular. */
@@ -104,17 +104,17 @@ static void	check_dump(t_score *score, int no, const char *input,
 static void	run_case(t_score *score, int no, char *input, char *want)
 {
 	t_token	*tokens;
-	t_cmd	*cmds;
+	t_pipeline	*list;
 
 	tokens = NULL;
-	cmds = build(score, no, input, want, &tokens);
-	if (tokens == NULL && cmds == NULL)
+	list = build(score, no, input, want, &tokens);
+	if (tokens == NULL && list == NULL)
 		return ;
 	if (want[0] == '!')
-		check_error(score, no, input, want, cmds);
+		check_error(score, no, input, want, list->cmds);
 	else
-		check_dump(score, no, input, want, cmds);
-	ast_free(cmds);
+		check_dump(score, no, input, want, list->cmds);
+	ast_free(list);
 	lex_free(tokens);
 }
 

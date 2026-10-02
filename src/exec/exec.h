@@ -127,6 +127,6 @@ void		ex_warn_bi(const char *builtin, const char *arg,
 				const char *reason);
 int			redir_apply(const t_xredir *redirs);
 
-void		ex_run(t_shell *sh, const t_cmd *cmds);
+void		ex_run(t_shell *sh, const t_pipeline *list);
 
 #endif

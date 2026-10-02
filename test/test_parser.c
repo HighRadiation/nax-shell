@@ -20,7 +20,7 @@ static void	check_error(t_score *score, int no, const char *input,
 		const char *want, const t_token *tokens)
 {
 	t_ast_err	err;
-	t_cmd		*cmds;
+	t_pipeline	*cmds;
 
 	cmds = ast_build(tokens, &err);
 	if (cmds == NULL && err.message != NULL
@@ -41,7 +41,7 @@ static void	check_dump(t_score *score, int no, const char *input,
 		const char *want, const t_token *tokens)
 {
 	t_ast_err	err;
-	t_cmd		*cmds;
+	t_pipeline	*cmds;
 	char		*got;
 
 	cmds = ast_build(tokens, &err);

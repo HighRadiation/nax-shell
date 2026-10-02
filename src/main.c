@@ -49,21 +49,21 @@ static void	report_error(t_shell *sh, const char *message, int status)
 	sh->last_status = status;
 }
 
-/* Token listesinden boru hattini kurar ve calistiriciya verir. */
+/* Token listesinden boru hatti listesini kurar ve calistiriciya verir. */
 static void	run_tokens(t_shell *sh, const t_token *tokens)
 {
 	t_ast_err	err;
-	t_cmd		*cmds;
+	t_pipeline	*list;
 
-	cmds = ast_build(tokens, &err);
-	if (cmds == NULL)
+	list = ast_build(tokens, &err);
+	if (list == NULL)
 	{
 		if (err.message != NULL)
 			report_error(sh, err.message, 2);
 		return ;
 	}
-	ex_run(sh, cmds);
-	ast_free(cmds);
+	ex_run(sh, list);
+	ast_free(list);
 }
 
 /*

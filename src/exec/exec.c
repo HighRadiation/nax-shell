@@ -315,29 +315,61 @@ static const char	*unsupported(const t_cmd *cmds)
 }
 
 /*
-** Boru hattini calistirir ve kabugun son durumunu gunceller.
+** Bir boru hattinin bu baglantiyla kosmasi gerekiyor mu.
 **
-** Sondaki kesme kontrolu onemli: onplanda kosan cocuk Ctrl-C ile
-** oldugunde sinyal kabuga da gelir ve bayrak set kalir. Temizlenmezse bir
-** sonraki okumada readline satiri kullanici bir sey yazmadan iptal eder.
+** "&&" onceki basariliysa, "||" onceki basarisizsa, ";" her halde.
+** Atlanan hattin durum kodu DEGISMEZ: bash de boyle davraniyor
+** ("false && true; echo $?" bir verir, cunku kosan son sey false).
 */
-void	ex_run(t_shell *sh, const t_cmd *cmds)
+static int	should_run(t_join join, int last)
+{
+	if (join == J_AND)
+		return (last == 0);
+	if (join == J_OR)
+		return (last != 0);
+	return (1);
+}
+
+/* Tek bir boru hattini kosar ve durum kodunu dondurur. */
+static int	run_one_pipeline(t_shell *sh, const t_cmd *cmds)
 {
 	const char	*reason;
 
-	if (cmds == NULL)
-		return ;
 	reason = unsupported(cmds);
 	if (reason != NULL)
 	{
 		ex_warn(reason);
-		sh->last_status = 1;
-		return ;
+		return (1);
 	}
 	if (cmds->next == NULL)
-		sh->last_status = run_one(sh, cmds);
-	else
-		sh->last_status = run_pipeline(sh, cmds);
-	if (sig_take_interrupt())
-		write(STDOUT_FILENO, "\n", 1);
+		return (run_one(sh, cmds));
+	return (run_pipeline(sh, cmds));
+}
+
+/*
+** Boru hatti listesini calistirir ve kabugun son durumunu gunceller.
+**
+** Sondaki kesme kontrolu onemli: onplanda kosan cocuk Ctrl-C ile
+** oldugunde sinyal kabuga da gelir ve bayrak set kalir. Temizlenmezse bir
+** sonraki okumada readline satiri kullanici bir sey yazmadan iptal eder.
+**
+** KESME LISTEYI DE DURDURUR: "a && b" yazip a kosarken Ctrl-C'ye
+** basildiginda b'nin kosmasi istenmez. Bash de boyle davraniyor.
+*/
+void	ex_run(t_shell *sh, const t_pipeline *list)
+{
+	int	stop;
+
+	stop = 0;
+	while (list != NULL && stop == 0)
+	{
+		if (should_run(list->join, sh->last_status))
+			sh->last_status = run_one_pipeline(sh, list->cmds);
+		if (sig_take_interrupt())
+		{
+			write(STDOUT_FILENO, "\n", 1);
+			stop = 1;
+		}
+		list = list->next;
+	}
 }

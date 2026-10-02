@@ -173,6 +173,36 @@ typedef struct s_ast_err
 ** redir_tail : uzerinde calisilan komutun son yonlendirmesi
 ** err        : hata bildirimi icin cagiranin verdigi yer
 */
+/*
+** Bir boru hattinin ONCEKI hatla baglantisi.
+**
+** J_FIRST  listenin ilk hatti; kosulsuz kosar
+** J_SEMI   ";"  onceki ne yaparsa yapsin kosar
+** J_AND    "&&" onceki BASARILI ise kosar
+** J_OR     "||" onceki BASARISIZ ise kosar
+**
+** NEDEN BAGLANTI HATTIN KENDISINDE TUTULUYOR:
+**   Alternatif, baglantiyi iki hattin ARASINDA ayri bir kayitta tutmakti.
+**   Boyle daha az yapi var ve calistirici tek dongu ile yurutuyor: her
+**   hatta gelince "ben kosmali miyim" sorusunu kendi baglantisina bakip
+**   yanitliyor.
+*/
+typedef enum e_join
+{
+	J_FIRST,
+	J_SEMI,
+	J_AND,
+	J_OR
+}	t_join;
+
+/* Bir boru hatti ve onceki hatla baglantisi. */
+typedef struct s_pipeline
+{
+	t_cmd				*cmds;
+	t_join				join;
+	struct s_pipeline	*next;
+}	t_pipeline;
+
 typedef struct s_parser
 {
 	const t_token	*tok;
@@ -180,6 +210,8 @@ typedef struct s_parser
 	t_cmd			*tail;
 	t_arg			*arg_tail;
 	t_redir			*redir_tail;
+	t_pipeline		*list_head;
+	t_pipeline		*list_tail;
 	t_ast_err		*err;
 }	t_parser;
 
@@ -264,9 +296,9 @@ typedef struct s_expander
 	t_exp_err		*err;
 }	t_expander;
 
-t_cmd		*ast_build(const t_token *tokens, t_ast_err *err);
-void		ast_free(t_cmd *cmds);
-char		*ast_dump(const t_cmd *cmds);
+t_pipeline	*ast_build(const t_token *tokens, t_ast_err *err);
+void		ast_free(t_pipeline *list);
+char		*ast_dump(const t_pipeline *list);
 
 t_field		*exp_word(const t_token *word, const t_shell *sh,
 				t_exp_err *err);

@@ -66,10 +66,34 @@ cat > |	!yonlendirmeden sonra dosya adi bekleniyor
 cat < > out	!yonlendirmeden sonra dosya adi bekleniyor
 cat <<	!yonlendirmeden sonra dosya adi bekleniyor
 
-# --- bu asamada desteklenmeyen operatorler anlasilir hata verir ---
-a ; b	!bu asamada desteklenmeyen operator
-a && b	!bu asamada desteklenmeyen operator
-a || b	!bu asamada desteklenmeyen operator
+# --- boru hatti listesi: ; && || ---
+# TEK HATLIK LISTEDE sarmalayici yazilmaz, o yuzden yukaridaki vakalarin
+# hicbiri bu katmandan etkilenmedi.
+a ; b	(list (cmd [a]) ; (cmd [b]))
+a && b	(list (cmd [a]) && (cmd [b]))
+a || b	(list (cmd [a]) || (cmd [b]))
+a && b || c	(list (cmd [a]) && (cmd [b]) || (cmd [c]))
+a ; b ; c	(list (cmd [a]) ; (cmd [b]) ; (cmd [c]))
+# Baglanti boru hattini boler, komutu degil: her yan kendi hatti.
+ls | wc && echo bitti	(list (pipe (cmd [ls]) (cmd [wc])) && (cmd [echo] [bitti]))
+a && ls | wc	(list (cmd [a]) && (pipe (cmd [ls]) (cmd [wc])))
+# Yonlendirme hattin kendi komutuna ait kaliyor.
+a > x && b < y	(list (cmd [a] >[x]) && (cmd [b] <[y]))
+
+# --- liste hatasi ---
+# "ls |" ile "ls &&" ayni sinifta degil; mesajlar ayri, cunku kullanici
+# hangi isaretin iki yanina komut bekledigini bilmek istiyor.
+&& b	!operatorun iki yaninda da komut olmali
+a &&	!operatorun iki yaninda da komut olmali
+a && && b	!operatorun iki yaninda da komut olmali
+;	!operatorun iki yaninda da komut olmali
+a ; ; b	!operatorun iki yaninda da komut olmali
+a && | b	!boru isaretinin iki yaninda da komut olmali
+a | && b	!boru isaretinin iki yaninda da komut olmali
+
+# --- halen desteklenmeyen operatorler ---
+# Artalan isareti is denetimi, parantezler alt kabuk gerektiriyor; ikisi de
+# ayristiricinin degil calistiricinin isi.
 sleep 1 &	!bu asamada desteklenmeyen operator
 ( a )	!bu asamada desteklenmeyen operator
 
