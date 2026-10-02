@@ -41,9 +41,20 @@ api_key        =
 # Niyeti tek komuta cevirmek dar bir istir; kucuk ve hizli model daha iyidir,
 # cunku burada gecikme kalitenin parcasidir. Hata aciklamak akil ister,
 # buyuk model bedelini hak eder.
+#
+# MODEL ADLARI ESKIR: saglayicilar model kaldiriyor ve o an istek
+# "404 - does not exist or you do not have access" ile doner. Ad yanlis
+# oldugunda anahtar sucsuzdur; hata satiri sebebi yaziyor. Hesabinda hangi
+# adlarin GECERLI oldugunu gormek icin:
+#
+#   curl -s -H "Authorization: Bearer $(grep '^api_key' nax.conf | \
+#       cut -d= -f2 | tr -d ' ')" \
+#       https://api.groq.com/openai/v1/models | grep -o '"id":"[^"]*"'
+#
+# Asagidakiler ornek; kendi listenden sec.
 # ---------------------------------------------------------------------------
-model_intent   = llama-3.3-70b-versatile
-model_explain  = llama-3.3-70b-versatile
+model_intent   = openai/gpt-oss-20b
+model_explain  = openai/gpt-oss-120b
 
 # ---------------------------------------------------------------------------
 # Yerel model — opsiyon, temel yol degil.
