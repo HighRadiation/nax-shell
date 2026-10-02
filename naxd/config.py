@@ -39,6 +39,7 @@ DEFAULTS = {
     "local_url": "http://127.0.0.1:11434/v1",
     "local_model": "",
     "local_fallback": "true",
+    "reasoning_effort": "",
     "timeout": "15",
     "spinner": "4",
     "ai_off_dirs": "",

@@ -45,6 +45,8 @@ FAILURES = {
     "http429": (429, '{"error":"cok fazla istek"}'),
     "badjson": (200, "bu JSON degil"),
     "cf1010": (403, "error code: 1010"),
+    "emptylen": (200, '{"choices":[{"message":{"content":""},'
+                 '"finish_reason":"length"}]}'),
     "nochoices": (200, '{"id":"x"}'),
     "empty": (200, '{"choices":[{"message":{"content":"   "}}]}'),
 }
@@ -85,6 +87,7 @@ class Handler(BaseHTTPRequestHandler):
             "system": payload.get("system"),
             "max_tokens": payload.get("max_tokens"),
             "temperature": payload.get("temperature"),
+            "effort": payload.get("reasoning_effort"),
         })
         if mode in FAILURES:
             code, body = FAILURES[mode]

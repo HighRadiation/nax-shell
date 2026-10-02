@@ -129,6 +129,29 @@ def post_json(url, headers, payload, timeout):
         raise ProviderError("yanit cozulemedi") from exc
 
 
+def empty_reason(data):
+    """
+    Bos yanitin sebebini kisa bir ifadeyle adlandirir.
+
+    "finish_reason" bos yanitin tek ipucu: "length" cevabin KESILDIGINI
+    soyluyor, yani model konusmaya basladi ama jeton siniri doldu. Bu,
+    akil yurutme yapan modellerde sik gorulur - butce akil yurutmeye
+    gidiyor ve kullaniciya gosterilecek metin hic uretilmiyor. Sebebi
+    adlandirmamak kullaniciyi yanlis yere, "model sacmaladi" sanisina
+    goturuyor.
+    """
+    try:
+        choice = data["choices"][0]
+    except (KeyError, IndexError, TypeError):
+        return ""
+    stop = choice.get("finish_reason") or ""
+    if stop == "length":
+        return "jeton siniri doldu, cevap kesildi"
+    if stop:
+        return "bitis sebebi: %s" % stop
+    return ""
+
+
 def read_content(data):
     """Yanittaki metni cikarir; beklenen yapi yoksa ProviderError."""
     try:
@@ -138,6 +161,11 @@ def read_content(data):
         sys.stderr.flush()
         raise ProviderError("yanit beklenen bicimde degil") from exc
     if not isinstance(content, str) or not content.strip():
+        sys.stderr.write("naxd: bos yanit govdesi: %r\n" % (repr(data)[:600],))
+        sys.stderr.flush()
+        reason = empty_reason(data)
+        if reason:
+            raise ProviderError("yanit bos (%s)" % reason)
         raise ProviderError("yanit bos")
     return content
 
@@ -154,8 +182,17 @@ def split_system(messages):
     return ("\n\n".join(system), rest)
 
 
-def build_compat(base, key, model, messages, limit, task):
-    """Uyumlu bicimde istek kurar; (adres, baslik, govde) dondurur."""
+def build_compat(base, key, model, messages, limit, task, effort=""):
+    """
+    Uyumlu bicimde istek kurar; (adres, baslik, govde) dondurur.
+
+    "reasoning_effort" YALNIZCA DOLUYSA gonderiliyor. Akil yurutme yapan
+    modellerde butcenin tamami goze gorunmeyen akil yurutme asamasina
+    gidebiliyor ve kullaniciya bos cevap kaliyor; bu alan o asamayi
+    kisaltiyor. Ama alani taniyan her saglayici yok ve bilinmeyen alan
+    gonderen bir istek 400 ile donebilir - o yuzden varsayilan bos ve
+    karar yapilandirmaya birakiliyor.
+    """
     headers = {}
     if key:
         headers["Authorization"] = "Bearer %s" % key
@@ -165,6 +202,8 @@ def build_compat(base, key, model, messages, limit, task):
         "temperature": 0.0 if task == "intent" else 0.3,
         "max_tokens": limit,
     }
+    if effort.strip():
+        payload["reasoning_effort"] = effort.strip()
     return (base.rstrip("/") + "/chat/completions", headers, payload)
 
 
@@ -274,14 +313,17 @@ class Provider:
         model = self.model_for(where, task)
         if not model.strip():
             raise ProviderError("model adi ayarlanmamis")
-        limit = 200 if task == "intent" else 400
+        limit = 512 if task == "intent" else 800
         if self.uses_anthropic(where):
             url, headers, payload = build_anthropic(base, key, model,
                                                     messages, limit)
             reader = read_anthropic
         else:
+            effort = ""
+            if where == "cloud":
+                effort = self.config.text("reasoning_effort")
             url, headers, payload = build_compat(base, key, model, messages,
-                                                 limit, task)
+                                                 limit, task, effort)
             reader = read_content
         try:
             data = post_json(url, headers, payload,

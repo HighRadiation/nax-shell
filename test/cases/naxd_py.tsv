@@ -73,3 +73,9 @@ C:user_agent_sent	ok
 C:error_reason_reaches_user	ok
 # JSON govdede sebep error.message alanindan cikariliyor, kirpma 80 karakter.
 C:json_error_reason_unwrapped	ok
+# Bos yanitin sebebi ekrana gelmeli: "yanit bos" tek basina kullaniciyi
+# modeli suclamaya goturuyor, oysa cevap jeton siniri yuzunden kesilmis.
+C:empty_reason_named	ok
+# reasoning_effort yalnizca ayarlandiysa gonderilir; alani tanimayan
+# saglayicida bilinmeyen alan istegi 400 yapabilir.
+C:effort_sent_only_when_set	ok

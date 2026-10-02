@@ -57,6 +57,24 @@ model_intent   = openai/gpt-oss-20b
 model_explain  = openai/gpt-oss-120b
 
 # ---------------------------------------------------------------------------
+# Akil yurutme butcesi — yalnizca gerekiyorsa doldurulur.
+#
+# Bazi modeller (ornegin gpt-oss ailesi) cevap vermeden once goze
+# gorunmeyen bir akil yurutme asamasindan geciyor ve bu asama jeton
+# butcesinden harciyor. Butce yetmezse kullaniciya BOS cevap kaliyor;
+# kabuk bunu "yanit bos (jeton siniri doldu)" olarak bildiriyor.
+#
+# Bu alan o asamayi kisaltir. Degerler saglayiciya gore degisiyor
+# (Groq'ta gpt-oss icin "low" / "medium" / "high"). BOS BIRAKILIRSA alan
+# istege hic eklenmez - alani tanimayan bir saglayici bilinmeyen alan
+# yuzunden 400 dondurebilir, o yuzden varsayilan bos.
+#
+# Yalnizca bulut cagrisinda gonderilir; yerel modele dusuldugunde
+# gonderilmez, cunku orada baska bir sunucu var.
+# ---------------------------------------------------------------------------
+reasoning_effort =
+
+# ---------------------------------------------------------------------------
 # Yerel model — opsiyon, temel yol degil.
 # local_url'nin 127.0.0.1 olmasi ZORUNLU DEGIL. Kabuk GPU'su olmayan bir
 # makinede kosarken, guclu makinede "ollama serve" calisir ve buraya o

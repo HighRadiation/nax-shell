@@ -424,7 +424,59 @@ def check_json_error_reason_unwrapped():
     return reason == "Invalid API Key" and len(uzun) == 80
 
 
+def check_empty_reason_named():
+    """
+    Bos yanitin SEBEBI kullaniciya gosterilen satira girmeli.
+
+    "yanit bos" tek basina kullaniciyi "model sacmaladi" sanisina
+    goturuyor. Oysa "finish_reason: length" cevabin kesildigini soyluyor:
+    model konusmaya basladi ama jeton butcesi doldu. Akil yurutme yapan
+    modellerde butce goze gorunmeyen asamaya gidiyor ve bu hal siradan.
+    """
+    server, base = stub_provider.start()
+    conf = write_conf(base, "emptylen", extra="local_fallback = false\n")
+    try:
+        with quiet_log():
+            cfg = config_mod.Config(conf)
+            prov = provider_mod.Provider(cfg)
+            try:
+                prov.ask("intent", [{"role": "user", "content": "x"}])
+                return False
+            except provider_mod.ProviderError as exc:
+                return "jeton" in str(exc)
+    finally:
+        server.shutdown()
+        os.unlink(conf)
+
+
+def check_effort_sent_only_when_set():
+    """
+    "reasoning_effort" yalnizca yapilandirmada doluysa gonderilmeli.
+
+    Alani taniyan her saglayici yok; bilinmeyen alan gonderen bir istek
+    400 ile donebilir. Varsayilan bos olmak zorunda, yoksa alani
+    tanimayan bir saglayicida AI yolunun tamami olur.
+    """
+    server, base = stub_provider.start()
+    bos = write_conf(base, "ok")
+    dolu = write_conf(base, "ok", extra="reasoning_effort = low\n")
+    try:
+        for path in (bos, dolu):
+            cfg = config_mod.Config(path)
+            provider_mod.Provider(cfg).ask(
+                "intent", [{"role": "user", "content": "x"}])
+        sessiz = server.seen[-2]["effort"]
+        acik = server.seen[-1]["effort"]
+    finally:
+        server.shutdown()
+        os.unlink(bos)
+        os.unlink(dolu)
+    return sessiz is None and acik == "low"
+
+
 CHECKS = {
+    "empty_reason_named": check_empty_reason_named,
+    "effort_sent_only_when_set": check_effort_sent_only_when_set,
     "user_agent_sent": check_user_agent_sent,
     "error_reason_reaches_user": check_error_reason_reaches_user,
     "json_error_reason_unwrapped": check_json_error_reason_unwrapped,

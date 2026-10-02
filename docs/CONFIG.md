@@ -183,7 +183,12 @@ karakterle sınırlı, günlükte kırpma yok.
 |---|---|---|
 | `servis 403 dondurdu: error code: 1010` | **Cloudflare**, Groq değil. 1010 "bu tarayıcı imzası yasaklı" demek; istek API'ye hiç ulaşmıyor. urllib'in varsayılan imzası bot listesinde | Kodda kapandı: istek `User-Agent: nax/1.0` ile gidiyor. Bu satırı yine görürsen `naxd/provider.py` içindeki `USER_AGENT` düşmüş demektir |
 | `servis 404 dondurdu: The model ... does not exist or you do not have access` | Model adı eskimiş. Sağlayıcılar model kaldırıyor; dünkü ad bugün yok | `model_intent` / `model_explain` satırlarını kendi listenden seç. Listeyi görmenin yolu `nax.conf.example` içinde yazılı ve o çağrı ücretsiz |
+| `yanit bos (jeton siniri doldu, cevap kesildi)` | Model cevap vermeden önce **akıl yürütme** yapıyor ve jeton bütçesi o aşamada tükeniyor; kullanıcıya gösterilecek metin hiç üretilmiyor. `gpt-oss` ailesinde sık | `reasoning_effort = low` yaz (sağlayıcıya göre değer değişir) ya da akıl yürütmeyen bir model seç. Bütçe de yükseltildi: niyet için 512, açıklama için 800 jeton |
 | `AI kapali: nax.conf icinde api_key bos` | Anahtar yok | Hata değil, desteklenen biçim. Doldurursan aynı oturumda geçerli olur; dosya her istekte kontrol edilir |
+
+Üçünün de ortak dersi aynı: **boş yanıt ya da durum kodu, tek başına
+nereye bakılacağını söylemiyor.** Bu yüzden her hata satırı artık
+sağlayıcının kendi gerekçesini taşıyor ve ham gövde günlüğe yazılıyor.
 
 **403 görünce ilk şüphelenilen şey anahtar olur ve genelde yanlıştır.** Bu
 bölüm o yüzden var: durum kodu nereye bakılacağını söylemiyor, gerekçe
