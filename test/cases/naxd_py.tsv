@@ -66,3 +66,10 @@ C:anthropic_refusal	ok
 # Dusme yolu Claude saglayicisinda bile UYUMLU bicimi kullanir, cunku yerel
 # sunucular o bicimi konusuyor.
 C:local_uses_compat	ok
+# Varsayilan urllib imzasi Cloudflare'in bot listesinde: imza basligi
+# dusunce istek API'ye hic ulasmiyor ve 403 doniyor.
+C:user_agent_sent	ok
+# 403'un SEBEBI ekrana gelmeli; yoksa kullanici anahtarini sucluyor.
+C:error_reason_reaches_user	ok
+# JSON govdede sebep error.message alanindan cikariliyor, kirpma 80 karakter.
+C:json_error_reason_unwrapped	ok

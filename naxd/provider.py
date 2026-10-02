@@ -35,8 +35,11 @@ DUSME TETIKLEYICISI "INTERNET VAR MI" DEGIL:
     sifirlar. Yerel cagri basarisiz olursa bu sayaca girmez; yoksa bir kez
     yerele dusen oturum sonsuza kadar orada kalirdi.
 
-HATA METNI KISA TUTULUR:
-    Kullanici tek satir gorur. Yigit izi ya da sunucunun tam yaniti
+HATA METNI KISA TUTULUR AMA SEBEBI TASIR:
+    Kullanici tek satir gorur ve o satirda saglayicinin kendi gerekcesi
+    yazar. Yalnizca durum kodu gostermek ("servis 403 dondurdu") kullaniciyi
+    yanlis yere bakmaya itiyor: 403 gorunce insan once anahtarini sucluyor,
+    oysa sebep bambaska olabiliyor. Yigit izi ve sunucunun TAM yaniti
     gunluk dosyasina gider, ekrana degil.
 """
 
@@ -50,9 +53,47 @@ CLOUD_FAIL_LIMIT = 2
 # Claude bicimi icin zorunlu surum basligi.
 ANTHROPIC_VERSION = "2023-06-01"
 
+# Istek imzasi.
+#
+# NEDEN VARSAYILANI BIRAKMIYORUZ: buyuk saglayicilarin onunde Cloudflare
+# duruyor ve urllib'in varsayilan "Python-urllib/3.x" imzasi bot listesinde.
+# Istek API'ye HIC ULASMADAN "HTTP 403 - error code: 1010" ile geri donuyor;
+# anahtar dogru olsa bile. 1010 Cloudflare'in "bu imza yasakli" kodu, yani
+# bir yetki hatasi degil. Kendi adimizi yazmak istegi o listeden cikariyor.
+USER_AGENT = "nax/1.0"
+
 
 class ProviderError(Exception):
     """Cagri basarisiz oldu; mesaji kullaniciya gosterilebilir kisalikta."""
+
+
+def error_reason(body):
+    """
+    Saglayicinin hata govdesinden tek satirlik sebebi cikarir.
+
+    Govde cogunlukla {"error": {"message": ...}} bicimindedir ama her zaman
+    degil: Cloudflare gibi araya giren katmanlar duz metin dondurur. Bu
+    yuzden cozulemeyen govde ATILMAZ, kirpilip oldugu gibi kullanilir -
+    "error code: 1010" tam olarak boyle bir metin ve tesadufen en ogretici
+    olani.
+    """
+    text = " ".join((body or "").split())
+    try:
+        data = json.loads(text)
+    except ValueError:
+        data = None
+    if isinstance(data, dict):
+        inner = data.get("error")
+        if isinstance(inner, dict):
+            text = str(inner.get("message") or inner.get("type") or text)
+        elif isinstance(inner, str):
+            text = inner
+        elif data.get("message"):
+            text = str(data["message"])
+    text = " ".join(text.split())
+    if len(text) > 80:
+        text = text[:77] + "..."
+    return text
 
 
 def post_json(url, headers, payload, timeout):
@@ -60,6 +101,7 @@ def post_json(url, headers, payload, timeout):
     data = json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(url, data=data, method="POST")
     request.add_header("Content-Type", "application/json")
+    request.add_header("User-Agent", USER_AGENT)
     for key, value in headers.items():
         request.add_header(key, value)
     try:
@@ -69,6 +111,10 @@ def post_json(url, headers, payload, timeout):
         detail = exc.read().decode("utf-8", "replace")[:400]
         sys.stderr.write("naxd: HTTP %s: %s\n" % (exc.code, detail))
         sys.stderr.flush()
+        reason = error_reason(detail)
+        if reason:
+            raise ProviderError("servis %s dondurdu: %s"
+                                % (exc.code, reason)) from exc
         raise ProviderError("servis %s dondurdu" % exc.code) from exc
     except Exception as exc:
         sys.stderr.write("naxd: baglanti hatasi: %r\n" % (exc,))

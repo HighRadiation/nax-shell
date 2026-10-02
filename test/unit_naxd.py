@@ -366,7 +366,68 @@ def check_local_uses_compat():
     return seen["path"].endswith("/chat/completions") and "yerelden" in text
 
 
+def check_user_agent_sent():
+    """
+    Istek kendi imzasiyla gitmeli, urllib'in varsayilaniyla degil.
+
+    Varsayilan "Python-urllib/3.x" imzasi Cloudflare'in bot listesinde ve
+    istek API'ye hic ulasmadan 403 doner. Bu kontrol gercek bir arizadan
+    dogdu; imza basligi kazara dusurulurse AI yolu tamamen durur.
+    """
+    server, base = stub_provider.start()
+    conf = write_conf(base, "ok")
+    try:
+        cfg = config_mod.Config(conf)
+        prov = provider_mod.Provider(cfg)
+        prov.ask("intent", [{"role": "user", "content": "x"}])
+        agent = server.seen[-1]["agent"]
+    finally:
+        server.shutdown()
+        os.unlink(conf)
+    return agent == provider_mod.USER_AGENT and "urllib" not in agent.lower()
+
+
+def check_error_reason_reaches_user():
+    """
+    Saglayicinin gerekcesi kullaniciya gosterilen satira girmeli.
+
+    Yalnizca durum kodunu gostermek ("servis 403 dondurdu") kullaniciyi
+    yanlis yere bakmaya itiyor: 403 gorunce insan ilk is anahtarini
+    sucluyor. Govde JSON degil duz metin oldugu halde sebep tasinmali.
+    """
+    server, base = stub_provider.start()
+    conf = write_conf(base, "cf1010", extra="local_fallback = false\n")
+    try:
+        with quiet_log():
+            cfg = config_mod.Config(conf)
+            prov = provider_mod.Provider(cfg)
+            try:
+                prov.ask("intent", [{"role": "user", "content": "x"}])
+                return False
+            except provider_mod.ProviderError as exc:
+                return "403" in str(exc) and "1010" in str(exc)
+    finally:
+        server.shutdown()
+        os.unlink(conf)
+
+
+def check_json_error_reason_unwrapped():
+    """
+    JSON govdede sebep "error.message" alanindan cikarilmali.
+
+    Govdeyi oldugu gibi basmak kullaniciya kullanilmaz bir JSON parcasi
+    gosterirdi; alan adlarini sokmek de sebebi kaybetmek olurdu.
+    """
+    reason = provider_mod.error_reason(
+        '{"error":{"message":"Invalid API Key","type":"invalid_request"}}')
+    uzun = provider_mod.error_reason("x" * 200)
+    return reason == "Invalid API Key" and len(uzun) == 80
+
+
 CHECKS = {
+    "user_agent_sent": check_user_agent_sent,
+    "error_reason_reaches_user": check_error_reason_reaches_user,
+    "json_error_reason_unwrapped": check_json_error_reason_unwrapped,
     "anthropic_shape": check_anthropic_shape,
     "anthropic_refusal": check_anthropic_refusal,
     "local_uses_compat": check_local_uses_compat,

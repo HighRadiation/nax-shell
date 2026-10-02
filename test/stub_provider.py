@@ -35,10 +35,16 @@ REPLIES = {
 }
 
 # Kip -> (durum kodu, govde). Hata hallerini uretir.
+#
+# "cf1010" GERCEK BIR VAKANIN KOPYASI: araya giren bir katman (Cloudflare)
+# istegi API'ye hic ulastirmadan 403 ile geri cevirdi ve govde JSON bile
+# degildi, duz metin "error code: 1010" idi. Govdeyi JSON sanan bir okuyucu
+# bu sebebi kaybeder.
 FAILURES = {
     "http500": (500, '{"error":"ic hata"}'),
     "http429": (429, '{"error":"cok fazla istek"}'),
     "badjson": (200, "bu JSON degil"),
+    "cf1010": (403, "error code: 1010"),
     "nochoices": (200, '{"id":"x"}'),
     "empty": (200, '{"choices":[{"message":{"content":"   "}}]}'),
 }
@@ -72,6 +78,7 @@ class Handler(BaseHTTPRequestHandler):
             "mode": mode,
             "path": self.path,
             "auth": self.headers.get("Authorization", ""),
+            "agent": self.headers.get("User-Agent", ""),
             "api_key": self.headers.get("x-api-key", ""),
             "version": self.headers.get("anthropic-version", ""),
             "messages": payload.get("messages", []),
