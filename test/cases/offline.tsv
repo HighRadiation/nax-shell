@@ -59,3 +59,12 @@ kac sayfa var	yok
 git status	yok
 df -h	yok
 ls -la	yok
+# GERCEK VAKA: "dun degisen dosya" kaydi uc anahtar sozcukle eslesiyor ama
+# istenen is zip'lemek. Kayit satirin tamamini karsilamadigi icin SUSMALI.
+dun degisen dosyalari zip'le	yok
+buyuk dosyalari bul ve sil	yok
+git durumunu goster ve commit et	yok
+dosya sayisini ogren ve kaydet	yok
+# Dolgu sozcukleri denetimi bozmamali; bunlar hala eslesmeli.
+bana disk kullanimini goster lutfen	df -h
+su anda bos alan ne kadar	df -h

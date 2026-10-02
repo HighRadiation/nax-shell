@@ -22,6 +22,20 @@
 **   eslesiyor. Birden fazla kayit eslesirse en cok anahtar sozcugu olan
 **   kazaniyor; esitlikte tablodaki ilk kayit.
 **
+** KAYIT SATIRIN TAMAMINI KARSILAMAK ZORUNDA:
+**   Anahtar sozcuklerin hepsinin satirda gecmesi YETMEZ; satirda kaydin
+**   hesaplayamadigi bir sozcuk de kalmamalidir. Gercek bir kullanimda
+**   olculdu: "dun degisen dosyalari zip'le" satirinda "dun degisen dosya"
+**   kaydi uc anahtar sozcukle eslesti ve kullaniciya find komutu onerildi.
+**   Oysa istenen is zip'lemekti; kayit satirin yarisini aciklayip kalanini
+**   sessizce yok saydi.
+**
+**   Dolgu sozcukleri ("goster", "listele", "ne kadar") bu denetimden muaf:
+**   hangi komutun dogru oldugunu degistirmiyorlar. "zip", "sil", "yedekle"
+**   degistiriyor. Boyle bir sozcuk artakalirsa tablo SUSUYOR ve satir
+**   modele gidiyor. Susmanin bedeli bir ag turu, yanlis komut onermenin
+**   bedeli kullanicinin verisi.
+**
 ** EN AZ IKI ANAHTAR SOZCUK SART:
 **   Tek sozcukle eslesmek yanlis pozitif uretir - "disk" sozcugu baska
 **   bir istekte de gecebilir. Iki sozcuk sarti tabloyu temkinli tutuyor
@@ -215,6 +229,88 @@ static int	score_entry(const char *folded, const char *keys)
 }
 
 /*
+** Satirdaki sozcuk, hangi komutun dogru oldugunu degistirmeyen bir dolgu mu.
+**
+** Liste kasten kisa ve yalnizca "bana goster" anlamindaki sozcuklerden
+** olusuyor. Bir is BILDIREN sozcuk (zip, sil, yedekle, tasi) buraya asla
+** girmez; girerse tablonun susma guvencesi bozulur.
+*/
+static int	is_filler(const char *word, size_t len)
+{
+	static const char	*const	fillers[] = {
+		"goster", "gor", "gormek", "listele", "soyle", "bul", "bahset",
+		"yaz", "ver", "bak", "bana", "lutfen", "istiyorum", "ister",
+		"ne", "kadar", "var", "mi", "mu", "bir", "tum", "tumu", "butun",
+		"hepsi", "su", "bu", "burada", "buradaki", "icin", "ile", "de",
+		"da", "ki", "en", "cok", "simdi", "anda", "an", "acaba",
+		"sadece", "yalnizca", NULL
+	};
+	size_t						i;
+
+	i = 0;
+	while (fillers[i] != NULL)
+	{
+		if (strlen(fillers[i]) == len
+			&& strncmp(fillers[i], word, len) == 0)
+			return (1);
+		i++;
+	}
+	return (0);
+}
+
+/*
+** Sozcuk, kaydin anahtar sozcuklerinden biriyle karsilaniyor mu.
+**
+** has_word'un tersi yonu: orada tablodaki sozcuk satirda araniyor, burada
+** satirdaki sozcugu tablodaki bir sozcuk aciklayabiliyor mu diye bakiliyor.
+** Ek toleransi ayni kurala uyuyor, yoksa "dosyalari" sozcugu "dosya"
+** kaydiyla eslesir ama onun tarafindan aciklanmis sayilmazdi.
+*/
+static int	key_covers(const char *keys, const char *word, size_t len)
+{
+	size_t	klen;
+	size_t	i;
+
+	i = 0;
+	while (keys[i] != '\0')
+	{
+		klen = 0;
+		while (keys[i + klen] != '\0' && keys[i + klen] != ' ')
+			klen++;
+		if (klen <= len && strncmp(keys + i, word, klen) == 0
+			&& (klen == len || (klen >= OFFLINE_SUFFIX_MIN
+					&& islower((unsigned char)word[klen]))))
+			return (1);
+		i += klen;
+		while (keys[i] == ' ')
+			i++;
+	}
+	return (0);
+}
+
+/* Satirin her sozcugu bu kayit ya da dolgu listesiyle karsilaniyor mu. */
+static int	line_covered(const char *folded, const char *keys)
+{
+	size_t	i;
+	size_t	len;
+
+	i = 0;
+	while (folded[i] != '\0')
+	{
+		while (folded[i] == ' ')
+			i++;
+		len = 0;
+		while (folded[i + len] != '\0' && folded[i + len] != ' ')
+			len++;
+		if (len > 0 && is_filler(folded + i, len) == 0
+			&& key_covers(keys, folded + i, len) == 0)
+			return (0);
+		i += len;
+	}
+	return (1);
+}
+
+/*
 ** Satirin tablodaki karsiligini verir; yoksa NULL.
 **
 ** Donen metin tablonun kendisine ait, sabit; cagiran serbest BIRAKMAZ.
@@ -236,7 +332,7 @@ const char	*offline_lookup(const char *text)
 	while (g_table[i][0] != NULL)
 	{
 		score = score_entry(folded, g_table[i][0]);
-		if (score > best_score)
+		if (score > best_score && line_covered(folded, g_table[i][0]))
 		{
 			best_score = score;
 			best = g_table[i][1];
