@@ -61,8 +61,9 @@ yakın.
 
 ### M2.3 — protokol ve yardımcı süreç iskeleti
 
-Tel biçimi ([PROTOCOL.md](PROTOCOL.md)) hayata geçti. Henüz gerçek model yok;
-karşı tarafta **kasten kötü davranan** bir taklit var, çünkü bu taşın sorusu
+Tel biçimi ([PROTOCOL.md](PROTOCOL.md)) hayata geçti. Bu taşta gerçek model
+henüz yoktu; karşı tarafta **kasten kötü davranan** bir taklit vardı (gerçek
+model ölmeyi sipariş üzerine yapmaz), çünkü bu taşın sorusu
 "cevap doğru mu" değil: **yardımcı süreç ölürse, donarsa ya da saçmalarsa
 kabuk sağlam kalıyor mu.**
 
@@ -258,6 +259,22 @@ Bu bilinçli: ağ, anahtar, ücret ve rastgelelik testlere girmemeli. Ama açık
 boşluk ve kapatmanın tek yolu gerçek bir anahtarla oturup kullanmak. Plan
 "bitti" dediğinde ürün bitmiş olmayacak; o adım plan dışıdır.
 
+### İlk gerçek koşu: üç hata, üçü de planda yoktu
+
+2026-10-02'de kabuk ilk kez gerçek bir anahtarla çalıştırıldı. Cevap kalitesi
+hâlâ ölçülmedi, çünkü **ilk üç deneme modele hiç ulaşmadı.** Çıkan üç hata
+yukarıdaki "ölçülmeyen tek şey" bölümünün neden yazıldığını gösteriyor:
+
+| Ne oldu | Gerçek sebep | Nerede kapandı |
+|---|---|---|
+| `cd /tmp` yazıldıktan sonra AI tamamen durdu | Yardımcı sürecin betiği **göreli** yolla çağrılıyordu. `cd` bir kabukta en sık kullanılan komut, yani bu her oturumda yaşanacak bir hataydı | `src/ai/bridge.c` — yol `/proc/self/exe` ile ikilinin yanından bulunuyor |
+| Her istek `servis 403 dondurdu` | Cloudflare'in `1010` kodu: urllib'in varsayılan imzası bot listesinde, istek API'ye hiç ulaşmıyor. Ekranda yalnızca durum kodu yazdığı için sebep görünmüyordu | `naxd/provider.py` — `User-Agent` başlığı, ve hata gövdesinden tek satırlık gerekçe |
+| `dun degisen dosyalari zip'le` → `find ...` önerildi, zip yok | Çevrimdışı tablo satırın yarısını açıklayan kayıtla cevap verdi; "zip'le" sözcüğü yok sayıldı | `src/ai/offline.c` — kazanan kayıt satırın **tamamını** karşılamak zorunda |
+
+Üçünün ortak yanı şu: hiçbiri bir test tarafından yakalanamazdı, çünkü üçü de
+testlerin bilinçli olarak dışında bıraktığı yerde duruyordu — gerçek çalışma
+dizini, gerçek ağ, gerçek cümle. Her üçü için şimdi vaka var.
+
 ## Sırada
 
 **Plandaki bütün kilometre taşları bitti.** Bu, projenin bittiği anlamına
@@ -277,8 +294,9 @@ yardımcı sürecin kurulum yolu.
 **3. Kullanımın göstereceği şeyler.** Bugüne kadarki tecrübe şunu söylüyor:
 gerçek hatalar planda yazmıyordu. `R_OK` makro çakışması, `t_field` ad
 çakışması, yazma tıkanmasında kilitlenme, maskeleyicide yanlış sıra, çevrimdışı
-tablonun yazım düzeltmesiyle çakışması — hiçbiri öngörülmüştü, hepsi kod
-yazılırken ya da ölçülürken çıktı. Dördüncü tür iş budur ve listelenemez.
+tablonun yazım düzeltmesiyle çakışması, ve ilk gerçek koşunun çıkardığı üç hata
+(yukarıda) — hiçbiri öngörülmüştü, hepsi kod yazılırken ya da **kullanılırken**
+çıktı. Dördüncü tür iş budur ve listelenemez.
 
 ## Temizlik borcu
 
@@ -288,3 +306,10 @@ Depoda iki eski yedek dal duruyor; işi bitti, silinebilir:
 yedek/rebase-oncesi
 yedek/yazar-degisiminden-once
 ```
+
+**Depo public'e açılmadan önce bilinmesi gereken:** ikisi de yalnızca yerelde
+duruyor, `origin`'e hiç gitmedi. Ama `yedek/yazar-degisiminden-once` dalı
+**başka bir kimlikle** atılmış commit'ler içeriyor (adından da belli: yazar
+değişiminden önce). `git push --all` ya da `git push --mirror` o dalı da
+gönderir ve o kimlik public olur. Depoyu açarken `git push origin main`
+biçiminde dalı adıyla göndermek, ya da bu dalları önce silmek gerekiyor.

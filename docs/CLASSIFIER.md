@@ -14,12 +14,19 @@ Ucuzdan pahalıya; ilk eşleşen kazanır ve sonraki aşamalar hiç çalışmaz.
 | 1 | Sözcüklere ayırma: özel karakter var mı, tırnak kapanmış mı | — | ~10 µs | yok |
 | 2 | Baş çözümü: yerleşik komut → `/` içeriyorsa dosya → PATH önbelleği | **komut** | ~5 µs | yok |
 | 3 | Şekil vetosu: baş çözüldü ama satır doğal dil mi | niyete devret | ~10 µs | yok |
-| 4 | Yerel düzeltme: yazım hatası tamiri | **öneri** | <2 ms | yok |
-| 5 | Kalan her şey | **niyet** | ~1 sn | 1 |
+| 4 | Çevrimdışı niyet tablosu: satırın elle yazılmış karşılığı var mı | **niyet** (yerel cevap) | <10 µs | yok |
+| 5 | Yerel düzeltme: yazım hatası tamiri | **öneri** | <2 ms | yok |
+| 6 | Kalan her şey | **niyet** | ~1 sn | 1 |
 
 Tasarımın en önemli sonucu: **normal komutlar AI'a hiç uğramaz.** `ls -la`
 yazdığında ne gecikme ne ücret oluşur. AI yalnızca kabuğun zaten
 anlamlandıramadığı satırlarda devreye girer.
+
+Tablonun **yazım düzeltmesinden önce** bakılması bir ölçümün sonucu: `kac
+dosya var` satırı önce düzeltmeye düşüyor ve `kac` sözcüğü için `tac` komutu
+öneriliyordu. Doğal dil cümlesine komut düzeltmesi önermek, cümleyi hiç
+anlamamak demek. Sıra değişince hem doğru cevap verildi hem bir ağ turu
+harcanmadı.
 
 ## Aşama 3 — şekil vetosu
 
@@ -78,7 +85,34 @@ aynen geri ver."* Böylece yanlış yönlendirmenin bedeli birkaç yüz milisani
 olur — **yanlış çalıştırma olmaz.** Tasarımın her yerinde tercih bu yöndedir:
 yavaşlık kabul edilebilir, sessiz yanlış davranış edilemez.
 
-## Aşama 4 — yerel yazım düzeltmesi
+## Aşama 4 — çevrimdışı niyet tablosu
+
+Sık kullanılan niyetlerin elle yazılmış karşılığı `src/ai/offline.c` içinde
+duruyor. Eşleşme bulunursa yardımcı süreç hiç başlatılmıyor: sıfır gecikme,
+sıfır ücret, her seferinde aynı komut. Bir kabukta "disk kullanımını göster"
+satırının cevabı tartışmalı değil; onu bir ağ turuna bağlamak kazanç
+getirmiyor.
+
+Eşleşme **anahtar sözcük kümesiyle** yapılıyor, tam metinle değil — "disk
+kullanımı" ile "disk kullanımını göster" aynı istek, farklı metin. İki kural
+tabloyu temkinli tutuyor:
+
+1. **En az iki anahtar sözcük** eşleşmek zorunda. Tek sözcük yanlış pozitif
+   üretir: "disk" başka bir istekte de geçebilir.
+2. **Kazanan kayıt satırın tamamını karşılamak zorunda.** Satırda kaydın
+   hesaplayamadığı bir sözcük kalırsa tablo susar ve satır modele gider.
+
+İkinci kural gerçek bir hatadan doğdu. `dun degisen dosyalari zip'le` satırında
+"dun degisen dosya" kaydının üç anahtar sözcüğü de geçiyor; kayıt eşleşti ve
+kullanıcıya `find . -newermt "1 day ago" -type f` önerildi. Zip yok. Kayıt
+satırın yarısını açıklayıp kalanını sessizce yok saymıştı.
+
+"Göster", "listele", "ne kadar", "lütfen" gibi dolgu sözcükleri bu denetimden
+muaf: hangi komutun doğru olduğunu değiştirmiyorlar. "Zip", "sil", "yedekle"
+değiştiriyor. Dolgu listesi hiçbir zaman tamamlanmayacak ve bu bilinçli:
+**eksik liste bir ağ turuna mal olur, yanlış komut önermeye değil.**
+
+## Aşama 5 — yerel yazım düzeltmesi
 
 Baş çözülmediğinde ilk iş AI'a gitmek değildir. Yazım hatalarının neredeyse
 tamamı sık kullanılan bir komuta iki karakterden az uzaklıktadır. Bunları uzak

@@ -71,8 +71,8 @@ denetleyicilerle yapılır. Sızıntı sıfır olmadan hiçbir aşama bitmiş sa
 
 ## Durum
 
-Çekirdek kabuk kuruluyor. Şu an çalışan: okuma döngüsü, renkli prompt, kalıcı
-geçmiş, `exit`, Ctrl-D ve sinyaller — Ctrl-C yarım satırı atıp temiz bir prompt
+Çekirdek kabuk çalışıyor: okuma döngüsü, renkli prompt, kalıcı geçmiş,
+`exit`, Ctrl-D ve sinyaller — Ctrl-C yarım satırı atıp temiz bir prompt
 verir, Ctrl-\ yok sayılır. **Komutlar artık gerçekten koşuyor** — tek komut,
 `PATH` çözümleme, gerçek çıkış kodları ve bash ile birebir eşleşen hata
 mesajları:
@@ -109,7 +109,7 @@ merhaba dunya
 ```
 
 `cd` ve `export` ana süreçte koşar, yoksa değişiklik çocukla birlikte yok
-olurdu. `<<` yönlendirmesi henüz yok, anlaşılır bir mesaj veriyor.
+olurdu.
 
 **Kabuk artık her satırı kendisi sınıflandırıyor** — hiçbir işaret, hiçbir
 kip yok. Normal komutlar bu yoldan hiç sapmadan geçiyor; doğal dil ayrı yola
@@ -138,10 +138,10 @@ Geri dönüşü olmayan komutlar (`rm`, `dd`, `chmod`, `kill` ve benzeri) bu
 istisnanın dışında: önerilirler ama **tampona konulmazlar.** Tampona konan
 öneri tek Enter'la koşar ve bu tür bir komut için o fazla yakın.
 
-**Yardımcı süreçle konuşma hattı hazır** — ama henüz gerçek bir model yok.
-Karşı tarafta kasten kötü davranan bir taklit var, çünkü önce şu soru
-yanıtlanmalı: yardımcı süreç ölürse, donarsa ya da saçmalarsa kabuk sağlam
-kalıyor mu? Ölçülen cevap:
+**Yardımcı süreç gerçek, ama dayanıklılığı taklitle ölçüldü.** Karşı tarafta
+kasten kötü davranan bir süreç koşturuluyor, çünkü gerçek bir model ölmeyi,
+donmayı ve saçmalamayı sipariş üzerine yapmaz. Sorulan soru şu: yardımcı
+süreç ölürse, donarsa ya da saçmalarsa kabuk sağlam kalıyor mu? Ölçülen cevap:
 
 | Durum | Kabuk ne yapıyor |
 |---|---|
@@ -241,6 +241,32 @@ Planın tamamı bitti — ama bu projenin bittiği anlamına gelmiyor. Neyin
 ölçülmediği [docs/ROADMAP.md](docs/ROADMAP.md)'de açıkça yazılı.
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
+
+## Ne yapmaz
+
+Bunlar eksik değil, sınır. Bilerek böyle:
+
+- **Sohbet botu değildir.** Her satır kendi başına durur: bir istek bir komut
+  üretir, bir soru iki cümlelik cevap alır. Modelin verdiği cevap bağlama
+  girmez, yalnızca **çalıştırdığın komutlar** girer. Yani "peki onu nasıl
+  silerim" diye devam edemezsin; soruyu kendi başına ayakta duracak şekilde
+  yazman gerekir. Bunun sebebi kabuğun sözleşmesi: bir satır, bir karar.
+- **Hiçbir şeyi kendi başına çalıştırmaz.** Öneri düzenleme satırına yazılır;
+  çalıştıran şey senin Enter'a basmandır. Yıkıcı komutlar tampona hiç konmaz.
+- **Arka plan işi (`&`) ve alt kabuk (`( )`) yok.** Sözcük ayırıcı tanıyor,
+  ayrıştırıcı anlaşılır bir hata veriyor.
+- **Önerilen komutların kalitesi ölçülmedi.** Protokol, dayanıklılık,
+  gizlilik, sınıflandırıcı ve kabuk dili vaka tablolarıyla ölçülü; modelin
+  ürettiği komutun işe yarayıp yaramadığı ölçülü **değil**, çünkü bütün AI
+  testleri sahte sağlayıcıya karşı koşuyor (ağ yok, anahtar yok, ücret yok).
+  Bu bilinçli bir boşluk ve [docs/ROADMAP.md](docs/ROADMAP.md) içinde yazılı.
+
+## Bir şey ters giderse
+
+AI yolu sustuğunda ya da `nax: AI: servis 4xx dondurdu` yazdığında sebep tek
+satırda görünür; tam yanıt `~/.nax-naxd.log` dosyasındadır. En sık iki sebep
+ve çözümü [docs/CONFIG.md](docs/CONFIG.md) içindeki "Sorun giderme"
+bölümünde. Kabuk bu durumların hiçbirinde durmaz: düz kabuk olarak çalışır.
 
 ## Dokümanlar
 

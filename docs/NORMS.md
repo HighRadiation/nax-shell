@@ -7,6 +7,14 @@ kod bunlara uyar.
 
 **Dosya, fonksiyon ve değişken adları İngilizce. Yorumlar Türkçe.**
 
+Bu kural **`Makefile` ve betikler için de geçerli**: hedef adları, değişken
+adları ve ekrana basılan etiketler İngilizce (`all`, `check`, `clean`, `cc`,
+`link`). Kuralın sebebi okuyanı tahmin etmeye bırakmamak: `make` ile gelen
+sözleşme İngilizce, araya Türkçe bir hedef adı koymak o sözleşmeyi bozar.
+Açıklamalar burada da Türkçe, kullanıcıya yazılan hata mesajları da
+(`HATA: readline basliklari bulunamadi`) — programın her yerinde olduğu gibi.
+Ayrım şu: **terim İngilizce, cümle Türkçe.**
+
 **Kod dosyaları tamamen ASCII.** Türkçe karakterler ASCII karşılıklarıyla
 yazılır, uzun tire yerine `-` kullanılır. Dokümanlar (`docs/*.md`) bu kuralın
 dışında — orada tam Türkçe yazım geçerli.

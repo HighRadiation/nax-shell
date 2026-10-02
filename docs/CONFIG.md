@@ -169,3 +169,22 @@ saçma bir süre bildirirse kabuk ya hiç beklemez ya sonsuza kadar bekler.
 `api_key` boş olduğunda `naxd` bunu açılışta bildirir, kabuk oturumda bir kez
 tek satır uyarı basar ve düz kabuk olarak tam işlevle çalışır. Anahtarsız
 durum bir hata hali değil, desteklenen bir çalışma biçimidir.
+
+## Sorun giderme
+
+Hata satırı artık sağlayıcının **kendi gerekçesini** taşıyor. Bu bölüm o
+gerekçeleri gerçek kullanımda görüldükleri hâliyle yazıyor; üçü de
+yapılandırma hatası, hiçbiri kabuğu durdurmuyor.
+
+Tam yanıt her zaman `~/.nax-naxd.log` dosyasında. Ekrandaki satır 80
+karakterle sınırlı, günlükte kırpma yok.
+
+| Ekranda görünen | Gerçek sebep | Çözüm |
+|---|---|---|
+| `servis 403 dondurdu: error code: 1010` | **Cloudflare**, Groq değil. 1010 "bu tarayıcı imzası yasaklı" demek; istek API'ye hiç ulaşmıyor. urllib'in varsayılan imzası bot listesinde | Kodda kapandı: istek `User-Agent: nax/1.0` ile gidiyor. Bu satırı yine görürsen `naxd/provider.py` içindeki `USER_AGENT` düşmüş demektir |
+| `servis 404 dondurdu: The model ... does not exist or you do not have access` | Model adı eskimiş. Sağlayıcılar model kaldırıyor; dünkü ad bugün yok | `model_intent` / `model_explain` satırlarını kendi listenden seç. Listeyi görmenin yolu `nax.conf.example` içinde yazılı ve o çağrı ücretsiz |
+| `AI kapali: nax.conf icinde api_key bos` | Anahtar yok | Hata değil, desteklenen biçim. Doldurursan aynı oturumda geçerli olur; dosya her istekte kontrol edilir |
+
+**403 görünce ilk şüphelenilen şey anahtar olur ve genelde yanlıştır.** Bu
+bölüm o yüzden var: durum kodu nereye bakılacağını söylemiyor, gerekçe
+söylüyor.

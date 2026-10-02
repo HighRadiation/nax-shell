@@ -80,14 +80,20 @@ engellemez.
 Şu an ayrıştırılan dil:
 
 ```
+liste       : boru_hattı ( ( ';' | '&&' | '||' ) boru_hattı )*
 boru_hattı  : komut ( '|' komut )*
 komut       : ( sözcük | yönlendirme )+
 yönlendirme : ( '<' | '>' | '>>' | '<<' ) sözcük
 ```
 
-Sözcük ayırıcı `;`, `&&`, `||`, `&`, `(`, `)` operatörlerini de tanıyor ama
-ayrıştırıcı henüz kabul etmiyor; anlaşılır bir hata verir. Onları şimdi
-tanımak, sözcük ayırıcıyı ileride ikinci kez açmayı önlüyor.
+Liste katmanı boru hattının **üstünde** duruyor: tek boru hattından oluşan bir
+satır tek öğeli bir liste üretir ve kanonik çıktısı değişmez, bu yüzden
+operatörler eklendiğinde eski vaka tablolarının hiçbiri kırılmadı.
+
+`&`, `(` ve `)` sözcük ayırıcıda tanınıyor ama ayrıştırıcı kabul etmiyor;
+anlaşılır bir hata verir. Arka plan işleri ve alt kabuk bugün yok —
+[FINDINGS.md](FINDINGS.md) içinde kayıtlı. Operatörleri sözcük ayırıcıda
+baştan tanımak, onu ikinci kez açmayı önlüyor.
 
 Bir komut ya en az bir argüman ya da en az bir yönlendirme içermek zorunda.
 Argümansız ama yönlendirmeli komut **geçerlidir**: `> dosya`, dosyayı
@@ -334,7 +340,7 @@ src/
     exec.c         ANA süreç tarafı: kim çatallanır, kim beklenir
     stage.c        ÇOCUK tarafı: boru uçları, yönlendirme, komut
     redir.c        yönlendirmeleri uygular
-    builtin.c      yerleşik tablosu; echo, pwd, exit
+    builtin.c      yerleşik tablosu; echo, pwd, exit, ctx
     builtin_env.c  export, unset
     builtin_cd.c   cd
   ai/              satır komut mu niyet mi
@@ -382,12 +388,11 @@ test/
   test_offline.c   niyet tablosu; korpusun yarısı negatif vaka
   cases/*.tsv      vaka tabloları; yeni vaka için yeniden derleme gerekmez
   pty_drive.py     sahte terminal üzerinden etkileşimli yol testleri
-naxd/              AI yardımcı süreci (sonraki aşamada)
 docs/              bu dizin
 ```
 
-Gruplar **mimarinin kendisini** yansıtıyor: altyapı, dil, çalıştırma, ve
-sıradaki AI tarafı. On yedi dosya düz durduğunda okuyan haritayı kaybediyordu.
+Gruplar **mimarinin kendisini** yansıtıyor: altyapı, dil, çalıştırma ve AI.
+Dosyalar düz bir listede durduğunda okuyan haritayı kaybediyordu.
 
 Alan başlıkları kendi klasörlerinde duruyor; `Makefile` her klasörü `-I`
 listesine eklediği için dosyalarda `"parse.h"` yazmak yeterli. Gruplama
