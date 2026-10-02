@@ -325,6 +325,9 @@ src/
     expand.c       bir sözcüğü alanlara çevirir
     expand_cmd.c   bir komutun argüman ve yönlendirmelerini genişletir
     exp_dump.c     genişletilmiş hattı kanonik metne çevirir
+    heredoc.c      "<<" gövdesini satır satır toplar
+    glob.c         dosya adı genişletmesi; dizin tarama ve sıralama
+    glob_match.c   tek yol bileşeni için desen eşleşmesi
   exec/            çalıştırma
     exec.h         çözümleme sonucu, aşama bağlantıları, bildirimler
     path.c         komut adını çalıştırılabilir bir yola çözer
@@ -350,6 +353,7 @@ src/
     redact.c       gönderilecek metinden sırları temizler
     ctx.c          oturum bağlamı halkası ve "ctx" yerleşiği
     ctx_facts.c    oturumun olguları: dizin, git dalı, ortam adları
+    offline.c      elle yazılmış niyet tablosu; modelden önce bakılır
 naxd/              yardımcı süreç; yalnızca Python standart kütüphanesi
   naxd.py          giriş ve döngü
   wire.py          tel biçiminin Python tarafı
@@ -374,6 +378,8 @@ test/
   unit_naxd.py     gerçek yardımcı sürecin uçtan uca davranışı
   test_redact.c    sır temizleme; korpusun yarısı negatif vaka
   test_ctx.c       bağlam halkası ve kapalı dizin eşleşmesi
+  test_glob.c      desen eşleşmesi; maske elle yazılır
+  test_offline.c   niyet tablosu; korpusun yarısı negatif vaka
   cases/*.tsv      vaka tabloları; yeni vaka için yeniden derleme gerekmez
   pty_drive.py     sahte terminal üzerinden etkileşimli yol testleri
 naxd/              AI yardımcı süreci (sonraki aşamada)

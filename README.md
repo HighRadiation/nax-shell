@@ -210,8 +210,35 @@ Gizlilik sözleşmesi dört kuralla uygulanıyor — ayrıntısı
 - Belirli dizinlerde AI **tamamen kapatılabilir**; kararı kabuk verir, yani
   veri karşı tarafa hiç ulaşmaz.
 
-Sıradaki: tamamlama — `<<`, `&& || ;`, dosya adı genişletmesi ve çevrimdışı
-için belirlenimci niyet tablosu. Bkz. [docs/ROADMAP.md](docs/ROADMAP.md).
+**Kabuk dili tamamlandı:** `;`, `&&`, `||`, `<<` ve dosya adı genişletmesi.
+Davranışın tamamı bash ile karşılaştırılarak ölçüldü.
+
+```
+nax ~/projeler $ make && ./test/run.sh || echo "patladi"
+nax ~/projeler $ echo *.c
+a.c b.c
+nax ~/projeler $ cat << SON
+> iki satir
+> SON
+iki satir
+```
+
+**Çevrimdışı da işe yarıyor.** Sık kullanılan niyetlerin elle yazılmış
+karşılığı var ve modelden önce ona bakılıyor — sıfır gecikme, sıfır ücret:
+
+```
+nax ~/projeler $ disk kullanimini goster
+nax: df -h
+```
+
+Çevrimdışı değerin büyük kısmı dil modelinden değil, bu belirlenimci katmandan
+geliyor: yazım düzeltmesi, PATH çözümlemesi, sınıflandırıcı ve niyet tablosu.
+Yerel dil modeli bunun **üstünde** opsiyonel bir katman, altında değil.
+
+Claude için `provider = anthropic` yeterli; farkları kod tarafında ele alındı.
+
+Planın tamamı bitti — ama bu projenin bittiği anlamına gelmiyor. Neyin
+ölçülmediği [docs/ROADMAP.md](docs/ROADMAP.md)'de açıkça yazılı.
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 

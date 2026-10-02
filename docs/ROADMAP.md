@@ -173,38 +173,112 @@ hiç durmuyor.
 güvenmek zorunda değilsin, bakabilirsin. Testi de bunu kullanıyor: sahte bir
 sır ekip çıktıda görünmediğini doğruluyor.
 
+### M4 — tamamlama
+
+Kabuk dili tamamlandı ve AI tarafına iki katman eklendi.
+
+| Kalem | Durum |
+|---|---|
+| `<<` yönlendirmesi | bitti |
+| `&& \|\| ;` işleçleri | bitti |
+| dosya adı genişletmesi | bitti |
+| `anthropic` bağdaştırıcısı | bitti |
+| çevrimdışı niyet tablosu | bitti |
+| yerel model erişimi | altyapı bitti, **gerçek modele karşı denenmedi** |
+
+Son satır dürüstlük gereği böyle: yapılandırma, düşme kuralı ve istek yolu
+sahte bir sunucuya karşı ölçüldü, ama bir `ollama` sunucusuyla gerçekten
+konuşulmadı. Aynı şey bulut tarafı için de geçerli — ayrıntısı aşağıda.
+
+### Dilin tamamlanması
+
+`;`, `&&` ve `||` için boru hattının **üstüne** bir katman eklendi: liste.
+Tek hatlık listede sarmalayıcı yazılmadığı için eski dökümlerin hiçbiri
+değişmedi. Anlamların tamamı bash ile karşılaştırıldı — atlanan hattın durum
+kodunu değiştirmemesi dahil.
+
+`<<` gövdesi **ayrıştırmadan sonra** toplanıyor, çünkü kaç satır okunacağı
+ancak sınırlayıcı bilindikten sonra belli oluyor. Bu, kabuğun girdi yolunu
+değiştiren tek özellik.
+
+Dosya adı genişletmesinde hangi yıldızın desen olduğu **karakter bazında**
+biliniyor: genişletici her yazdığı karakterin yanına bir maske biti koyuyor.
+Ölçüldü, başka yolu yok:
+
+```
+echo "*.c"           -> harf        X="*.c"; echo $X    -> DESEN
+echo "a"*.c          -> "a" harf, yıldız desen (aynı sözcükte)
+```
+
+Son satır sözcük ya da parça bazında bir bayrağı diskalifiye ediyor.
+
+### Çevrimdışı katman
+
+`docs/CONFIG.md`'nin tezi uygulandı: çevrimdışı değerin büyük kısmı dil
+modelinden değil, sıfır gecikmeli belirlenimci katmandan geliyor. O katman
+artık dört parça — yazım düzeltmesi, PATH çözümlemesi, sınıflandırıcı ve
+**elle yazılmış niyet tablosu.**
+
+Tablo modelden *ve yazım düzeltmesinden* önce bakılıyor. İkinci sıra ölçülerek
+bulundu: ters olduğunda "kac dosya var" satırı tabloya hiç ulaşmıyor, `kac`
+sözcüğü için `tac` önerisi alıyordu. Tablonun tanıdığı satır tanım gereği
+doğal dildir, yazım hatası değil.
+
 ### Test durumu
 
 | Grup | Vaka | Mutasyon |
 |---|---|---|
-| sınıflandırıcı korpusu | 62 | 15/15 |
-| genişletme korpusu | 52 | — |
-| sözcük ayırıcı korpusu | 44 | — |
-| ayrıştırıcı korpusu | 40 | — |
-| **protokol korpusu** | **40** | **19/20** |
-| **satır okuma senaryoları** | **14** | **14/17** |
-| **yardımcı süreç senaryoları** | **23** | **23/23** |
-| **gerçek daemon (Python)** | **20** | — |
-| **tel biçimi çaprazlama** | **36** | — |
-| **maskeleyici** | **47** | **17/17** |
-| **bağlam halkası** | **26** | — |
-| boru ile bütünleşik | 124 | — |
-| sahte terminal (pty) | 35 | — |
+| sözcük ayırıcı | 44 | — |
+| ayrıştırıcı | 56 | 13/13 |
+| genişletme | 52 | — |
+| **dosya adı genişletmesi** | **37** | **16/16** |
+| sınıflandırıcı | 64 | 15/15 |
+| maskeleyici | 47 | 17/17 |
+| bağlam halkası | 26 | — |
+| **çevrimdışı tablo** | **33** | **14/14** |
+| protokol | 40 | 19/20 |
+| satır okuma | 14 | 14/17 |
+| yardımcı süreç | 23 | 23/23 |
+| gerçek daemon (Python) | 25 | — |
+| tel biçimi çaprazlama | 36 | — |
+| boru ile bütünleşik | 168 | — |
+| sahte terminal (pty) | 39 | — |
 
-Yakalanmayan dört mutasyon davranışı hiç değiştirmiyor; gerekçeleri kodda ve
+Toplam 30 grup, hepsi normal **ve** denetleyicili derlemede. Yakalanmayan dört
+mutasyon davranışı hiç değiştirmiyor; gerekçeleri kodda ve
 [FINDINGS.md](FINDINGS.md)'de yazılı.
+
+### Ölçülmeyen tek şey: cevap kalitesi
+
+Protokol, dayanıklılık, gizlilik ve kabuk dili ölçüldü. **Modelin ürettiği
+komutların işe yarayıp yaramadığı ölçülmedi** — bütün AI testleri sahte bir
+sağlayıcıya karşı koşuyor.
+
+Bu bilinçli: ağ, anahtar, ücret ve rastgelelik testlere girmemeli. Ama açık bir
+boşluk ve kapatmanın tek yolu gerçek bir anahtarla oturup kullanmak. Plan
+"bitti" dediğinde ürün bitmiş olmayacak; o adım plan dışıdır.
 
 ## Sırada
 
-### M4 — tamamlama
+**Plandaki bütün kilometre taşları bitti.** Bu, projenin bittiği anlamına
+gelmiyor — plan bir iskeleydi ve iskele tamamlandı.
 
-- `<<` yönlendirmesi (girdi yolunu değiştirdiği için ayrı iş)
-- `&& || ;` işleçleri
-- dosya adı genişletmesi (globbing)
-- `anthropic` bağdaştırıcısı
-- **çevrimdışı için belirlenimci niyet→komut tablosu**: internet yokken
-  yavaş bir yerel model beklemek yerine, sık isteklerin doğrudan karşılığı
-- yerel model erişimi
+Geriye üç tür iş kalıyor:
+
+**1. Gerçek kullanım.** Yukarıdaki "ölçülmeyen tek şey" bölümü. Gerçek bir
+anahtarla oturup kullanmak, ve çıkan şeyi ölçmek. Bu adım plan dışıdır çünkü
+planın içinden yapılamaz.
+
+**2. [FINDINGS.md](FINDINGS.md)'deki açık maddeler.** Hiçbiri engelleyici
+değil ama "bitti" dedikten sonra da iş olduğunu gösteriyorlar: `~user`,
+`IFS`, atama öneki olmadan değişken (`X=1`), `$$`, `${VAR:-x}`, `echo -e`,
+yardımcı sürecin kurulum yolu.
+
+**3. Kullanımın göstereceği şeyler.** Bugüne kadarki tecrübe şunu söylüyor:
+gerçek hatalar planda yazmıyordu. `R_OK` makro çakışması, `t_field` ad
+çakışması, yazma tıkanmasında kilitlenme, maskeleyicide yanlış sıra, çevrimdışı
+tablonun yazım düzeltmesiyle çakışması — hiçbiri öngörülmüştü, hepsi kod
+yazılırken ya da ölçülürken çıktı. Dördüncü tür iş budur ve listelenemez.
 
 ## Temizlik borcu
 
