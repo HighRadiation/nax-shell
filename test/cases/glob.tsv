@@ -1,0 +1,60 @@
+# Tek yol bileseni icin desen eslesmesi.
+#
+# Bicim: <desen>|<maske>|<ad> ve maske desenle AYNI uzunlukta.
+# Maskede "1" harfi harfine, "0" desen demek. Ayrintisi test_glob.c
+# basliginda.
+
+# --- yildiz ---
+*|0|a.c	eslesti
+*|0|	eslesti
+*.c|000|a.c	eslesti
+*.c|000|uzun-ad.c	eslesti
+*.c|000|a.txt	eslesmedi
+a*|00|a	eslesti
+a*|00|abc	eslesti
+a*c|000|a.c	eslesti
+*a*|000|bab	eslesti
+*a*|000|bbb	eslesmedi
+
+# --- MASKE KRITIK: tirnakli yildiz desen DEGIL ---
+# "echo "*.c"" satirindaki yildiz bir dosya adi karakteridir.
+*.c|100|a.c	eslesmedi
+*.c|100|*.c	eslesti
+# Ayni sozcukte hem harf hem desen olabilir: "echo "a"*.c"
+a*.c|1000|a.c	eslesti
+a*.c|1000|ab.c	eslesti
+a*.c|1000|b.c	eslesmedi
+
+# --- soru isareti ---
+?.c|000|a.c	eslesti
+?.c|000|ab.c	eslesmedi
+?|0|	eslesmedi
+a?c|000|abc	eslesti
+# Tirnakli soru isareti harf.
+?.c|100|?.c	eslesti
+?.c|100|a.c	eslesmedi
+
+# --- kume ---
+[ab].c|000000|a.c	eslesti
+[ab].c|000000|b.c	eslesti
+[ab].c|000000|c.c	eslesmedi
+[a-z].c|0000000|m.c	eslesti
+[a-z].c|0000000|3.c	eslesmedi
+[0-9]|00000|7	eslesti
+# Olumsuzlama iki bicimde de yazilabilir.
+[!a].c|000000|b.c	eslesti
+[!a].c|000000|a.c	eslesmedi
+[^a].c|000000|b.c	eslesti
+# Tirnakli kume harf.
+[ab].c|111111|[ab].c	eslesti
+[ab].c|111111|a.c	eslesmedi
+# KAPANMAMIS KOSE PARANTEZ DESEN DEGIL HARF: bash da boyle davraniyor ve
+# "echo [abc" satirini oldugu gibi basiyor.
+[abc|0000|a	eslesmedi
+[abc|0000|[abc	eslesti
+
+# --- harfi harfine eslesme ---
+a.c|000|a.c	eslesti
+a.c|000|a.txt	eslesmedi
+# Bos desen yalnizca bos adla eslesir.
+X|1|X	eslesti

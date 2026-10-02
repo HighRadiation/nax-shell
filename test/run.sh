@@ -56,6 +56,18 @@ echo metin > "$FIX/kosmaz.txt"
 chmod 644 "$FIX/kosmaz.txt"
 mkdir "$FIX/birdizin"
 printf 'satir1\nsatir2\n' > "$FIX/girdi.txt"
+# Dosya adi genisletmesi fiksturu: iki ".g" dosyasi, bir gizli dosya, bir
+# alt dizin ve adinda YILDIZ gecen bir dosya. Son dosya onemli: desen ile
+# harf ayrimini olcen tek sey o.
+mkdir "$FIX/glob"
+: > "$FIX/glob/bir.g"
+: > "$FIX/glob/iki.g"
+: > "$FIX/glob/uc.txt"
+: > "$FIX/glob/.gizli"
+: > "$FIX/glob/yildiz*dosya"
+mkdir "$FIX/glob/alt"
+: > "$FIX/glob/alt/ic.g"
+
 mkdir "$FIX/saltokunur"
 chmod 555 "$FIX/saltokunur"
 
@@ -517,6 +529,38 @@ run_case   "boru icindeki export etkisiz" $'echo x | export NAXY=1\necho "[$NAXY
 # "command not found" cikar; bu yuzden birlesik cikti bos olmak zorunda.
 # Mutasyon denemesi bu boslugu gosterdi.
 run_merged "boru icinde yerlesik taninir" $'echo x | export NAXY=1\n'   ""
+
+# --- dosya adi genisletmesi ---
+# Davranisin tamami bash ile karsilastirildi; farklarin hepsi giderildi.
+run_case   "yildiz eslesenleri verir"     "cd $FIX/glob && echo *.g"$'\n' "bir.g iki.g"
+# SONUC SIRALI: dizin okuma sirasi dosya sistemine gore degisir, ayni
+# komutun farkli siralarda cikti vermesi kabul edilemez.
+run_case   "sonuc sirali"                 "cd $FIX/glob && echo *"$'\n' "alt bir.g iki.g uc.txt yildiz*dosya"
+# TIRNAKLI YILDIZ DESEN DEGIL: adinda yildiz gecen dosya ile eslesiyor.
+run_case   "tirnakli yildiz harf olur"    "cd $FIX/glob && echo \"yildiz*dosya\""$'\n' "yildiz*dosya"
+run_case   "kacisli yildiz harf olur"     "cd $FIX/glob && echo yildiz\\*dosya"$'\n' "yildiz*dosya"
+# Tirnaksiz GENISLETME SONUCU desen olur; bu bash'te boyle ve olculdu.
+run_case   "degisken degeri desen olur"   "cd $FIX/glob && export P=*.g && echo \$P"$'\n' "bir.g iki.g"
+run_case   "tirnakli degisken harf olur"  "cd $FIX/glob && export P=*.g && echo \"\$P\""$'\n' "*.g"
+# Soru isareti ve kume.
+# Tek karakterli ".g" dosyasi yok, yani eslesme olmuyor ve desen kaliyor.
+run_case   "soru isareti tek karakter"    "cd $FIX/glob && echo ?.g"$'\n' "?.g"
+run_case   "soru isareti eslesirse gelir" "cd $FIX/glob && echo ???.g"$'\n' "bir.g iki.g"
+run_case   "kume eslesir"                 "cd $FIX/glob && echo [bi]*.g"$'\n' "bir.g iki.g"
+# GIZLI DOSYA yalnizca desen nokta ile baslarsa eslesir.
+run_case   "gizli dosya yildizla gelmez"  "cd $FIX/glob && echo *i*"$'\n' "bir.g iki.g yildiz*dosya"
+run_case   "gizli dosya nokta ile gelir"  "cd $FIX/glob && echo .giz*"$'\n' ".gizli"
+# "." ve ".." hicbir desenle eslesmez.
+run_case   "nokta girdileri gelmez"       "cd $FIX/glob && echo .*"$'\n' ".gizli"
+# Bilesen bazinda: yildiz bolu isaretini gecmiyor.
+run_case   "alt dizinde desen"            "cd $FIX/glob && echo alt/*.g"$'\n' "alt/ic.g"
+run_case   "yildiz bolu gecmez"           "cd $FIX/glob && echo */ic.g"$'\n' "alt/ic.g"
+# ESLESME YOKSA DESEN OLDUGU GIBI KALIR: alani silmek kullanicinin
+# yazdigini sessizce yok etmek olurdu.
+run_case   "eslesme yoksa desen kalir"    "cd $FIX/glob && echo yok*.zzz"$'\n' "yok*.zzz"
+# Yonlendirme hedefi de genisletiliyor; birden fazla eslesme belirsiz.
+run_case   "yonlendirme hedefi genisler"  "cd $FIX/glob && echo ic > bir.g && cat bir*.g"$'\n' "ic"
+run_stderr "cok eslesen hedef belirsiz"   "cd $FIX/glob && echo x > *.g"$'\n' "belirsiz yonlendirme"
 
 # --- here-document ---
 # Govde ayristirmadan SONRA toplaniyor: kabugun girdi yolu bir satirdan

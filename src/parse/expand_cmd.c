@@ -43,11 +43,12 @@ void	xcmd_free(t_xcmd *xcmd)
 }
 
 /*
-** Yonlendirme hedefini tek bir dosya adina cozer.
+** Yonlendirme hedefini tek bir yola cozer.
 **
-** Sifir ya da birden fazla alan uretmek hatadir: "> $YOK" neyi
-** yonlendirecegini, "> $IKI_KELIME" hangisine yonlendirecegini
-** soylemiyor. Bash de bu iki durumda "ambiguous redirect" diyor.
+** DOSYA ADI GENISLETMESI BURADA DA UYGULANIYOR: bash da yonlendirme
+** hedefini genisletiyor. Birden fazla eslesme "belirsiz yonlendirme"
+** demek - hangi dosyaya yazilacagi belirsizken bir tanesini secmek
+** sessizce yanlis dosyaya yazmak olurdu.
 */
 static int	resolve_target(const t_token *word, const t_shell *sh,
 		char **out, t_exp_err *err)
@@ -55,6 +56,8 @@ static int	resolve_target(const t_token *word, const t_shell *sh,
 	t_field	*fields;
 
 	fields = exp_word(word, sh, err);
+	if (fields != NULL)
+		fields = glob_fields(fields);
 	if (fields == NULL)
 	{
 		if (err->message == NULL)
@@ -72,6 +75,7 @@ static int	resolve_target(const t_token *word, const t_shell *sh,
 		return (0);
 	}
 	*out = fields->text;
+	free(fields->mask);
 	free(fields);
 	return (1);
 }
@@ -138,6 +142,8 @@ static int	expand_args(const t_cmd *cmd, const t_shell *sh, t_xcmd *out,
 		fields = exp_word(arg->word, sh, err);
 		if (fields == NULL && err->message != NULL)
 			return (0);
+		if (fields != NULL)
+			fields = glob_fields(fields);
 		if (fields != NULL && tail == NULL)
 			out->args = fields;
 		else if (fields != NULL)

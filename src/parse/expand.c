@@ -66,19 +66,21 @@ static int	fail(t_expander *exp, const char *message)
 }
 
 /* Verilen metni sahiplenip yeni bir alan olarak listeye ekler. */
-static int	field_add(t_expander *exp, char *text)
+static int	field_add(t_expander *exp, char *text, char *mask)
 {
 	t_field	*field;
 
-	if (text == NULL)
-		return (0);
+	if (text == NULL || mask == NULL)
+		return (free(text), free(mask), 0);
 	field = malloc(sizeof(*field));
 	if (field == NULL)
 	{
 		free(text);
+		free(mask);
 		return (0);
 	}
 	field->text = text;
+	field->mask = mask;
 	field->next = NULL;
 	if (exp->tail == NULL)
 		exp->head = field;
@@ -94,13 +96,33 @@ static int	field_flush(t_expander *exp)
 {
 	if (buf_empty(&exp->buf))
 		return (1);
-	return (field_add(exp, buf_take(&exp->buf)));
+	return (field_add(exp, buf_take(&exp->buf), buf_take(&exp->mask)));
+}
+
+/*
+** Tek karakteri tampona ve yanina maske bitini yazar.
+**
+** Maske buf ile AYNI uzunlukta kalmak zorunda; bu yuzden tamponlara
+** yazan tek yol bu islev. Ikisini ayri ayri doldurmak, bir yerde
+** unutuldugunda maskeyi metinle kaydirip tum desenleri bozardi.
+*/
+static int	push_one(t_expander *exp, char c)
+{
+	if (buf_push(&exp->buf, c) == 0)
+		return (0);
+	return (buf_push(&exp->mask, (char)('0' + (exp->literal != 0))));
 }
 
 /* Metni oldugu gibi tampona ekler; alan ayirmaya tabi tutmaz. */
 static int	append_plain(t_expander *exp, const char *s)
 {
-	return (buf_push_str(&exp->buf, s));
+	while (*s != '\0')
+	{
+		if (push_one(exp, *s) == 0)
+			return (0);
+		s++;
+	}
+	return (1);
 }
 
 /* Metni tampona eklerken bosluk dizilerinden alanlara boler. */
@@ -116,7 +138,7 @@ static int	append_split(t_expander *exp, const char *s)
 				s++;
 			continue ;
 		}
-		if (buf_push(&exp->buf, *s) == 0)
+		if (push_one(exp, *s) == 0)
 			return (0);
 		s++;
 	}
@@ -152,7 +174,7 @@ static int	append_number(t_expander *exp, int value)
 		digits[i] = (char)('0' + value % 10);
 		value /= 10;
 	}
-	return (buf_push_str(&exp->buf, digits + i));
+	return (append_plain(exp, digits + i));
 }
 
 /* Metnin basindan itibaren gecerli bir degisken adi mi. */
@@ -265,7 +287,7 @@ static int	expand_text(t_expander *exp, const char *s, int split)
 			continue ;
 		}
 		exp->emit = 1;
-		if (buf_push(&exp->buf, s[i]) == 0)
+		if (push_one(exp, s[i]) == 0)
 			return (0);
 		i++;
 	}
@@ -291,16 +313,26 @@ static const char	*expand_tilde(t_expander *exp, const char *s)
 	if (home == NULL || *home == '\0')
 		return (s);
 	exp->emit = 1;
+	exp->literal = 1;
 	if (append_plain(exp, home) == 0)
 		return (NULL);
+	exp->literal = 0;
 	return (s + 1);
 }
 
-/* Tek bir parcayi kipine gore isler. */
+/*
+** Tek bir parcayi kipine gore isler.
+**
+** TIRNAK KIPI MASKEYI DE BELIRLIYOR: tirnakli parcadan gelen her karakter
+** harfi harfine, tirnaksiz parcadan gelen her karakter desen olarak
+** isaretleniyor. Genisletme sonuclari da parcanin kipini devraliyor ve bu
+** olculdu: tirnaksiz bir degiskenin degerindeki yildiz desen oluyor.
+*/
 static int	expand_seg(t_expander *exp, const t_seg *seg, int first)
 {
 	const char	*text;
 
+	exp->literal = (seg->quote != Q_NONE);
 	if (seg->quote == Q_SINGLE)
 	{
 		exp->emit = 1;
@@ -327,7 +359,7 @@ static int	finish_word(t_expander *exp)
 	if (buf_empty(&exp->buf) == 0)
 		return (field_flush(exp));
 	if (exp->emit)
-		return (field_add(exp, strdup("")));
+		return (field_add(exp, strdup(""), strdup("")));
 	return (1);
 }
 
@@ -338,6 +370,8 @@ static void	expander_init(t_expander *exp, const t_token *word,
 	exp->sh = sh;
 	exp->word = word;
 	buf_init(&exp->buf);
+	buf_init(&exp->mask);
+	exp->literal = 0;
 	exp->head = NULL;
 	exp->tail = NULL;
 	exp->emit = 0;
@@ -355,6 +389,7 @@ void	field_free(t_field *fields)
 	{
 		next = fields->next;
 		free(fields->text);
+		free(fields->mask);
 		free(fields);
 		fields = next;
 	}
@@ -368,6 +403,11 @@ void	field_free(t_field *fields)
 ** zorunda) ve tirnak kipi yok - govdenin tamami tek parca.
 **
 ** Basarida 1 doner ve sonucu *out icine yazar; cagiran serbest birakir.
+**
+** MASKE HARFI HARFINE: "<<" govdesi dosya adi genisletmesine tabi degil,
+** o yuzden uretilen her karakter harf olarak isaretleniyor. Govde zaten
+** alan listesine donusmuyor; maske yalnizca tamponlarin ayni uzunlukta
+** kalmasi icin dolduruluyor.
 */
 int	exp_raw_text(const char *text, const t_shell *sh, char **out,
 		t_exp_err *err)
@@ -375,15 +415,18 @@ int	exp_raw_text(const char *text, const t_shell *sh, char **out,
 	t_expander	exp;
 
 	expander_init(&exp, NULL, sh, err);
+	exp.literal = 1;
 	if (expand_text(&exp, text, 0) == 0)
 	{
 		buf_free(&exp.buf);
+		buf_free(&exp.mask);
 		field_free(exp.head);
 		if (err->message == NULL)
 			err->message = "bellek ayrilamadi";
 		return (0);
 	}
 	field_free(exp.head);
+	buf_free(&exp.mask);
 	if (exp.buf.data == NULL)
 	{
 		*out = strdup("");
@@ -418,9 +461,11 @@ t_field	*exp_word(const t_token *word, const t_shell *sh, t_exp_err *err)
 	if (seg == NULL && finish_word(&exp) != 0)
 	{
 		buf_free(&exp.buf);
+		buf_free(&exp.mask);
 		return (exp.head);
 	}
 	buf_free(&exp.buf);
+	buf_free(&exp.mask);
 	field_free(exp.head);
 	if (err->message == NULL)
 	{

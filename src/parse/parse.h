@@ -241,9 +241,24 @@ char		*lex_dump(const t_token *tokens);
 ** degeri bosluk iceriyorsa birden fazla alana bolunur, bos bir degere
 ** genisleyen tirnaksiz sozcuk ise HIC alan uretmez.
 */
+/*
+** Genisletmenin urettigi bir alan.
+**
+** mask, text ile AYNI uzunlukta bir bit dizgisi: her karakter icin "1"
+** harfi harfine, "0" desen olarak ele alinacak demek.
+**
+** NEDEN KARAKTER BAZINDA: dosya adi genisletmesinde hangi yildizin desen
+** oldugu ancak bu ayrimla bilinebiliyor. Olculdu:
+**   echo "*.c"              -> harf (tirnakli)
+**   X="*.c"; echo $X        -> DESEN (tirnaksiz genisletme sonucu)
+**   X="*.c"; echo "$X"      -> harf
+**   echo "a"*.c             -> "a" harf, yildiz desen (ayni sozcukte)
+** Sozcuk ya da parca bazinda bir bayrak son ornegi yanlis yapardi.
+*/
 typedef struct s_field
 {
 	char			*text;
+	char			*mask;
 	struct s_field	*next;
 }	t_field;
 
@@ -312,6 +327,8 @@ typedef struct s_expander
 	const t_shell	*sh;
 	const t_token	*word;
 	t_buf			buf;
+	t_buf			mask;
+	int				literal;
 	t_field			*head;
 	t_field			*tail;
 	int				emit;
@@ -322,6 +339,10 @@ t_pipeline	*ast_build(const t_token *tokens, t_ast_err *err);
 int			heredoc_fill(t_pipeline *list, const t_shell *sh);
 int			exp_heredoc(const t_redir *redir, const t_shell *sh,
 				char **out);
+t_field		*glob_fields(t_field *fields);
+int			glob_match(const char *pattern, const char *mask,
+				const char *name);
+
 int			exp_raw_text(const char *text, const t_shell *sh,
 				char **out, t_exp_err *err);
 void		ast_free(t_pipeline *list);
