@@ -153,6 +153,8 @@ char		*ctx_env_names(void);
 char		*ctx_block(void);
 char		*ctx_dump(void);
 
+const char	*offline_lookup(const char *text);
+
 char		*redact_text(const char *text);
 int			redact_is_secret_name(const char *name);
 

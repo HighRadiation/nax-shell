@@ -1,0 +1,61 @@
+# Elle yazilmis niyet tablosu.
+#
+# Gerekcesi docs/CONFIG.md'de: cevrimdisi degerin buyuk kismi dil
+# modelinden degil, sifir gecikmeli belirlenimci katmandan geliyor.
+#
+# KORPUSUN YARISI NEGATIF VAKA; ayrintisi test_offline.c basliginda.
+
+# --- temel eslesmeler ---
+disk kullanimi	df -h
+disk kullanimini goster	df -h
+bos alan ne kadar	df -h
+buyuk dosyalari bul	du -ah . | sort -rh | head -20
+git durumu	git status
+git durumunu soyle	git status
+calisan surecleri listele	ps aux
+bellek kullanimi	free -h
+dinlenen portlari goster	ss -tlnp
+sistem bilgisi	uname -a
+
+# --- TURKCE KARAKTERLER ASCII'YE KATLANIYOR ---
+# Kullanici iki bicimde de yazabilir; tabloyu iki kez yazmak yerine
+# karsilastirma oncesi katlama yapiliyor.
+disk kullanımı	df -h
+bellek kullanımını göster	free -h
+büyük dosyaları bul	du -ah . | sort -rh | head -20
+ağ bağlantılarını listele	ss -tunap
+
+# --- NOKTALAMA ESLESMEYI BOZMAZ ---
+disk kullanimi?	df -h
+git durumu!	git status
+disk   kullanimi	df -h
+
+# --- EK TOLERANSI ---
+# Dort harften uzun sozcuklerde ek serbest: "kullanim" sozcugu
+# "kullanimini" ile de eslesiyor.
+disk kullanimindan bahset	df -h
+dosya sayisini soyle	find . -type f | wc -l
+git dallarini listele	git branch -a
+
+# --- EN COK ANAHTAR SOZCUGU OLAN KAZANIR ---
+# "dun degisen dosya" uc sozcuk; "degisiklik liste" iki. Uc kazaniyor.
+dun degisen dosyalari goster	find . -newermt "1 day ago" -type f
+
+# --- YANLIS POZITIF ARANIYOR ---
+# EN AZ IKI ANAHTAR SOZCUK SART: tek sozcuk eslesmez.
+disk	yok
+git	yok
+dosya	yok
+bellek	yok
+# Tabloda olmayan istek eslesmez; modele gitmeli.
+sunucuya baglan	yok
+bu hata ne demek	yok
+eski loglari sil	yok
+dosyayi yedekle	yok
+# Kisa sozcukte EK TOLERANSI YOK: "say" sozcugu "sayfa" icinde geciyor ve
+# ek serbest olsa "kac sayfa var" dosya sayma komutu sanilirdi. Olculdu.
+kac sayfa var	yok
+# Gercek komutlar tabloya takilmamali.
+git status	yok
+df -h	yok
+ls -la	yok

@@ -629,16 +629,33 @@ run_out_absent "bosluklu satir baglama girmez" \
 run_out_absent "ortam degeri gonderilmez" $'ctx\n' "$NAX_TV"
 run_case_contains "ortam adi gonderilir" $'ctx\n' "NAX_TV"
 
+# --- elle yazilmis niyet tablosu ---
+# Tablo MODELDEN ONCE bakiliyor ve eslesirse yardimci surec HIC
+# baslatilmiyor. Bunu olcmek icin AI kasten bozuk: baslatilmaya calisilsa
+# "duz kabuk" uyarisi cikardi, cikmiyorsa hic denenmemis demektir.
+export NAX_NAXD="python3 test/fake_naxd.py die_at_start"
+run_stderr "tablo eslesmesi komut uretir" $'disk kullanimini goster\n' "nax: df -h"
+run_stderr_absent "tablo eslesirse AI denenmez" $'disk kullanimini goster\n' "duz kabuk"
+run_status "tablo eslesmesi durum 0"      $'disk kullanimini goster\n' 0
+# Turkce karakterli yazim da eslesir.
+run_stderr "turkce karakterli yazim"      $'bellek kullan\xc4\xb1m\xc4\xb1\n' "nax: free -h"
+# Tabloda olmayan istek modele gider; AI bozuk oldugu icin duz kabuk olur.
+run_stderr "tabloda yoksa modele gider"   $'sunucuya baglan\n' "duz kabuk"
+unset NAX_NAXD
+
 # --- AI hatti ---
+# VAKALARDA KULLANILAN CUMLE TABLOYA TAKILMAMALI: "dun degisen dosyalari
+# goster" artik elle yazilmis tabloda ve modele hic gitmiyor. Bu yuzden
+# AI vakalari tabloda OLMAYAN bir istek kullaniyor.
 # Yardimci surec NAX_NAXD ile secilir; testler taklit surece yoneltiyor.
 # Gercek surece yoneltmek aga cikmak, anahtar ve ucret demek olurdu ve
 # ustelik ayni girdi her zaman ayni cevabi vermezdi.
 export NAX_NAXD="python3 test/fake_naxd.py ok"
 # Niyet komuta cevrilir ve oneri yazilir.
-run_stderr "niyet oneri uretir"           $'dun degisen dosyalari goster\n' "nax: ls -la"
-run_status "oneri sonrasi durum 0"        $'dun degisen dosyalari goster\n' 0
+run_stderr "niyet oneri uretir"           $'eski loglari sil\n' "nax: ls -la"
+run_status "oneri sonrasi durum 0"        $'eski loglari sil\n' 0
 # Betik kipinde oneri KOSMAZ; yalnizca yazilir.
-run_case   "AI onerisi kendiliginden kosmaz" $'dun degisen dosyalari goster\n' ""
+run_case   "AI onerisi kendiliginden kosmaz" $'eski loglari sil\n' ""
 # Son hata aciklanabilir; cevap ekrana basilir.
 run_case   "son hata aciklanir"           $'boylebirkomutyok\n?\n' "komut bulunamadi"
 # Son komut basariliysa sorulmaz: basarili bir komutu "neden patladi" diye
@@ -651,28 +668,28 @@ unset NAX_NAXD
 # Soru ile istek ayrimi: model SORU cevabi dondurdugunde metin ekrana
 # basilir, duzenleme satirina konmaz.
 export NAX_NAXD="python3 test/fake_naxd.py answer"
-run_case   "soru cevabi ekrana basilir"   $'dun degisen dosyalari goster\n' "bu bir dizin listesi"
+run_case   "soru cevabi ekrana basilir"   $'eski loglari sil\n' "bu bir dizin listesi"
 unset NAX_NAXD
 
 # AI baslatilamazsa kabuk DUZ KABUK olur: sebep bir kez yazilir, satir
 # bash'in yaptigi seye duser (ilk sozcuk icin "command not found", 127).
 export NAX_NAXD="python3 test/fake_naxd.py die_at_start"
-run_stderr "AI yoksa sebep yazilir"       $'dun degisen dosyalari goster\n' "duz kabuk"
-run_stderr "AI yoksa komut bulunamadi"    $'dun degisen dosyalari goster\n' "dun: command not found"
-run_status "AI yoksa durum 127"           $'dun degisen dosyalari goster\n' 127
+run_stderr "AI yoksa sebep yazilir"       $'eski loglari sil\n' "duz kabuk"
+run_stderr "AI yoksa komut bulunamadi"    $'eski loglari sil\n' "eski: command not found"
+run_status "AI yoksa durum 127"           $'eski loglari sil\n' 127
 unset NAX_NAXD
 
 # Zaman asimi EL SIKISMADA bildirilen sureden gelir. Taklit READY'de bir
 # saniye bildiriyor; ontanimli on bes saniye uygulanirsa bu vaka
 # zaman asimina ugrar ve patlar.
 export NAX_NAXD="python3 test/fake_naxd.py silent_fast"
-run_stderr "cevap gelmezse zaman asimi"   $'dun degisen dosyalari goster\n' "AI cevap vermedi"
-run_status "zaman asimi sonrasi durum 1"  $'dun degisen dosyalari goster\n' 1
+run_stderr "cevap gelmezse zaman asimi"   $'eski loglari sil\n' "AI cevap vermedi"
+run_status "zaman asimi sonrasi durum 1"  $'eski loglari sil\n' 1
 unset NAX_NAXD
 
 # Bozuk konusan surec ihlal sayilir ve baglanti kapatilir.
 export NAX_NAXD="python3 test/fake_naxd.py garbage"
-run_stderr "bozuk cevap baglantiyi keser" $'dun degisen dosyalari goster\n' "baglantisi koptu"
+run_stderr "bozuk cevap baglantiyi keser" $'eski loglari sil\n' "baglantisi koptu"
 unset NAX_NAXD
 
 # AI'in kapali oldugu dizinde HICBIR SEY gonderilmez. Karar gonderen
@@ -680,11 +697,11 @@ unset NAX_NAXD
 # satir bildirilir ve satir duz kabuk gibi ele alinir.
 export NAX_NAXD="python3 test/fake_naxd.py nogo"
 export NAX_FAKE_NOGO="$PWD"
-run_stderr "kapali dizinde AI calismaz"   $'dun degisen dosyalari goster\n' "bu dizinde AI kapali"
-run_status "kapali dizinde durum 127"     $'dun degisen dosyalari goster\n' 127
+run_stderr "kapali dizinde AI calismaz"   $'eski loglari sil\n' "bu dizinde AI kapali"
+run_status "kapali dizinde durum 127"     $'eski loglari sil\n' 127
 # Liste baska bir dizini gosteriyorsa istek normal gider.
 export NAX_FAKE_NOGO="/kesinlikle-olmayan-bir-dizin"
-run_stderr "liste disinda AI calisir"     $'dun degisen dosyalari goster\n' "nax: ls -la"
+run_stderr "liste disinda AI calisir"     $'eski loglari sil\n' "nax: ls -la"
 unset NAX_FAKE_NOGO
 unset NAX_NAXD
 

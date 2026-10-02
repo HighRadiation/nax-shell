@@ -169,11 +169,15 @@ static int	try_fix(t_decision *d, const t_token *tokens)
 **    denenebilir; sebebi olculdu, "dun" sozcugunun "du" komutuna uzakligi
 **    1. Veto once bakilmasa "dun degisen dosyalari goster" istegi disk
 **    kullanimi komutu sanilirdi.
-** 2  Yerel duzeltme denenir. Bulunursa AI'a hic gidilmez.
-** 3  Operator varsa ya da tek sozcukse kabuk yolu; calistirici 127 uretir.
-** 4  Kalan her sey niyet.
+** 2  ELLE YAZILMIS NIYET TABLOSUNA bakilir. Tablonun tanidigi satir tanim
+**    geregi dogal dildir, yazim hatasi degil - bu yuzden duzeltmeden
+**    ONCE geliyor. Sira tersken olculdu: "kac dosya var" satiri tabloya
+**    hic ulasmiyor, "kac" sozcugu icin "tac" onerisi aliyordu.
+** 3  Yerel duzeltme denenir. Bulunursa AI'a hic gidilmez.
+** 4  Operator varsa ya da tek sozcukse kabuk yolu; calistirici 127 uretir.
+** 5  Kalan her sey niyet.
 **
-** 3. ADIM PLANDAN BILINCLI SAPMA: plan "kalan her sey niyet" diyordu. Oyle
+** 4. ADIM PLANDAN BILINCLI SAPMA: plan "kalan her sey niyet" diyordu. Oyle
 ** yapilinca "boylebirkomutyok" artik "command not found" vermiyor, AI'a
 ** gidiyor - kabugun en temel hata mesaji kayboluyor.
 **
@@ -185,6 +189,8 @@ static t_decision	*unresolved_head(t_decision *d, const t_token *tokens)
 {
 	d->vetoes = cls_vetoes(tokens, d->text);
 	if (d->vetoes != 0)
+		d->route = ROUTE_INTENT;
+	else if (offline_lookup(d->text) != NULL)
 		d->route = ROUTE_INTENT;
 	else if (try_fix(d, tokens))
 		d->route = ROUTE_FIX;

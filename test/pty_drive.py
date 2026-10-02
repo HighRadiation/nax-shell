@@ -518,11 +518,15 @@ def case_ai_suggestion_preloaded(binary, rep):
     AI onerisi bir sonraki prompta hazir gelir.
 
     Taklit surec belirli bir echo komutu oneriyor, yani kosup kosmadigi
-    ciktidan goruluyor. Yerel yazim duzeltmesindeki on yukleme ile ayni
+    ciktidan goruluyor.
+
+    KULLANILAN CUMLE ELLE YAZILMIS TABLODA OLMAMALI: tabloda eslesen bir
+    satir yardimci surece hic gitmiyor ve vaka olcmek istedigi seyi
+    olcmezdi. Yerel yazim duzeltmesindeki on yukleme ile ayni
     mekanizma; buradaki fark onerinin kaynagi.
     """
     sh = Shell(binary, {"NAX_NAXD": "python3 test/fake_naxd.py cmd_echo"})
-    sh.ask(b"dun degisen dosyalari goster\n")
+    sh.ask(b"eski loglari sil\n")
     offered = sh.wait_for("echo ai-onyukleme-kaniti")
     loaded = sh.wait_for("echo ai-onyukleme-kaniti", skip=1)
     sh.send(b"\n")

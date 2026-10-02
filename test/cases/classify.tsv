@@ -55,6 +55,12 @@ test the build	INTENT:STOPWORD,HEAD
 # Veto once bakilmasa bu satir disk kullanimi komutu sanilirdi.
 dun degisen dosyalari goster	INTENT
 
+# ELLE YAZILMIS NIYET TABLOSU DUZELTMEDEN ONCE BAKILIR. Tablonun tanidigi
+# satir tanim geregi dogal dildir. Sira tersken olculdu: "kac dosya var"
+# satiri tabloya hic ulasmiyor, "kac" sozcugu icin "tac" onerisi aliyordu.
+kac dosya var	INTENT
+disk kullanimini goster	INTENT
+
 # Yerel duzeltme bulundu. Vakalar YERLESIK yazim hatasi kullaniyor, cunku
 # yerlesikler PATH icerigine bagli degil; ayni satir her ortamda FIX verir.
 ehco merhaba	FIX

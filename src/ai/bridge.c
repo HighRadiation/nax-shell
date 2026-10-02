@@ -17,6 +17,11 @@
 **   bilgilendirici davranis - satiri sessizce yutmak kullaniciyi neyin
 **   olmadigi konusunda karanlikta birakirdi.
 **
+** ELLE YAZILMIS TABLO EN ONDE:
+**   Sik kullanilan niyetlerin dogrudan karsiligi var ve eslesirse hicbir
+**   sey gonderilmiyor. Gerekcesi docs/CONFIG.md'de: cevrimdisi degerin
+**   buyuk kismi dil modelinden degil, belirlenimci katmandan geliyor.
+**
 ** BAZI DIZINLERDE AI TAMAMEN KAPALI:
 **   Liste yapilandirmada duruyor ve el sikismada kabuga bildiriliyor.
 **   Karari kabuk veriyor, cunku "hic gonderme" karari GONDEREN tarafta
@@ -414,7 +419,39 @@ static void	ask_and_use(t_shell *sh, t_ftype type, const t_pair *fields,
 }
 
 /*
+** Tablodan gelen komutu yazar ve uygunsa bir sonraki prompta hazirlar.
+**
+** Model yolundan geceni ile AYNI gorunuyor: kullanici acisindan fark
+** yok, yalnizca cevap aninda ve bedelsiz geliyor. Risk denetimi burada da
+** uygulaniyor - tablodaki komutlar tartismasiz olsa da kural kodun
+** bir yerinde istisna kabul etmemeli.
+*/
+static void	show_offline(t_shell *sh, const char *cmd)
+{
+	char	*head;
+	int		risky;
+
+	fflush(stdout);
+	fprintf(stderr, "%s: %s\n", NAX_NAME, cmd);
+	sh->last_status = 0;
+	head = first_word(cmd);
+	risky = 0;
+	if (head != NULL)
+		risky = fix_is_dangerous(head);
+	free(head);
+	if (risky || sh->interactive == 0)
+		return ;
+	ln_preload(cmd);
+}
+
+/*
 ** Dogal dil satirini yardimci surece goturur.
+**
+** TABLO MODELDEN ONCE BAKILIYOR: elle yazilmis niyet tablosunda eslesme
+** varsa yardimci surec hic baslatilmiyor. Sonuc sifir gecikme, sifir
+** ucret ve her seferinde ayni komut. Bir kabukta "disk kullanimini
+** goster" satirinin cevabi tartismali degil; onu bir ag turuna baglamak
+** kazanc getirmiyor.
 **
 ** DIZIN VE DURUM AYRI ALAN DEGIL: ikisi de baglam blogunun icinde
 ** gidiyor. Ayri alan olmalari bilgiyi iki yerde tutmak olurdu ve
@@ -422,9 +459,16 @@ static void	ask_and_use(t_shell *sh, t_ftype type, const t_pair *fields,
 */
 void	ai_intent(t_shell *sh, const char *text)
 {
-	t_pair	fields[2];
-	char	*block;
+	t_pair		fields[2];
+	char		*block;
+	const char	*offline;
 
+	offline = offline_lookup(text);
+	if (offline != NULL)
+	{
+		show_offline(sh, offline);
+		return ;
+	}
 	if (ensure_ready(sh) == 0)
 	{
 		fall_back(sh, text);
