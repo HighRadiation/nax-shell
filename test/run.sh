@@ -148,6 +148,46 @@ run_inherited_ignore_check() {
 	report_mask "devralinan yok sayma cocuga gecer" "$want" "$got"
 }
 
+# Bir metnin STDOUT'ta gecmedigini dogrular.
+#
+# Gizlilik vakalari icin: "nax ctx" ciktisinda sirrin GORUNMEMESI
+# olculuyor. docs/PRIVACY.md bunu acikca testin isi sayiyor.
+# Stdout'un verilen metni ICERDIGINI dogrular.
+run_case_contains() {
+	local name="$1" input="$2" want="$3" got
+
+	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 timeout "$CASE_TIMEOUT" "$BIN" 2>/dev/null)"
+	case "$got" in
+		*"$want"*)
+			PASS=$((PASS + 1))
+			printf "  ${G}gecti${N}   %s\n" "$name"
+			;;
+		*)
+			FAIL=$((FAIL + 1))
+			printf "  ${R}patladi${N} %s\n" "$name"
+			printf "    beklenen icerik: %s\n" "$want"
+			printf "    gelen          : %s\n" "$got"
+			;;
+	esac
+}
+
+run_out_absent() {
+	local name="$1" input="$2" unwanted="$3" got
+
+	got="$(printf '%s' "$input" | ASAN_OPTIONS=detect_leaks=1 timeout "$CASE_TIMEOUT" "$BIN" 2>/dev/null)"
+	case "$got" in
+		*"$unwanted"*)
+			FAIL=$((FAIL + 1))
+			printf "  ${R}patladi${N} %s\n" "$name"
+			printf "    cikmamasi gereken: %s\n" "$unwanted"
+			;;
+		*)
+			PASS=$((PASS + 1))
+			printf "  ${G}gecti${N}   %s\n" "$name"
+			;;
+	esac
+}
+
 run_stderr_absent() {
 	local name="$1" input="$2" unwanted="$3" got
 
@@ -477,6 +517,24 @@ run_case   "boru icindeki export etkisiz" $'echo x | export NAXY=1\necho "[$NAXY
 # "command not found" cikar; bu yuzden birlesik cikti bos olmak zorunda.
 # Mutasyon denemesi bu boslugu gosterdi.
 run_merged "boru icinde yerlesik taninir" $'echo x | export NAXY=1\n'   ""
+
+# --- baglam ve gizlilik ---
+# "nax ctx" bir sonraki istekte gidecek baytlari basar. Gizlilik iddiasini
+# denetlenebilir kilan tek ozellik bu: belgeye guvenmek zorunda degilsin.
+run_case_contains "ctx kosan komutu gosterir" $'echo kanit\nctx\n' "[0] echo kanit"
+# SAHTE SIR EKLENIP GORUNMEDIGI DOGRULANIYOR. PRIVACY.md bunu acikca
+# testin isi sayiyor.
+run_out_absent "ctx sirri sizdirmaz" \
+	$'export K=gsk_abcdefghij1234567890ABCDEFGHIJ\nctx\n' \
+	"gsk_abcdefghij"
+run_case_contains "ctx sirrin yerine yer tutucu koyar" \
+	$'export K=gsk_abcdefghij1234567890ABCDEFGHIJ\nctx\n' "[GIZLI:anahtar]"
+# Bosluk ile baslayan satir baglama HIC girmez.
+run_out_absent "bosluklu satir baglama girmez" \
+	$'echo bir\n  gizli-kalsin\nctx\n' "gizli-kalsin"
+# Ortam degiskenlerinin DEGERLERI gonderilmez; yalnizca adlar.
+run_out_absent "ortam degeri gonderilmez" $'ctx\n' "$NAX_TV"
+run_case_contains "ortam adi gonderilir" $'ctx\n' "NAX_TV"
 
 # --- AI hatti ---
 # Yardimci surec NAX_NAXD ile secilir; testler taklit surece yoneltiyor.

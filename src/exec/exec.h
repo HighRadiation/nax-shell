@@ -107,6 +107,16 @@ int			bi_export(t_shell *sh, char **argv);
 int			bi_unset(t_shell *sh, char **argv);
 int			bi_cd(t_shell *sh, char **argv);
 
+/*
+** "ctx" yerlesigi src/ai/ctx.c icinde uygulaniyor.
+**
+** Burada ilan edilmesinin sebebi yerlesik TABLOSUNUN burada olmasi;
+** uygulamanin AI tarafinda durmasinin sebebi ise gosterdigi seyin
+** baglam halkasi olmasi. Tabloyu ai.h'a bagimli kilmamak icin bildirim
+** digerleriyle ayni yerde.
+*/
+int			bi_ctx(t_shell *sh, char **argv);
+
 char		**build_argv(const t_field *fields);
 void		child_stage(t_shell *sh, const t_xcmd *xcmd, const t_stage *st);
 int			wait_child(pid_t pid);

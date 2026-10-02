@@ -1,0 +1,41 @@
+# Oturum baglami halkasi.
+#
+# Kurallar docs/PRIVACY.md icinde. Bicim test_ctx.c basliginda.
+
+# --- temel ---
+echo bir	[0] echo bir
+echo bir|echo iki	[0] echo bir;[0] echo iki
+boylebirkomutyok:127	[127] boylebirkomutyok
+
+# --- sira: ESKIDEN YENIYE ---
+# Dil modelleri sonda olana daha cok dikkat eder ve son komut en degerli
+# olan. Sira ters olsa baglam yaniltici olurdu.
+bir|iki|uc	[0] bir;[0] iki;[0] uc
+
+# --- bosluk ile baslayan satir HIC GIRMEZ ---
+# Kabuklarda bir bosluk ile baslayan satirin gecmise yazilmamasi yaygin
+# bir aliskanlik; burada baglamdan kacmanin yolu oluyor.
+echo bir| gizli kalsin|echo iki	[0] echo bir;[0] echo iki
+ yalniz gizli	yok
+\tsekme ile baslayan	yok
+
+# --- yalnizca bosluktan olusan satir ---
+echo bir|   	[0] echo bir
+
+# --- halka en eskiyi dusurur (CTX_RING = 8) ---
+a|b|c|d|e|f|g|h	[0] a;[0] b;[0] c;[0] d;[0] e;[0] f;[0] g;[0] h
+a|b|c|d|e|f|g|h|i	[0] b;[0] c;[0] d;[0] e;[0] f;[0] g;[0] h;[0] i
+a|b|c|d|e|f|g|h|i|j	[0] c;[0] d;[0] e;[0] f;[0] g;[0] h;[0] i;[0] j
+
+# --- maskeleme GIRISTE yapilir ---
+export K=gsk_abcdefghij1234567890ABCDEFGHIJ	[0] export K=[GIZLI:anahtar]
+git clone https://ad:parola@sunucu/x	[0] git clone https://[GIZLI:url-kimlik]@sunucu/x
+
+# --- tabloda anlatilamayanlar ---
+# Temizlenmemis bir sir bellekte hic durmamali; blok iki kez uretilip ayni
+# sonucu vermesi maskelemenin giriste yapildigini gosteriyor.
+C:secret_never_stored	ok
+C:clear_empties	ok
+# "nax ctx" ciktisi gonderilen blogu ICERMELI; gizlilik iddiasini
+# denetlenebilir kilan tek ozellik bu.
+C:dump_contains_block	ok

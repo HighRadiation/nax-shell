@@ -116,6 +116,43 @@ int			cls_has_operator(const t_token *tokens);
 size_t		cls_word_count(const t_token *tokens);
 const char	*cls_route_name(t_route route);
 
+/*
+** Baglam halkasindaki bir kayit.
+**
+** Komut metni MASKELENMIS halde saklaniyor, gonderilirken degil. Sebebi
+** "nax ctx" sozlesmesi: o komut gidecek baytlari AYNEN basmak zorunda ve
+** iki ayri yerde maskelemek o esitligi kirardi.
+*/
+typedef struct s_entry
+{
+	char	*cmd;
+	int		code;
+}	t_entry;
+
+/*
+** Oturum baglami: son komutlar halkasi.
+**
+** NEDEN HALKA: baglam sinirli olmak zorunda. Hem gizlilik sozlesmesi
+** "sinirli sayida" diyor hem de her istekte butun gecmisi gondermek
+** gecikmeyi ve ucreti buyutur. Sabit boyutlu halka en eskiyi dusuruyor.
+*/
+# define CTX_RING 8
+
+typedef struct s_ctx
+{
+	t_entry	ring[CTX_RING];
+	size_t	next;
+	size_t	filled;
+}	t_ctx;
+
+void		ctx_add(const char *line, int code);
+void		ctx_clear(void);
+int			ctx_push_facts(t_buf *buf);
+char		*ctx_hello(void);
+char		*ctx_env_names(void);
+char		*ctx_block(void);
+char		*ctx_dump(void);
+
 char		*redact_text(const char *text);
 int			redact_is_secret_name(const char *name);
 

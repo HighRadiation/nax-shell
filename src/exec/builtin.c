@@ -43,6 +43,7 @@ static const t_builtin	*bi_table(void)
 		{"export", bi_export},
 		{"unset", bi_unset},
 		{"exit", bi_exit},
+		{"ctx", bi_ctx},
 		{NULL, NULL}
 	};
 

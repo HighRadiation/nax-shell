@@ -37,6 +37,7 @@
 
 static t_naxd	g_ai;
 static int		g_started;
+static int		g_greeted;
 static char		*g_words[AI_ARGV_MAX];
 
 /* Gosterge: bekleme uzadiginda bir kez basilir. */
@@ -93,6 +94,33 @@ static const char	*log_path(void)
 }
 
 /*
+** Oturum anlik goruntusunu bir kez gonderir.
+**
+** NEDEN BIR KEZ: ortam degiskeni adlari ve en sik kullanilan komutlar
+** uzun bir liste ve oturum icinde degismiyor. Her istekte tasimak jetonu
+** bosa harcamak olurdu. Baglanti olup yeniden kurulursa yeniden
+** gonderiliyor, cunku karsi taraf artik yeni bir surec.
+**
+** CEVAP BEKLENMIYOR: HELLO bir bildirim, bir istek degil.
+*/
+static void	send_hello(void)
+{
+	t_pair	field;
+	char	*snapshot;
+
+	if (g_greeted)
+		return ;
+	snapshot = ctx_hello();
+	if (snapshot == NULL)
+		return ;
+	field.key = "context";
+	field.value = snapshot;
+	if (naxd_send(&g_ai, FR_HELLO, &field, 1))
+		g_greeted = 1;
+	free(snapshot);
+}
+
+/*
 ** Baglantiyi gerekiyorsa kurar; konusmaya hazirsa 1 doner.
 **
 ** Basarisizlikta sebep oturumda bir kez yazilir. Her satirda yeniden
@@ -114,6 +142,7 @@ static int	ensure_ready(t_shell *sh)
 	}
 	if (naxd_alive(&g_ai))
 		return (1);
+	g_greeted = 0;
 	if (naxd_open(&g_ai) == 0)
 	{
 		if (g_ai.warned == 0)
@@ -132,6 +161,7 @@ static int	ensure_ready(t_shell *sh)
 		}
 		return (0);
 	}
+	send_hello();
 	return (1);
 }
 
@@ -272,28 +302,30 @@ static void	ask_and_use(t_shell *sh, t_ftype type, const t_pair *fields,
 	proto_free(&reply);
 }
 
-/* Dogal dil satirini yardimci surece goturur. */
+/*
+** Dogal dil satirini yardimci surece goturur.
+**
+** DIZIN VE DURUM AYRI ALAN DEGIL: ikisi de baglam blogunun icinde
+** gidiyor. Ayri alan olmalari bilgiyi iki yerde tutmak olurdu ve
+** "nax ctx" ile gosterilen seyle gonderilen sey ayrisabilirdi.
+*/
 void	ai_intent(t_shell *sh, const char *text)
 {
-	t_pair	fields[3];
-	char	cwd[512];
-	char	status[16];
+	t_pair	fields[2];
+	char	*block;
 
 	if (ensure_ready(sh) == 0)
 	{
 		fall_back(sh, text);
 		return ;
 	}
+	block = ctx_block();
 	fields[0].key = "text";
 	fields[0].value = text;
-	fields[1].key = "cwd";
-	fields[1].value = "";
-	if (getcwd(cwd, sizeof(cwd)) != NULL)
-		fields[1].value = cwd;
-	snprintf(status, sizeof(status), "%d", sh->last_status);
-	fields[2].key = "status";
-	fields[2].value = status;
-	ask_and_use(sh, FR_INTENT, fields, 3);
+	fields[1].key = "context";
+	fields[1].value = block;
+	ask_and_use(sh, FR_INTENT, fields, 2);
+	free(block);
 }
 
 /*

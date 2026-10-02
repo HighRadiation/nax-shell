@@ -37,8 +37,15 @@ static char	*g_preload = NULL;
 #define CLR_OFF "\001\033[0m\002"
 #define PROMPT_EXTRA 64
 
-/* HOME ile baslayan yolu ~ ile kisaltir; cagiran serbest birakir. */
-static char	*shorten_path(const char *path)
+/*
+** Yolu ev dizini "~" ile kisaltir; cagiran serbest birakir.
+**
+** IKI KULLANICISI VAR: prompt ve baglam anlik goruntusu. Gizlilik
+** sozlesmesi calisma dizininin "~ ile kisaltilmis" halde gonderilmesini
+** soyluyor, yani ayni kisaltma iki yerde gerekiyor. Burada durmasinin
+** sebebi prompt'un ilk kullanici olmasi.
+*/
+char	*ln_short_path(const char *path)
 {
 	const char	*home;
 	size_t		len;
@@ -67,7 +74,7 @@ static char	*current_dir(void)
 
 	if (getcwd(buf, sizeof(buf)) == NULL)
 		return (strdup("?"));
-	return (shorten_path(buf));
+	return (ln_short_path(buf));
 }
 
 /* Gosterilecek prompt metnini uretir; cagiran serbest birakir. */
@@ -206,6 +213,154 @@ int	ln_head_uses(const char *name)
 		i++;
 	}
 	return (count);
+}
+
+/* Satirin ilk sozcugunu tampona yazar; sozcuk yoksa 0 doner. */
+static int	head_of(const char *line, char *out, size_t cap)
+{
+	size_t	n;
+
+	if (line == NULL)
+		return (0);
+	while (*line == ' ' || *line == '\t')
+		line++;
+	n = 0;
+	while (line[n] != '\0' && line[n] != ' ' && line[n] != '\t'
+		&& n + 1 < cap)
+		n++;
+	if (n == 0)
+		return (0);
+	memcpy(out, line, n);
+	out[n] = '\0';
+	return (1);
+}
+
+/* Adi tabloda arar; yoksa -1 doner. */
+static int	find_head(char *names[], size_t used, const char *head)
+{
+	size_t	i;
+
+	i = 0;
+	while (i < used)
+	{
+		if (strcmp(names[i], head) == 0)
+			return ((int)i);
+		i++;
+	}
+	return (-1);
+}
+
+/*
+** Gecmisteki komut baslarini sayar; tabloya kac ayri ad girdigini verir.
+**
+** NEDEN BURADA: gecmis readline'in elinde. Gizlilik sozlesmesi bu listeyi
+** gonderilenler arasinda sayiyor, cunku hangi araclari kullandigini bilen
+** bir model daha isabetli komut uretir.
+**
+** TABLO DOLARSA YENI ADLAR YOK SAYILIR: gecmisi olan bir kullanicida ilk
+** altmis dort farkli komut zaten en siklarini iceriyor ve siniri
+** buyutmenin karsiligi yok.
+*/
+static size_t	count_heads(char *names[], int counts[], size_t cap)
+{
+	HIST_ENTRY	**list;
+	char		head[64];
+	size_t		used;
+	size_t		i;
+	int			at;
+
+	list = history_list();
+	used = 0;
+	if (list == NULL)
+		return (0);
+	i = 0;
+	while (list[i] != NULL)
+	{
+		if (head_of(list[i]->line, head, sizeof(head)))
+		{
+			at = find_head(names, used, head);
+			if (at >= 0)
+				counts[at]++;
+			else if (used < cap && (names[used] = strdup(head)) != NULL)
+				counts[used++] = 1;
+		}
+		i++;
+	}
+	return (used);
+}
+
+/* Tabloda en yuksek sayiyi tasiyan kaydi verir; kalmamissa -1. */
+static int	best_unused(int counts[], size_t used)
+{
+	size_t	i;
+	int		best;
+
+	best = -1;
+	i = 0;
+	while (i < used)
+	{
+		if (counts[i] > 0 && (best < 0 || counts[i] > counts[best]))
+			best = (int)i;
+		i++;
+	}
+	return (best);
+}
+
+/* En sik kullanilan ilk "top" basi tampona yazar. */
+static void	pick_top(t_buf *buf, char *names[], int counts[], size_t used,
+		size_t top)
+{
+	char	piece[96];
+	size_t	taken;
+	int		at;
+
+	taken = 0;
+	while (taken < top)
+	{
+		at = best_unused(counts, used);
+		if (at < 0)
+			return ;
+		snprintf(piece, sizeof(piece), "%s%s %d", taken ? ", " : "",
+			names[at], counts[at]);
+		if (buf_push_str(buf, piece) == 0)
+			return ;
+		counts[at] = 0;
+		taken++;
+	}
+}
+
+/* Tabloda ayrilan adlari birakir. */
+static void	free_names(char *names[], size_t used)
+{
+	size_t	i;
+
+	i = 0;
+	while (i < used)
+	{
+		free(names[i]);
+		i++;
+	}
+}
+
+/*
+** En sik kullanilan baslari "ad sayi, ad sayi" bicimiyle verir.
+**
+** Cagiran serbest birakir. Gecmis bossa bos dize doner.
+*/
+char	*ln_top_heads(size_t top)
+{
+	char	*names[64];
+	int		counts[64];
+	t_buf	buf;
+	size_t	used;
+
+	used = count_heads(names, counts, 64);
+	buf_init(&buf);
+	pick_top(&buf, names, counts, used, top);
+	free_names(names, used);
+	if (buf.data == NULL)
+		return (strdup(""));
+	return (buf_take(&buf));
 }
 
 /*

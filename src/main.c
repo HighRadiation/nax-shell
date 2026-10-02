@@ -130,6 +130,7 @@ static void	handle_line(t_shell *sh, const char *line)
 	{
 		remember_command(sh, d.text);
 		run_tokens(sh, tokens);
+		ctx_add(d.text, sh->last_status);
 	}
 	else if (d.route == ROUTE_FIX)
 		report_fix(sh, &d);
@@ -168,6 +169,7 @@ static void	shell_init(t_shell *sh)
 static void	shell_free(t_shell *sh)
 {
 	ai_stop();
+	ctx_clear();
 	ln_hist_save(sh->hist_path);
 	free(sh->hist_path);
 	sh->hist_path = NULL;

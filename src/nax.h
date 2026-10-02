@@ -63,6 +63,8 @@ char	*ln_hist_path(void);
 void	ln_hist_load(const char *path);
 void	ln_hist_save(const char *path);
 char	*ln_read(const t_shell *sh);
+char	*ln_short_path(const char *path);
+char	*ln_top_heads(size_t top);
 int		ln_head_uses(const char *name);
 void	ln_preload(const char *text);
 
