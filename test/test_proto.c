@@ -94,7 +94,7 @@ static void	case_parse(t_score *score, int no, char *input, char *want)
 
 /* Kurma belirtimini tipe, kimlige ve alanlara ayirir; alan sayisini verir. */
 static size_t	split_spec(char *input, t_ftype *type, long *id,
-		t_field *fields)
+		t_pair *fields)
 {
 	char	*token;
 	char	*eq;
@@ -143,7 +143,7 @@ static int	newline_is_sane(const char *line)
 /* Kurma vakasi. */
 static void	case_build(t_score *score, int no, char *input, char *want)
 {
-	t_field	fields[PROTO_MAX_FIELDS];
+	t_pair	fields[PROTO_MAX_FIELDS];
 	t_ftype	type;
 	long	id;
 	size_t	n;
@@ -194,7 +194,7 @@ static int	check_too_long(void)
 /* Yenisatir iceren deger kodlanip aynen geri cozulmeli. */
 static int	check_newline_round_trip(void)
 {
-	t_field	field;
+	t_pair	field;
 	t_frame	frame;
 	char	*line;
 	int		ok;

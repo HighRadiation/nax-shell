@@ -40,7 +40,7 @@ atlanır — satır tabanlı olmanın asıl kazancı bu kurtarma yeteneğidir.
 
 | Tip | Alanlar | Kabuk ne yapar |
 |---|---|---|
-| `READY` | `version`, `key` | Hazır olduğunu kaydeder |
+| `READY` | `version`, `key`, `timeout`, `spinner` | Hazır olduğunu kaydeder; süreleri uygular |
 | `OK` (`kind=request`) | `cmd`, `note`, `danger` | Öneriyi düzenleme satırına yazar |
 | `OK` (`kind=question`) | `text` | Metni ekrana basar |
 | `NEED` | `provide=cwd_ls,git_status` | Sabit listeden olguyu verir, en çok iki tur |
@@ -52,6 +52,22 @@ atlanır — satır tabanlı olmanın asıl kazancı bu kurtarma yeteneğidir.
 →  INTENT   id=7  text=b64:ZMO8bi...  cwd=b64:L2hvbWU...  branch=main  status=0
 ←  OK       id=7  kind=request  cmd=b64:ZmluZCAu...  note=b64:c29u...  danger=0
 ```
+
+### `READY` neden süreleri taşıyor
+
+`timeout` ve `spinner` yapılandırmada durur, ama yapılandırmayı **yalnızca
+`naxd` okur.** Beklemeyi ise kabuk yapar. Değerleri el sıkışmada göndermek bu
+çelişkiyi çözer: C tarafında ayrıştırıcı yazmak gerekmez ve tek kaynak
+korunur.
+
+`key=no` ise anahtar ayarlanmamış demektir. Kabuk bunu bilmek zorunda: istek
+göndermek boş bir tur olur ve kullanıcıya oturumda **bir kez** sebebi
+söylenmelidir. Alan hiç yoksa anahtar var sayılır — eski bir yardımcı süreci
+hiç denememek, denemekten daha kötüdür.
+
+Kabuk bildirilen süreleri **makul aralığa kırpar.** Karşı taraf sıfır ya da
+saçma bir süre bildirirse kabuk ya hiç beklemez ya sonsuza kadar bekler;
+ikisi de kabul edilemez.
 
 ## Dayanıklılık
 

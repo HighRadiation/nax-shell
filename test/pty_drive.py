@@ -513,6 +513,64 @@ def case_child_signal_mask(binary, rep):
     return sh.screen()
 
 
+def case_ai_suggestion_preloaded(binary, rep):
+    """
+    AI onerisi bir sonraki prompta hazir gelir.
+
+    Taklit surec belirli bir echo komutu oneriyor, yani kosup kosmadigi
+    ciktidan goruluyor. Yerel yazim duzeltmesindeki on yukleme ile ayni
+    mekanizma; buradaki fark onerinin kaynagi.
+    """
+    sh = Shell(binary, {"NAX_NAXD": "python3 test/fake_naxd.py cmd_echo"})
+    sh.ask(b"dun degisen dosyalari goster\n")
+    offered = sh.wait_for("echo ai-onyukleme-kaniti")
+    loaded = sh.wait_for("echo ai-onyukleme-kaniti", skip=1)
+    sh.send(b"\n")
+    ran = sh.wait_for("ai-onyukleme-kaniti", skip=2)
+    sh.ask(b"exit\n")
+    alive, info = sh.close()
+    rep.check("AI onerisi yazildi", offered, sh.screen()[-300:])
+    rep.check("AI onerisi tampona hazir geldi", loaded, sh.screen()[-300:])
+    rep.check("Enter AI onerisini kostu", ran, sh.screen()[-300:])
+    rep.check("AI onerisi sonrasi kabuk duzgun kapandi", not alive, info)
+    return sh.screen()
+
+
+def case_ai_risky_not_preloaded(binary, rep):
+    """
+    Riskli AI onerisi yazilir ama tampona KONULMAZ.
+
+    IKI AYRI VAKA BIR ARADA:
+      risky_cmd  karsi taraf danger=1 diyor
+      risky_lie  karsi taraf danger=0 DIYOR ama komut gercekten riskli
+
+    Ikincisi asil olculen sey: kabuk karsi tarafin dogru cevap vermesine
+    GUVENMIYOR, komutun basini kendi listesiyle de denetliyor. Guvenligi
+    uzaktaki bir surecin bildirdigine baglamak yanlis olurdu.
+    """
+    screens = []
+    loaded = {}
+    for mode, needle in (("risky_cmd", "/tmp/kazadan-sonra"),
+                         ("risky_lie", "/tmp/yalan-soyleyen")):
+        sh = Shell(binary, {"NAX_NAXD": "python3 test/fake_naxd.py " + mode})
+        sh.ask(b"eski seyleri temizle\n")
+        sh.wait_for(needle)
+        sh.quiet()
+        # Oneri satiri komutu BIR kez yaziyor; tampona konulsa ikinci kez
+        # gorunurdu.
+        loaded[mode] = sh.screen().count(needle) > 1
+        sh.send(b"\n")
+        sh.quiet()
+        sh.ask(b"exit\n")
+        sh.close()
+        screens.append(sh.screen())
+    rep.check("riskli AI onerisi tampona KONULMADI",
+              not loaded["risky_cmd"], screens[0][-400:])
+    rep.check("karsi taraf guvenli dese de riskli oneri konulmadi",
+              not loaded["risky_lie"], screens[1][-400:])
+    return "".join(screens)
+
+
 def case_eof(binary, rep):
     """Ctrl-D gercek dosya sonu olarak taninir."""
     sh = Shell(binary)
@@ -545,6 +603,8 @@ def main():
         case_fix_history_ranking,
         case_fix_quoted_head_not_preloaded,
         case_child_signal_mask,
+        case_ai_suggestion_preloaded,
+        case_ai_risky_not_preloaded,
     ):
         screens.append(case(binary, rep))
 

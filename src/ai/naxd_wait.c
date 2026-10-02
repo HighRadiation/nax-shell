@@ -210,7 +210,7 @@ static void	send_cancel(t_naxd *nx, long id)
 ** ZAMAN ASIMI KAPATMAZ: gec cevap veren surec bozuk degil, yavas. CANCEL
 ** gonderilip devam ediliyor.
 */
-t_askst	naxd_ask(t_naxd *nx, t_ftype type, const t_field *fields, size_t n,
+t_askst	naxd_ask(t_naxd *nx, t_ftype type, const t_pair *fields, size_t n,
 		t_frame *reply, t_tick_fn tick)
 {
 	char	*line;

@@ -79,7 +79,7 @@ static void	record(char *out, size_t cap, const char *name, const char *text)
 /* Istegi gonderip sonucunu ve varsa onerisini kaydeder. */
 static void	do_ask(t_naxd *nx, char *out, size_t cap)
 {
-	t_field		field;
+	t_pair		field;
 	t_frame		reply;
 	t_askst		state;
 	const char	*cmd;
@@ -233,7 +233,7 @@ static int	check_cancel_wakes_wait(void)
 	t_naxd	nx;
 	char	*argv[5];
 	t_frame	reply;
-	t_field	field;
+	t_pair	field;
 	t_askst	state;
 	char	byte;
 
@@ -301,7 +301,7 @@ static int	check_deaf_write_does_not_hang(void)
 	t_naxd	nx;
 	char	*argv[5];
 	t_frame	reply;
-	t_field	field;
+	t_pair	field;
 	t_askst	state;
 	char	*big;
 	int		marked;
@@ -347,7 +347,7 @@ static int	check_event_write_marks_dead(void)
 {
 	t_naxd	nx;
 	char	*argv[5];
-	t_field	field;
+	t_pair	field;
 	int		sent;
 	int		marked;
 
@@ -384,7 +384,7 @@ static int	check_late_reader_recovers(void)
 	t_naxd	nx;
 	char	*argv[5];
 	t_frame	reply;
-	t_field	field;
+	t_pair	field;
 	t_askst	state;
 	char	*big;
 
@@ -428,7 +428,7 @@ static int	check_eintr_does_not_extend(void)
 	t_naxd				nx;
 	char				*argv[5];
 	t_frame				reply;
-	t_field				field;
+	t_pair				field;
 	t_askst				state;
 	struct itimerval	timer;
 	struct sigaction	sa;
@@ -482,7 +482,7 @@ static int	check_real_naxd_handshake(void)
 	t_naxd	nx;
 	char	*argv[5];
 	t_frame	reply;
-	t_field	field;
+	t_pair	field;
 	t_askst	state;
 	FILE	*fp;
 	char	path[64];

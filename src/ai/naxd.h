@@ -82,6 +82,11 @@ typedef void	(*t_tick_fn)(void);
 ** wake_rd ve wake_wr kendine boru. Yazma ucu sinyal isleyicisine
 ** veriliyor; okuma ucu beklemede gozlenen ikinci tanimlayici.
 **
+** has_key, READY kaydindaki "key" alanindan gelir. Kabuk bunu bilmek
+** zorunda: anahtar yoksa istek gondermek bos bir tur demek ve kullaniciya
+** oturumda BIR KEZ sebebi soylenmeli. Anahtarsiz durum bir hata hali
+** degil, desteklenen bir calisma bicimi.
+**
 ** tick_ms ve limit_ms YAPIDA, sabit degil: testler on bes saniye
 ** beklemek zorunda kalmamali ve ayni degerler ileride yapilandirmadan
 ** gelecek. Varsayilanlari asagidaki sabitler.
@@ -103,6 +108,7 @@ typedef struct s_naxd
 	int			fails;
 	int			tries;
 	int			warned;
+	int			has_key;
 	long		first_fail_ms;
 	long		next_try_ms;
 	long		tick_ms;
@@ -117,9 +123,9 @@ int			naxd_open(t_naxd *nx);
 void		naxd_close(t_naxd *nx);
 int			naxd_alive(const t_naxd *nx);
 int			naxd_write(t_naxd *nx, const char *line);
-int			naxd_send(t_naxd *nx, t_ftype type, const t_field *fields,
+int			naxd_send(t_naxd *nx, t_ftype type, const t_pair *fields,
 				size_t n);
-t_askst		naxd_ask(t_naxd *nx, t_ftype type, const t_field *fields,
+t_askst		naxd_ask(t_naxd *nx, t_ftype type, const t_pair *fields,
 				size_t n, t_frame *reply, t_tick_fn tick);
 t_askst		naxd_wait(t_naxd *nx, long id, t_frame *reply, t_tick_fn tick);
 long		naxd_last_id(const t_naxd *nx);

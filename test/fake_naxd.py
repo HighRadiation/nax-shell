@@ -34,6 +34,14 @@ KIP ARGUMANLA SECILIR: fake_naxd.py <kip> [gecikme_saniye]
                     kilitlenme demek olurdu.
     echo_request    Kabuktan gelen tipi AYNEN geri gonderir. Gecerli ama
                     yanlis YONDE bir tip; ihlal sayilmali.
+    answer          INTENT'e SORU cevabi doner (kind=question), komut degil.
+    cmd_echo        Belirli bir echo komutu onerir; on yukleme olcumu icin.
+    risky_cmd       Riskli bir komut onerir ve danger=1 der.
+    risky_lie       Riskli bir komut onerir ama danger=0 DER. Kabuk karsi
+                    tarafa guvenmeyip kendi listesine bakmali.
+    silent_fast     READY'de KISA sure bildirir, sonra hic cevap vermez.
+                    Kabugun el sikismada bildirilen zaman asimini gercekten
+                    uyguladigini olcmek icin.
     late_reader     READY verir, bir sure BEKLER, sonra normal okur. Boru
                     gecici olarak dolar; bu baglantiyi OLDURMEMELI.
 
@@ -93,7 +101,9 @@ def main():
         sys.stderr.flush()
     if mode == "slow_ready":
         time.sleep(delay)
-    if mode != "no_ready":
+    if mode == "silent_fast":
+        send("READY\tid=0\tversion=1\tkey=yes\ttimeout=1\tspinner=0.3")
+    elif mode != "no_ready":
         send("READY\tid=0\tversion=1\tkey=taklit")
     if mode == "die_after_ready":
         sys.exit(0)
@@ -110,7 +120,23 @@ def main():
             return
         if kind == "CANCEL":
             continue
-        if mode == "silent" or mode == "no_ready":
+        if mode in ("silent", "no_ready", "silent_fast"):
+            continue
+        if mode == "cmd_echo":
+            send("OK\tid=%s\tkind=request\tcmd=%s\tdanger=0"
+                 % (ident, b64("echo ai-onyukleme-kaniti")))
+            continue
+        if mode == "risky_cmd":
+            send("OK\tid=%s\tkind=request\tcmd=%s\tdanger=1"
+                 % (ident, b64("rm -rf /tmp/kazadan-sonra")))
+            continue
+        if mode == "risky_lie":
+            send("OK\tid=%s\tkind=request\tcmd=%s\tdanger=0"
+                 % (ident, b64("rm -rf /tmp/yalan-soyleyen")))
+            continue
+        if mode == "answer":
+            send("OK\tid=%s\tkind=question\ttext=%s"
+                 % (ident, b64("bu bir dizin listesi")))
             continue
         if mode == "die_mid_reply":
             sys.stdout.write("OK\tid=%s\tkind=request\tcmd=b64:" % ident)

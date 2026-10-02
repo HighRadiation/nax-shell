@@ -69,6 +69,7 @@ void	naxd_init(t_naxd *nx, char *const *argv, const char *log_path)
 	nx->fails = 0;
 	nx->tries = 0;
 	nx->warned = 0;
+	nx->has_key = 0;
 	nx->first_fail_ms = 0;
 	nx->next_try_ms = 0;
 	nx->tick_ms = NAXD_TICK_MS;
@@ -242,6 +243,56 @@ static void	note_failure(t_naxd *nx)
 }
 
 /*
+** READY kaydi anahtarin var oldugunu soyluyor mu.
+**
+** Alan yoksa VAR sayilir: eski ya da farkli bir yardimci surec bu alani
+** gondermiyor olabilir ve o durumda istegi hic denememek, denemekten
+** daha kotu olurdu.
+*/
+static int	ready_has_key(const t_frame *reply)
+{
+	const char	*text;
+
+	text = proto_field(reply, "key");
+	if (text == NULL)
+		return (1);
+	return (strcmp(text, "no") != 0);
+}
+
+/*
+** READY'de bildirilen sureyi uygular; akil disi deger yok sayilir.
+**
+** NEDEN KARSI TARAFTAN: timeout ve spinner yapilandirmada duruyor ama
+** yapilandirmayi yalnizca yardimci surec okuyor. Bekleme ise burada
+** yapiliyor. Degerleri el sikismada almak, C tarafina ayristirici
+** yazmadan tek kaynagi korumanin yolu.
+**
+** SINIRLAR ZORUNLU: karsi taraf sifir ya da sacma bir sure bildirirse
+** kabuk ya hic beklemez ya da sonsuza kadar bekler. Ikisi de kabul
+** edilemez, o yuzden deger makul araliga kirpilir.
+*/
+static void	apply_times(t_naxd *nx, const t_frame *reply)
+{
+	const char	*text;
+	double		value;
+
+	text = proto_field(reply, "timeout");
+	if (text != NULL)
+	{
+		value = atof(text) * 1000.0;
+		if (value >= 1000.0 && value <= 120000.0)
+			nx->limit_ms = (long)value;
+	}
+	text = proto_field(reply, "spinner");
+	if (text != NULL)
+	{
+		value = atof(text) * 1000.0;
+		if (value >= 100.0 && value < (double)nx->limit_ms)
+			nx->tick_ms = (long)value;
+	}
+}
+
+/*
 ** Sureci baslatir ve READY bekler; basarida 1.
 **
 ** Basarisizlikta surec toplanir ve bir sonraki denemenin zamani
@@ -265,6 +316,8 @@ int	naxd_open(t_naxd *nx)
 	state = naxd_wait(nx, 0, &reply, NULL);
 	if (state == ASK_OK && reply.type == FR_READY)
 	{
+		nx->has_key = ready_has_key(&reply);
+		apply_times(nx, &reply);
 		proto_free(&reply);
 		nx->state = AI_READY;
 		nx->tries = 0;
@@ -376,7 +429,7 @@ int	naxd_write(t_naxd *nx, const char *line)
 }
 
 /* Cevap beklenmeyen bir kayit gonderir; basarida 1. */
-int	naxd_send(t_naxd *nx, t_ftype type, const t_field *fields, size_t n)
+int	naxd_send(t_naxd *nx, t_ftype type, const t_pair *fields, size_t n)
 {
 	char	*line;
 	int		ok;

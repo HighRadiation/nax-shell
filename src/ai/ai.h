@@ -116,4 +116,8 @@ int			cls_has_operator(const t_token *tokens);
 size_t		cls_word_count(const t_token *tokens);
 const char	*cls_route_name(t_route route);
 
+void		ai_intent(t_shell *sh, const char *text);
+void		ai_explain(t_shell *sh);
+void		ai_stop(void);
+
 #endif

@@ -79,19 +79,25 @@ typedef enum e_perr
 # define PROTO_MAX_LINE 1048576
 # define PROTO_MAX_FIELDS 16
 
-/* Bir anahtar/deger cifti; ikisi de cercevenin tamponuna bakar. */
-typedef struct s_field
+/*
+** Bir anahtar/deger cifti; ikisi de cercevenin tamponuna bakar.
+**
+** ADI t_pair, t_field DEGIL: parse.h icinde genisletmenin urettigi alan
+** icin zaten bir t_field var ve iki baslik ilk kez bir arada
+** kullanildiginda cakistilar. Ayni ad iki farkli sey icin kullanilamaz.
+*/
+typedef struct s_pair
 {
 	const char	*key;
 	const char	*value;
-}	t_field;
+}	t_pair;
 
 /* Cozulmus bir kayit; buf sahipli, alanlar onun icine isaret eder. */
 typedef struct s_frame
 {
 	t_ftype	type;
 	char	*buf;
-	t_field	fields[PROTO_MAX_FIELDS];
+	t_pair	fields[PROTO_MAX_FIELDS];
 	size_t	count;
 }	t_frame;
 
@@ -145,7 +151,7 @@ typedef struct s_reader
 char		*b64_encode(const unsigned char *in, size_t n);
 int			b64_decode_inplace(char *text, size_t *out_len);
 
-char		*proto_build(t_ftype type, long id, const t_field *fields,
+char		*proto_build(t_ftype type, long id, const t_pair *fields,
 				size_t n);
 t_perr		proto_parse(const char *line, t_frame *out);
 void		proto_blank(t_frame *frame);

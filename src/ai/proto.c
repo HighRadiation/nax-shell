@@ -155,7 +155,7 @@ static int	push_value(t_buf *buf, const char *value)
 }
 
 /* Bir alani sekmeyle birlikte tampona yazar. */
-static int	push_field(t_buf *buf, const t_field *field)
+static int	push_field(t_buf *buf, const t_pair *field)
 {
 	if (key_is_valid(field->key) == 0)
 		return (0);
@@ -173,7 +173,7 @@ static int	push_field(t_buf *buf, const t_field *field)
 ** Bunlar cagiranin hatasi, karsi tarafin degil, o yuzden ayri hata
 ** degerleri yok.
 */
-char	*proto_build(t_ftype type, long id, const t_field *fields, size_t n)
+char	*proto_build(t_ftype type, long id, const t_pair *fields, size_t n)
 {
 	t_buf	buf;
 	char	head[64];

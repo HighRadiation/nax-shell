@@ -21,6 +21,12 @@ HATA CIKISI GUNLUGE GIDER:
     Buradan yazilan her sey oraya gider: kullanicinin ekrani bozulmaz ama
     ayrinti da kaybolmaz.
 
+SURELER EL SIKISMADA BILDIRILIR:
+    timeout ve spinner yapilandirmada duruyor ama yapilandirmayi yalnizca
+    bu taraf okuyor. Kabugun da bu surelere ihtiyaci var: beklemeyi o
+    yapiyor. Degerleri READY kaydiyla gondermek celiskiyi cozuyor - C
+    tarafinda ayristirici yazmak gerekmiyor ve tek kaynak korunuyor.
+
 CANCEL NE YAPAR:
     Dongu tek is parcacikli oldugu icin CANCEL ancak biz cevabi
     gonderdikten SONRA okunabilir - model cagrisi sirasinda stdin
@@ -146,6 +152,8 @@ def main():
     send(wire.build("READY", 0, {
         "version": VERSION,
         "key": "yes" if cfg.has_key() else "no",
+        "timeout": "%g" % cfg.number("timeout"),
+        "spinner": "%g" % cfg.number("spinner"),
     }))
     if not cfg.has_key():
         log("api_key bos: AI kapali, kabuk duz kabuk olarak calisir")

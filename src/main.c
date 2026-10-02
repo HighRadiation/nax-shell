@@ -67,23 +67,21 @@ static void	run_tokens(t_shell *sh, const t_token *tokens)
 }
 
 /*
-** AI yolunu simdilik bir bilgi satiriyla karsilar.
+** Son calistirilan satiri hatirlar.
 **
-** Siniflandirici kararini veriyor ama yardimci surec henuz yok. Mesaj
-** kararin GORUNUR olmasi icin: hangi satirin niyet sayildigini ve hangi
-** vetonun tetiklendigini gozle dogrulamak, korpus testinin yanindaki
-** ikinci gozlem yolu.
+** NEDEN GEREKLI: tek basina "?" yazildiginda son hatanin aciklanmasi
+** isteniyor ve o satirin metni baska yerde tutulmuyor. Bir sonraki
+** asamada bu tek satir, baglam halkasina donusecek.
 */
-static void	report_route(t_shell *sh, const t_decision *d)
+static void	remember_command(t_shell *sh, const char *line)
 {
-	fflush(stdout);
-	if (d->route == ROUTE_EXPLAIN)
-		fprintf(stderr, "%s: son hata aciklamasi henuz bagli degil\n",
-			NAX_NAME);
-	else
-		fprintf(stderr, "%s: niyet (veto %#x) henuz bagli degil: %s\n",
-			NAX_NAME, d->vetoes, d->text);
-	sh->last_status = 1;
+	char	*copy;
+
+	copy = strdup(line);
+	if (copy == NULL)
+		return ;
+	free(sh->last_cmd);
+	sh->last_cmd = copy;
 }
 
 /*
@@ -129,13 +127,18 @@ static void	handle_line(t_shell *sh, const char *line)
 
 	d = cls_classify(line, &tokens, &err);
 	if (d.route == ROUTE_SHELL)
+	{
+		remember_command(sh, d.text);
 		run_tokens(sh, tokens);
+	}
 	else if (d.route == ROUTE_FIX)
 		report_fix(sh, &d);
 	else if (d.route == ROUTE_SYNTAX_ERR)
 		report_error(sh, err.message, 2);
-	else if (d.route != ROUTE_EMPTY)
-		report_route(sh, &d);
+	else if (d.route == ROUTE_INTENT)
+		ai_intent(sh, d.text);
+	else if (d.route == ROUTE_EXPLAIN)
+		ai_explain(sh);
 	lex_free(tokens);
 }
 
@@ -145,6 +148,7 @@ static void	shell_init(t_shell *sh)
 	sh->last_status = 0;
 	sh->interactive = isatty(STDIN_FILENO);
 	sh->exiting = 0;
+	sh->last_cmd = NULL;
 	sig_snapshot_inherited();
 	if (sh->interactive)
 		sig_setup_interactive();
@@ -163,9 +167,12 @@ static void	shell_init(t_shell *sh)
 */
 static void	shell_free(t_shell *sh)
 {
+	ai_stop();
 	ln_hist_save(sh->hist_path);
 	free(sh->hist_path);
 	sh->hist_path = NULL;
+	free(sh->last_cmd);
+	sh->last_cmd = NULL;
 	ln_preload(NULL);
 }
 

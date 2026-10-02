@@ -48,6 +48,7 @@ typedef struct s_shell
 	char	*hist_path;
 	int		interactive;
 	int		exiting;
+	char	*last_cmd;
 }	t_shell;
 
 void	buf_init(t_buf *buf);

@@ -260,6 +260,30 @@ run_leak_fd_check() {
 #
 # Kurallar docs/NORMS.md icinde yazili; buradaki her kontrol oradaki bir
 # kurala karsilik geliyor.
+# Ayni tip adinin iki ayri yapi icin kullanilmadigini dogrular.
+#
+# NEDEN VAR: proto.h bir anahtar/deger cifti icin t_field tanimlamisti,
+# oysa parse.h genisletmenin urettigi alan icin ayni adi kullaniyordu.
+# Iki baslik ilk kez bir arada kullanilana kadar hata gorunmedi - yani
+# aylarca sessizce bekleyebilirdi.
+#
+# R_OK dersinin aynisi: bulunan hatayi tek tek degil SINIF olarak kapat.
+run_type_clash_check() {
+	local dupes
+
+	dupes=$(grep -hoE '^typedef (struct|enum|union) (s|e|u)_[a-z0-9_]+' \
+		src/*.h src/*/*.h test/*.h 2>/dev/null \
+		| awk '{print $NF}' | sort | uniq -d)
+	if [ -z "$dupes" ]; then
+		PASS=$((PASS + 1))
+		printf "  ${G}gecti${N}   tip adlari cakismiyor\n"
+	else
+		FAIL=$((FAIL + 1))
+		printf "  ${R}patladi${N} ayni ad iki yapi icin kullanilmis:%s\n" \
+			"$(echo $dupes)"
+	fi
+}
+
 run_norm_check() {
 	local src hdr bad
 
@@ -454,6 +478,52 @@ run_case   "boru icindeki export etkisiz" $'echo x | export NAXY=1\necho "[$NAXY
 # Mutasyon denemesi bu boslugu gosterdi.
 run_merged "boru icinde yerlesik taninir" $'echo x | export NAXY=1\n'   ""
 
+# --- AI hatti ---
+# Yardimci surec NAX_NAXD ile secilir; testler taklit surece yoneltiyor.
+# Gercek surece yoneltmek aga cikmak, anahtar ve ucret demek olurdu ve
+# ustelik ayni girdi her zaman ayni cevabi vermezdi.
+export NAX_NAXD="python3 test/fake_naxd.py ok"
+# Niyet komuta cevrilir ve oneri yazilir.
+run_stderr "niyet oneri uretir"           $'dun degisen dosyalari goster\n' "nax: ls -la"
+run_status "oneri sonrasi durum 0"        $'dun degisen dosyalari goster\n' 0
+# Betik kipinde oneri KOSMAZ; yalnizca yazilir.
+run_case   "AI onerisi kendiliginden kosmaz" $'dun degisen dosyalari goster\n' ""
+# Son hata aciklanabilir; cevap ekrana basilir.
+run_case   "son hata aciklanir"           $'boylebirkomutyok\n?\n' "komut bulunamadi"
+# Son komut basariliysa sorulmaz: basarili bir komutu "neden patladi" diye
+# sormak modelden uydurma cevap almak demek, ustelik bedava degil.
+run_stderr "basarili komut aciklanmaz"    $'echo x\n?\n' "aciklanacak hata yok"
+# Hic komut kosmadan "?" yazilirsa sessiz kalinmaz.
+run_stderr "aciklanacak komut yoksa soylenir" $'?\n' "aciklanacak bir komut yok"
+unset NAX_NAXD
+
+# Soru ile istek ayrimi: model SORU cevabi dondurdugunde metin ekrana
+# basilir, duzenleme satirina konmaz.
+export NAX_NAXD="python3 test/fake_naxd.py answer"
+run_case   "soru cevabi ekrana basilir"   $'dun degisen dosyalari goster\n' "bu bir dizin listesi"
+unset NAX_NAXD
+
+# AI baslatilamazsa kabuk DUZ KABUK olur: sebep bir kez yazilir, satir
+# bash'in yaptigi seye duser (ilk sozcuk icin "command not found", 127).
+export NAX_NAXD="python3 test/fake_naxd.py die_at_start"
+run_stderr "AI yoksa sebep yazilir"       $'dun degisen dosyalari goster\n' "duz kabuk"
+run_stderr "AI yoksa komut bulunamadi"    $'dun degisen dosyalari goster\n' "dun: command not found"
+run_status "AI yoksa durum 127"           $'dun degisen dosyalari goster\n' 127
+unset NAX_NAXD
+
+# Zaman asimi EL SIKISMADA bildirilen sureden gelir. Taklit READY'de bir
+# saniye bildiriyor; ontanimli on bes saniye uygulanirsa bu vaka
+# zaman asimina ugrar ve patlar.
+export NAX_NAXD="python3 test/fake_naxd.py silent_fast"
+run_stderr "cevap gelmezse zaman asimi"   $'dun degisen dosyalari goster\n' "AI cevap vermedi"
+run_status "zaman asimi sonrasi durum 1"  $'dun degisen dosyalari goster\n' 1
+unset NAX_NAXD
+
+# Bozuk konusan surec ihlal sayilir ve baglanti kapatilir.
+export NAX_NAXD="python3 test/fake_naxd.py garbage"
+run_stderr "bozuk cevap baglantiyi keser" $'dun degisen dosyalari goster\n' "baglantisi koptu"
+unset NAX_NAXD
+
 # --- cocuga sizan sinyal davranisi ---
 run_signal_mask_check
 run_inherited_ignore_check
@@ -499,6 +569,7 @@ run_stderr "yerlesikler de aday olarak taranir" $'exprot A=1\n' \
 run_case   "env PATH'ten kosar"           $'export NAXZ=bulundu\nenv | grep "^NAXZ="\n' "NAXZ=bulundu"
 
 run_macro_clash_check
+run_type_clash_check
 run_norm_check
 run_leak_check
 
