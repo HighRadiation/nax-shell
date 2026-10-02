@@ -346,7 +346,13 @@ src/
     naxd.h         yardımcı sürecin durumu, istek sonucu, bağlantı
     naxd.c         süreci başlatma, yazma, gözetim, yeniden doğma
     naxd_wait.c    cevabı bekleme: poll, kendine boru, zaman aşımı
-  (ai/ içinde sonraki aşamada: niyet yolunun kabuğa bağlanması)
+    bridge.c       kabuğun AI'ı nasıl kullandığı: ne basılır, ne tampona konur
+naxd/              yardımcı süreç; yalnızca Python standart kütüphanesi
+  naxd.py          giriş ve döngü
+  wire.py          tel biçiminin Python tarafı
+  config.py        nax.conf okuma, değişiklikte kendini yenileme
+  prompt.py        modele ne sorulduğu, cevabın nasıl okunduğu
+  provider.py      bulut ve yerel model çağrıları, düşme kuralı
 test/
   test.h           test koşucularının paylaştığı tipler ve iskele
   harness.c        vaka dosyası okuma, kaçış çözme, özet basma
@@ -358,7 +364,11 @@ test/
   test_proto.c     tablo tabanlı protokol testleri; kurma ve çözme bir arada
   test_lineio.c    senaryo tabanlı satır okuma testleri; parçalı veri
   test_naxd.c      senaryo tabanlı dayanıklılık testleri; taklit süreçle
-  fake_naxd.py     kasten kötü davranan yardımcı süreç taklidi (17 kip)
+  fake_naxd.py     kasten kötü davranan yardımcı süreç taklidi (20 kip)
+  stub_provider.py sahte model servisi; kipini model adından okur
+  pyharness.py     Python tarafı için tablo tabanlı test iskelesi
+  unit_wire.py     tel biçiminin iki dilde aynı olduğunu doğrular
+  unit_naxd.py     gerçek yardımcı sürecin uçtan uca davranışı
   cases/*.tsv      vaka tabloları; yeni vaka için yeniden derleme gerekmez
   pty_drive.py     sahte terminal üzerinden etkileşimli yol testleri
 naxd/              AI yardımcı süreci (sonraki aşamada)

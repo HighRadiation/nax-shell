@@ -153,8 +153,36 @@ kalıyor mu? Ölçülen cevap:
 `Ctrl-C` beklemeyi keser: kesme işleyicisi bir boruya tek bayt yazar, çünkü
 sinyal bağlamında güvenle yapılabilecek tek iş bu.
 
-Sıradaki: gerçek yardımcı süreç ve ilk sağlayıcı — bkz.
-[docs/ROADMAP.md](docs/ROADMAP.md).
+**Doğal dil artık gerçekten çalışıyor.** Yardımcı süreç yalnızca Python
+standart kütüphanesiyle yazıldı; paket kurmak gerekmiyor.
+
+```
+nax ~/projeler $ dun degisen dosyalari goster
+nax: find . -newermt "1 day ago" -type f
+nax ~/projeler $ find . -newermt "1 day ago" -type f▮   ← tampona hazır gelir
+
+nax ~/projeler $ boylebirkomutyok
+nax: boylebirkomutyok: command not found
+nax ~/projeler $ ?
+Komut bulunamadi, cunku PATH icinde boyle bir program yok.
+```
+
+Doğal dilin iki türü ayrı yollardan geçer: **istek** bir komut önerir ve
+tampona hazırlanır, **soru** ekrana basılır. Ayrımı model yapar ama kabuk
+ona körü körüne güvenmez:
+
+- Riskli komut önerilir, **tampona konulmaz** — karşı taraf "güvenli" dese
+  bile, çünkü kabuk komutun başını kendi listesiyle de denetler.
+- `api_key` boşsa sebep bir kez yazılır ve kabuk **düz kabuk** olarak çalışır:
+  satır bash'in yaptığı şeye düşer. Anahtarsız durum bir hata hâli değil.
+- Yardımcı süreç ölürse, donarsa ya da saçmalarsa kabuk sağlam kalır.
+
+Kurulum: `cp nax.conf.example nax.conf`, `chmod 600 nax.conf`, `api_key`
+satırını doldur. Ayarı kaydettiğin an geçerli olur; kabuğu yeniden başlatmak
+gerekmez. Ayrıntısı [docs/CONFIG.md](docs/CONFIG.md)'de.
+
+Sıradaki: paylaşılan durum — içerideki AI'ın cwd'yi, son komutları ve git
+dalını **sormadan** bilmesi. Bkz. [docs/ROADMAP.md](docs/ROADMAP.md).
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 

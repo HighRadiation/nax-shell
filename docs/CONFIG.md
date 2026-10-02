@@ -120,6 +120,25 @@ Bir not: küçük modeller Türkçede İngilizceden belirgin biçimde zayıftır
 Niyetler Türkçe yazılacağı için model seçerken bu etken göz önünde
 bulundurulmalıdır.
 
+## İki ortam değişkeni
+
+| Değişken | Ne işe yarar |
+|---|---|
+| `NAX_CONF` | Yapılandırma dosyasının yolunu değiştirir. Testler bunu kullanıyor; birden fazla kurulumu yan yana denemek için de işe yarar |
+| `NAX_NAXD` | Yardımcı süreci başlatacak komutu değiştirir. Varsayılan `python3 naxd/naxd.py`. Testler bunu kasten kötü davranan bir taklide yöneltiyor |
+
+İkisi de sıradan ayar değil, **yolu değiştiren** anahtarlar. Bu yüzden
+`nax.conf` içinde değiller: yapılandırma dosyasının yerini yapılandırma
+dosyasında belirtmek olmaz, ve yardımcı sürecin kendisi o dosyayı okuyan taraf.
+
+## Süreler el sıkışmada gelir
+
+`timeout` ve `spinner` bu dosyada durur ama dosyayı yalnızca `naxd` okur.
+Beklemeyi ise kabuk yapar. Bu yüzden `naxd` iki değeri `READY` kaydıyla
+kabuğa bildirir — C tarafında ayrıştırıcı yazmak gerekmez ve tek kaynak
+korunur. Kabuk gelen değeri makul aralığa kırpar; karşı taraf sıfır ya da
+saçma bir süre bildirirse kabuk ya hiç beklemez ya sonsuza kadar bekler.
+
 ## Anahtar yoksa
 
 `api_key` boş olduğunda `naxd` bunu açılışta bildirir, kabuk oturumda bir kez

@@ -87,6 +87,51 @@ Kullanıcının `Ctrl-C` ile beklemeyi kesmesi **kendine boru** ile gözleniyor:
 kesme işleyicisi o boruya bir bayt yazıyor, çünkü sinyal bağlamında güvenle
 yapılabilecek tek iş bu. "Bayrak set et" tek başına `poll`'u uyandırmaz.
 
+### M2.4 — gerçek yardımcı süreç ve ilk sağlayıcı
+
+Kabuk artık doğal dili gerçekten çalıştırıyor. Yardımcı süreç yalnızca Python
+standart kütüphanesiyle yazıldı: kullanıcının paket kurması gerekmiyor.
+
+**Soru ile istek ayrımı** bu taşın asıl işi. Sınıflandırıcı doğal dil dediği
+her satırı niyet olarak gönderiyor, ama doğal dilin iki türü var:
+
+| Satır | Ne istiyor | Kabuk ne yapıyor |
+|---|---|---|
+| `eski logları sil` | komut | Öneriyi yazar, düzenleme satırına hazırlar |
+| `bu hata ne demek` | cevap | Metni ekrana basar |
+
+Ayrımı model yapıyor ve cevabı **iki başlıktan** biriyle veriyor: `CMD <komut>`
+ya da `ANS <cevap>`. Serbest metinden komut çıkarmaya çalışmak tahmin işi
+olurdu ve tahmin eden bir kabuk güvenilmez.
+
+**Başlık yoksa cevap sayılır.** Sıra bilinçli: yanlış okunan bir metni ekrana
+basmak zararsız, yanlış okunan bir komutu düzenleme satırına yazmak değil.
+
+### Üç güven kuralı
+
+**Risk kararını kabuk kendi verir.** Yardımcı süreç bir `danger` ipucu
+gönderiyor ama tek başına ona güvenilmiyor; kabuk komutun başını kendi
+listesiyle de denetliyor. Testi karşı tarafın *yalan söylediği* durumu
+ölçüyor: `danger=0` dense bile `rm -rf` tampona konmuyor.
+
+**Anahtar yoksa kabuk düz kabuk olur.** Sebep oturumda bir kez yazılır, sonra
+satır bash'in yaptığı şeye düşer: ilk sözcük için `command not found` ve 127.
+Anahtarsız durum bir hata hâli değil, desteklenen bir çalışma biçimi.
+
+**Düşme tetikleyicisi "internet var mı" değil "çağrı patladı mı".** Üst üste
+iki bulut hatası yerel modele geçirir; başarılı çağrı sayacı sıfırlar.
+
+### Testler ağa çıkmıyor
+
+Karşı tarafta sahte bir model servisi var ve kipini istenen **model adından**
+okuyor, yani yeni bir yapılandırma alanı gerekmiyor. İki çaprazlama testi
+eklendi:
+
+- Python tarafı C'nin vaka dosyasını okuyor, yani korpus artık tek bir
+  uygulamanın değil **biçimin** testi. İlk koşumda üç ayrışma yakalandı.
+- C istemcisi **gerçek** Python daemon'ıyla el sıkışıyor. Taklitle konuşmak
+  "kendi yazdığımla anlaşıyorum" demekti.
+
 ### Test durumu
 
 | Grup | Vaka | Mutasyon |
@@ -97,23 +142,16 @@ yapılabilecek tek iş bu. "Bayrak set et" tek başına `poll`'u uyandırmaz.
 | ayrıştırıcı korpusu | 40 | — |
 | **protokol korpusu** | **40** | **19/20** |
 | **satır okuma senaryoları** | **14** | **14/17** |
-| **yardımcı süreç senaryoları** | **22** | **23/23** |
-| boru ile bütünleşik | 101 | — |
-| sahte terminal (pty) | 29 | — |
+| **yardımcı süreç senaryoları** | **23** | **23/23** |
+| **gerçek daemon (Python)** | **20** | — |
+| **tel biçimi çaprazlama** | **36** | — |
+| boru ile bütünleşik | 115 | — |
+| sahte terminal (pty) | 35 | — |
 
 Yakalanmayan dört mutasyon davranışı hiç değiştirmiyor; gerekçeleri kodda ve
 [FINDINGS.md](FINDINGS.md)'de yazılı.
 
 ## Sırada
-
-### M2.4 — gerçek yardımcı süreç ve ilk sağlayıcı
-
-- `naxd` — yalnızca Python standart kütüphanesi (bağımlılık kurmak
-  gerekmemeli)
-- `compat` sağlayıcı bağdaştırıcısı (Groq ile)
-- `nax.conf` okuma; biçim [CONFIG.md](CONFIG.md)'de
-- **soru ile istek ayrımı**: "bu ne demek" cevap ister, "eski logları sil"
-  komut ister; ikisi aynı yoldan geçmemeli
 
 ### M3 — paylaşılan durum
 
