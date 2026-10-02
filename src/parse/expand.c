@@ -361,6 +361,39 @@ void	field_free(t_field *fields)
 }
 
 /*
+** Ham bir metindeki degiskenleri genisletip TEK dizge dondurur.
+**
+** NEDEN AYRI GIRIS: "<<" govdesi bir sozcuk degil, serbest metin. Alan
+** ayirma yapilmamali (bosluklar ve yenisatirlar oldugu gibi kalmak
+** zorunda) ve tirnak kipi yok - govdenin tamami tek parca.
+**
+** Basarida 1 doner ve sonucu *out icine yazar; cagiran serbest birakir.
+*/
+int	exp_raw_text(const char *text, const t_shell *sh, char **out,
+		t_exp_err *err)
+{
+	t_expander	exp;
+
+	expander_init(&exp, NULL, sh, err);
+	if (expand_text(&exp, text, 0) == 0)
+	{
+		buf_free(&exp.buf);
+		field_free(exp.head);
+		if (err->message == NULL)
+			err->message = "bellek ayrilamadi";
+		return (0);
+	}
+	field_free(exp.head);
+	if (exp.buf.data == NULL)
+	{
+		*out = strdup("");
+		return (*out != NULL);
+	}
+	*out = buf_take(&exp.buf);
+	return (*out != NULL);
+}
+
+/*
 ** Bir sozcugu genisletir ve urettigi alan listesini dondurur.
 **
 ** Alan uretmeyen sozcuk icin de NULL doner; bu bir hata DEGILDIR. Cagiran

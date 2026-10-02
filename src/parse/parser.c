@@ -118,8 +118,30 @@ static int	arg_push(t_parser *par, t_cmd *cmd, const t_token *word)
 	return (1);
 }
 
-/* Yonlendirmeyi komutun yonlendirme listesinin sonuna ekler. */
-static int	redir_push(t_parser *par, t_cmd *cmd, t_tok type,
+/*
+** Sozcugun tirnakli bir parcasi var mi.
+**
+** "<<" sinirlayicisi icin gerekli: tirnakliysa govde genisletilmez.
+** Kural sinirlayicinin YAZIMINA bakiyor, govdenin icerigine degil; bash
+** de boyle davraniyor.
+*/
+static int	quoted_word(const t_token *word)
+{
+	const t_seg	*seg;
+
+	if (word == NULL)
+		return (0);
+	seg = word->segs;
+	while (seg != NULL)
+	{
+		if (seg->quote != Q_NONE)
+			return (1);
+		seg = seg->next;
+	}
+	return (0);
+}
+
+/* Yonlendirmeyi komuta ekler; hedef sozcuk odunc alinir. */static int	redir_push(t_parser *par, t_cmd *cmd, t_tok type,
 		const t_token *target)
 {
 	t_redir	*redir;
@@ -129,6 +151,8 @@ static int	redir_push(t_parser *par, t_cmd *cmd, t_tok type,
 		return (0);
 	redir->type = type;
 	redir->target = target;
+	redir->body = NULL;
+	redir->raw = quoted_word(target);
 	redir->next = NULL;
 	if (par->redir_tail == NULL)
 		cmd->redirs = redir;
@@ -306,6 +330,7 @@ static void	redir_free(t_redir *redir)
 	while (redir != NULL)
 	{
 		next = redir->next;
+		free(redir->body);
 		free(redir);
 		redir = next;
 	}

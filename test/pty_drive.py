@@ -571,6 +571,35 @@ def case_ai_risky_not_preloaded(binary, rep):
     return "".join(screens)
 
 
+def case_heredoc_prompt(binary, rep):
+    """
+    "<<" govdesi DEVAM PROMPTU ile okunur ve gecmise yazilmaz.
+
+    Iki sey olculuyor:
+      - prompt "> " oluyor; normal prompt kalsa kullanici komut
+        bekledigini sanirdi
+      - govde satirlari gecmise GIRMIYOR; yukari ok komutun kendisini
+        getiriyor, govdenin son satirini degil
+    """
+    sh = Shell(binary)
+    sh.ask(b"cat << SON\n")
+    prompted = sh.wait_for("> ")
+    sh.send(b"govde-satiri\n")
+    sh.send(b"SON\n")
+    ran = sh.wait_for("govde-satiri", skip=1)
+    sh.quiet()
+    sh.ask(b"\x1b[A")
+    recalled = sh.wait_for("cat << SON", skip=1)
+    sh.send(b"\x03")
+    sh.ask(b"exit\n")
+    alive, info = sh.close()
+    rep.check("<< devam promptu basildi", prompted, sh.screen()[-300:])
+    rep.check("<< govdesi girdiye verildi", ran, sh.screen()[-300:])
+    rep.check("<< govdesi gecmise yazilmadi", recalled, sh.screen()[-400:])
+    rep.check("<< sonrasi kabuk duzgun kapandi", not alive, info)
+    return sh.screen()
+
+
 def case_eof(binary, rep):
     """Ctrl-D gercek dosya sonu olarak taninir."""
     sh = Shell(binary)
@@ -605,6 +634,7 @@ def main():
         case_child_signal_mask,
         case_ai_suggestion_preloaded,
         case_ai_risky_not_preloaded,
+        case_heredoc_prompt,
     ):
         screens.append(case(binary, rep))
 

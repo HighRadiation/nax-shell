@@ -432,8 +432,6 @@ run_stderr "parantez desteklenmiyor"      $'( a )\n'              "desteklenmeye
 run_case   "son durum sonraki satirda okunur" $'false\necho $?\n' "1"
 run_case   "sozdizimi durumu okunur"          $'ls |\necho $?\n'  "2"
 
-run_stderr "<< henuz kosmuyor"            $'cat << SON\n'         "<< yonlendirmesi bu asamada calistirilmiyor"
-run_status "<< kodu 1"                    $'cat << SON\n'         1
 
 run_case   "iki asamali boru"             $'printf "a\\nb\\nc\\n" | wc -l\n'      "3"
 run_case   "uc asamali boru"              $'printf "a\\nb\\nc\\n" | grep -v b | wc -l\n' "2"
@@ -519,6 +517,31 @@ run_case   "boru icindeki export etkisiz" $'echo x | export NAXY=1\necho "[$NAXY
 # "command not found" cikar; bu yuzden birlesik cikti bos olmak zorunda.
 # Mutasyon denemesi bu boslugu gosterdi.
 run_merged "boru icinde yerlesik taninir" $'echo x | export NAXY=1\n'   ""
+
+# --- here-document ---
+# Govde ayristirmadan SONRA toplaniyor: kabugun girdi yolu bir satirdan
+# fazlasini okuyor. Davranisin tamami bash ile karsilastirildi.
+run_case   "govde girdiye verilir"        $'cat << SON\nbir\niki\nSON\n' "bir
+iki"
+# Sinirlayici TAM eslesmeli; "SONX" satiri "SON"u kapatmaz.
+run_case   "sinirlayici tam eslesir"      $'cat << SON\nSONX\nSON\n' "SONX"
+# Tirnaksiz sinirlayici: govdedeki degisken genisletilir.
+run_case   "tirnaksiz sinirlayici genisletir" $'export A=dunya\ncat << SON\nmerhaba $A\nSON\n' "merhaba dunya"
+# Tirnakli sinirlayici: govde HARFI HARFINE gider. Kullanicinin "$" iceren
+# bir metni aynen gondermesinin tek yolu bu.
+# Beklenen deger TEK TIRNAK icinde: run.sh kendi icinde genisletmesin.
+run_case   "tirnakli sinirlayici harfi harfine" \
+	$'export A=dunya\ncat << "SON"\nmerhaba $A\nSON\n' 'merhaba $A'
+# Bos govde gecerli.
+run_case   "bos govde gecerli"            $'cat << SON\nSON\necho bitti\n' "bitti"
+# Boru hattinda da calisir.
+run_case   "boru hattinda govde"          $'cat << SON | tr a-z A-Z\nkucuk\nSON\n' "KUCUK"
+# Birden fazla govde YAZILDIKLARI SIRADA okunur; son yonlendirme kazanir.
+run_case   "cok govdede sira korunur"     $'cat << A << B\natilan\nA\nkullanilan\nB\n' "kullanilan"
+# Dosya sonu gelirse toplanan kadari kullanilir ve uyari basilir; bash da
+# boyle yapiyor. Satiri tamamen reddetmek yazilan her seyi kaybettirirdi.
+run_stderr "dosya sonu uyari verir"       $'cat << SON\nyarim\n' "dosya sonuyla kesildi"
+run_case   "dosya sonunda toplanan kullanilir" $'cat << SON\nyarim\n' "yarim"
 
 # --- boru hatti listesi: ; && || ---
 # Anlamlarin tamami bash ile karsilastirilarak olculdu.

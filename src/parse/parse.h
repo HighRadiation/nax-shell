@@ -126,10 +126,24 @@ typedef struct s_arg
 ** type yalnizca T_REDIR_IN, T_REDIR_OUT, T_APPEND ya da T_HEREDOC olur.
 ** target da odunc alinmis bir sozcuk token'idir.
 */
+/*
+** Bir yonlendirme.
+**
+** body ve raw YALNIZCA "<<" icin anlamli:
+**   body  satir satir toplanan ham govde; SAHIPLI, ast_free birakir
+**   raw   sinirlayici tirnakli miydi. Tirnakliysa govde genisletilmez;
+**         bash boyle davraniyor ve kural "sinirlayicinin tirnagina bak"
+**         seklinde, govdenin icine bakmak degil
+**
+** Govde neden burada: toplama ayristirmadan SONRA yapiliyor, cunku
+** okunacak satir sayisi ancak sinirlayici bilindikten sonra belli olur.
+*/
 typedef struct s_redir
 {
 	t_tok			type;
 	const t_token	*target;
+	char			*body;
+	int				raw;
 	struct s_redir	*next;
 }	t_redir;
 
@@ -234,6 +248,14 @@ typedef struct s_field
 }	t_field;
 
 /* Genisletilmis yonlendirme: turu ve cozulmus dosya adi. */
+/*
+** Genisletilmis yonlendirme.
+**
+** path alani "<<" icin DOSYA YOLU DEGIL, gonderilecek govde metnidir.
+** Ayri bir alan eklemek yerine ayni alanin kullanilmasinin sebebi: her
+** iki halde de "bu yonlendirmenin verisi" anlamini tasiyor ve
+** calistirici tipe bakip ne yapacagini zaten biliyor.
+*/
 typedef struct s_xredir
 {
 	t_tok			type;
@@ -297,6 +319,11 @@ typedef struct s_expander
 }	t_expander;
 
 t_pipeline	*ast_build(const t_token *tokens, t_ast_err *err);
+int			heredoc_fill(t_pipeline *list, const t_shell *sh);
+int			exp_heredoc(const t_redir *redir, const t_shell *sh,
+				char **out);
+int			exp_raw_text(const char *text, const t_shell *sh,
+				char **out, t_exp_err *err);
 void		ast_free(t_pipeline *list);
 char		*ast_dump(const t_pipeline *list);
 

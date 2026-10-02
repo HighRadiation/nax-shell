@@ -17,6 +17,7 @@
 #include "nax.h"
 #include "parse.h"
 #include <stdlib.h>
+#include <string.h>
 
 /* Genisletilmis yonlendirme listesini serbest birakir. */
 static void	xredir_free(t_xredir *redir)
@@ -75,6 +76,31 @@ static int	resolve_target(const t_token *word, const t_shell *sh,
 	return (1);
 }
 
+/*
+** "<<" govdesini genisletir ya da oldugu gibi kopyalar.
+**
+** Sinirlayici tirnakliysa govde HARFI HARFINE gider; tirnaksizsa icindeki
+** degiskenler genisletilir. Kural sinirlayicinin yazimina bakiyor,
+** govdenin icerigine degil - bash de boyle davraniyor ve bu, kullanicinin
+** "$" iceren bir metni aynen gondermesinin tek yolu.
+**
+** ALAN AYIRMA YOK: govde tek bir metin, arguman listesi degil. Bosluklar
+** ve yenisatirlar oldugu gibi kalmak zorunda.
+*/
+int	exp_heredoc(const t_redir *redir, const t_shell *sh, char **out)
+{
+	t_exp_err	err;
+
+	if (redir->body == NULL)
+		return (0);
+	if (redir->raw)
+	{
+		*out = strdup(redir->body);
+		return (*out != NULL);
+	}
+	return (exp_raw_text(redir->body, sh, out, &err));
+}
+
 /* Cozulmus yonlendirmeyi listenin sonuna ekler. */
 static int	xredir_push(t_xcmd *out, t_xredir **tail, t_tok type, char *path)
 {
@@ -126,7 +152,13 @@ static int	expand_args(const t_cmd *cmd, const t_shell *sh, t_xcmd *out,
 	return (1);
 }
 
-/* Komutun tum yonlendirmelerini sirasi korunarak cozer. */
+/*
+** Komutun tum yonlendirmelerini sirasi korunarak cozer.
+**
+** "<<" AYRI YOLDAN GECER: onun hedefi bir dosya yolu degil sinirlayici ve
+** cozulecek sey toplanan govde. Ayni dongude ele alinmasi, sirasinin
+** digerlerine gore korunmasini sagliyor.
+*/
 static int	expand_redirs(const t_cmd *cmd, const t_shell *sh, t_xcmd *out,
 		t_exp_err *err)
 {
@@ -138,7 +170,12 @@ static int	expand_redirs(const t_cmd *cmd, const t_shell *sh, t_xcmd *out,
 	redir = cmd->redirs;
 	while (redir != NULL)
 	{
-		if (resolve_target(redir->target, sh, &path, err) == 0)
+		if (redir->type == T_HEREDOC)
+		{
+			if (exp_heredoc(redir, sh, &path) == 0)
+				return (0);
+		}
+		else if (resolve_target(redir->target, sh, &path, err) == 0)
 			return (0);
 		if (xredir_push(out, &tail, redir->type, path) == 0)
 			return (0);

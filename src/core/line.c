@@ -413,6 +413,27 @@ static char	*read_interactive(void)
 	return (line);
 }
 
+/*
+** Devam satiri okur; cagiran serbest birakir. EOF'ta NULL doner.
+**
+** NEDEN AYRI ISLEV: "<<" govdesi normal bir komut satiri degil. Gecmise
+** YAZILMAZ (kullanici govdeyi yukari okla geri cagirmak istemez) ve
+** prompt farkli olmak zorunda, yoksa kullanici komut bekledigini sanir.
+**
+** On yukleme kancasi burada DEVRE DISI: bekleyen bir oneri govdenin
+** icine girerdi.
+*/
+char	*ln_read_more(const t_shell *sh)
+{
+	char	*line;
+
+	if (sh->interactive == 0)
+		return (read_plain());
+	rl_startup_hook = NULL;
+	line = readline("> ");
+	return (line);
+}
+
 /* Bir satir okur; cagiran serbest birakir. EOF'ta NULL doner. */
 char	*ln_read(const t_shell *sh)
 {

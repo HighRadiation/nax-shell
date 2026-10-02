@@ -66,6 +66,15 @@ cat > |	!yonlendirmeden sonra dosya adi bekleniyor
 cat < > out	!yonlendirmeden sonra dosya adi bekleniyor
 cat <<	!yonlendirmeden sonra dosya adi bekleniyor
 
+# --- here-document ---
+# Ayristirici yalnizca sinirlayiciyi goruyor; govde ayristirmadan SONRA
+# toplaniyor, cunku kac satir okunacagi ancak sinirlayici bilindikten
+# sonra belli olur.
+cat << "SON"	(cmd [cat] <<[SON])
+cat << A << B	(cmd [cat] <<[A] <<[B])
+cat << SON | wc	(pipe (cmd [cat] <<[SON]) (cmd [wc]))
+cat << SON > cikti	(cmd [cat] <<[SON] >[cikti])
+
 # --- boru hatti listesi: ; && || ---
 # TEK HATLIK LISTEDE sarmalayici yazilmaz, o yuzden yukaridaki vakalarin
 # hicbiri bu katmandan etkilenmedi.

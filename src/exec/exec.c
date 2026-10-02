@@ -23,9 +23,9 @@
 **   once kaydedilip sonra geri yuklenmek zorunda. Cocukta bu sorun yoktu,
 **   cunku cocuk zaten yok oluyordu.
 **
-** HENUZ YOK:
-**   "<<" yonlendirmesi. Govdesini okumak icin okuma dongusunden ek satir
-**   almak gerekiyor; bu, kabugun girdi yolunu degistiren ayri bir is.
+** "<<" ARTIK CALISIYOR: govdesi ayristirmadan sonra toplaniyor ve
+**   calistiriciya metin olarak geliyor; redir.c onu bir boru uzerinden
+**   girdiye veriyor.
 */
 
 #include "nax.h"
@@ -295,24 +295,6 @@ static int	run_pipeline(t_shell *sh, const t_cmd *cmds)
 	return (code);
 }
 
-/* Bu asamada calistirilamayan yapiyi soyler; yoksa NULL doner. */
-static const char	*unsupported(const t_cmd *cmds)
-{
-	const t_redir	*redir;
-
-	while (cmds != NULL)
-	{
-		redir = cmds->redirs;
-		while (redir != NULL)
-		{
-			if (redir->type == T_HEREDOC)
-				return ("<< yonlendirmesi bu asamada calistirilmiyor");
-			redir = redir->next;
-		}
-		cmds = cmds->next;
-	}
-	return (NULL);
-}
 
 /*
 ** Bir boru hattinin bu baglantiyla kosmasi gerekiyor mu.
@@ -333,14 +315,6 @@ static int	should_run(t_join join, int last)
 /* Tek bir boru hattini kosar ve durum kodunu dondurur. */
 static int	run_one_pipeline(t_shell *sh, const t_cmd *cmds)
 {
-	const char	*reason;
-
-	reason = unsupported(cmds);
-	if (reason != NULL)
-	{
-		ex_warn(reason);
-		return (1);
-	}
 	if (cmds->next == NULL)
 		return (run_one(sh, cmds));
 	return (run_pipeline(sh, cmds));

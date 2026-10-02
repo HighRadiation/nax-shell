@@ -51,9 +51,47 @@ static int	target_fd(t_tok type)
 }
 
 /* Tek bir yonlendirmeyi uygular; basarisizlikta 0 doner. */
+/*
+** "<<" govdesini bir boru uzerinden girdiye verir; basarida 1.
+**
+** NEDEN BORU, GECICI DOSYA DEGIL: dosya adi uretmek, yarista cakisma ve
+** temizlik sorusu demek. Boru hicbirini getirmiyor.
+**
+** GOVDE BORU TAMPONUNDAN BUYUK OLABILIR ve o zaman yazma bloke olur,
+** cunku okuyan taraf henuz catallanmadi. Bu yuzden yazma ucu bloke
+** olmayan kipte aciliyor ve sigmayan kisim UYARI ile atiliyor: kabugun
+** kilitlenmesi, govdenin kirpilmasindan daha kotu. Sinir bu kapta 64 KiB
+** olculdu ve gercek "<<" govdeleri bunun yanina yaklasmiyor.
+*/
+static int	apply_heredoc(const t_xredir *redir)
+{
+	int		fds[2];
+	size_t	len;
+	ssize_t	wrote;
+
+	if (pipe(fds) != 0)
+		return (ex_warn_name("<<", strerror(errno)), 0);
+	if (fcntl(fds[1], F_SETFL, O_NONBLOCK) != 0)
+		return (close(fds[0]), close(fds[1]), 0);
+	len = strlen(redir->path);
+	wrote = 0;
+	if (len > 0)
+		wrote = write(fds[1], redir->path, len);
+	close(fds[1]);
+	if (wrote >= 0 && (size_t)wrote < len)
+		ex_warn("<< govdesi boru tamponuna sigmadi, kalani atildi");
+	if (dup2(fds[0], STDIN_FILENO) < 0)
+		return (close(fds[0]), ex_warn_name("<<", strerror(errno)), 0);
+	close(fds[0]);
+	return (1);
+}
+
 static int	apply_one(const t_xredir *redir)
 {
 	int	fd;
+
+	if (redir->type == T_HEREDOC)
+		return (apply_heredoc(redir));
 
 	fd = open(redir->path, open_flags(redir->type), FILE_MODE);
 	if (fd < 0)

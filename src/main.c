@@ -49,7 +49,13 @@ static void	report_error(t_shell *sh, const char *message, int status)
 	sh->last_status = status;
 }
 
-/* Token listesinden boru hatti listesini kurar ve calistiriciya verir. */
+/*
+** Token listesinden boru hatti listesini kurar ve calistiriciya verir.
+**
+** "<<" govdeleri AYRISTIRMADAN SONRA toplaniyor: kac satir okunacagi
+** ancak sinirlayici bilindikten sonra belli oluyor. Bu yuzden kabugun
+** girdi yolu burada bir satirdan fazlasini okuyabiliyor.
+*/
 static void	run_tokens(t_shell *sh, const t_token *tokens)
 {
 	t_ast_err	err;
@@ -60,6 +66,12 @@ static void	run_tokens(t_shell *sh, const t_token *tokens)
 	{
 		if (err.message != NULL)
 			report_error(sh, err.message, 2);
+		return ;
+	}
+	if (heredoc_fill(list, sh) == 0)
+	{
+		report_error(sh, "<< govdesi okunamadi", 1);
+		ast_free(list);
 		return ;
 	}
 	ex_run(sh, list);
