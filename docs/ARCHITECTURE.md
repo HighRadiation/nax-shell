@@ -347,6 +347,9 @@ src/
     naxd.c         süreci başlatma, yazma, gözetim, yeniden doğma
     naxd_wait.c    cevabı bekleme: poll, kendine boru, zaman aşımı
     bridge.c       kabuğun AI'ı nasıl kullandığı: ne basılır, ne tampona konur
+    redact.c       gönderilecek metinden sırları temizler
+    ctx.c          oturum bağlamı halkası ve "ctx" yerleşiği
+    ctx_facts.c    oturumun olguları: dizin, git dalı, ortam adları
 naxd/              yardımcı süreç; yalnızca Python standart kütüphanesi
   naxd.py          giriş ve döngü
   wire.py          tel biçiminin Python tarafı
@@ -369,6 +372,8 @@ test/
   pyharness.py     Python tarafı için tablo tabanlı test iskelesi
   unit_wire.py     tel biçiminin iki dilde aynı olduğunu doğrular
   unit_naxd.py     gerçek yardımcı sürecin uçtan uca davranışı
+  test_redact.c    sır temizleme; korpusun yarısı negatif vaka
+  test_ctx.c       bağlam halkası ve kapalı dizin eşleşmesi
   cases/*.tsv      vaka tabloları; yeni vaka için yeniden derleme gerekmez
   pty_drive.py     sahte terminal üzerinden etkileşimli yol testleri
 naxd/              AI yardımcı süreci (sonraki aşamada)

@@ -132,6 +132,47 @@ eklendi:
 - C istemcisi **gerçek** Python daemon'ıyla el sıkışıyor. Taklitle konuşmak
   "kendi yazdığımla anlaşıyorum" demekti.
 
+### M3 — paylaşılan durum
+
+Projeyi ayırt eden ikinci şey hayata geçti: içerideki AI çalışma dizinini, son
+komutları, çıkış kodlarını ve git dalını **sormadan** biliyor. Terminalde ayrı
+bir program olarak koşan bir yardımcı bunları bilemez.
+
+```
+nax ~/nax-shell $ ctx
+--- her istekte gidiyor ---
+dizin: ~/nax-shell
+git dali: main
+isletim sistemi: Linux
+en sik kullanilan: git 412, make 180, ls 97
+son komutlar:
+  [0] echo bir
+  [127] boylebirkomutyok
+--- yalniz oturum acilisinda gitti ---
+ortam degiskeni adlari: PATH, HOME, TERM, ...
+--- bunun disinda hicbir sey ---
+```
+
+### Gizlilik sözleşmesi uygulandı
+
+`docs/PRIVACY.md` bir belge değil, uygulanan bir sözleşme. Dört kuralı:
+
+| Kural | Nasıl uygulandı |
+|---|---|
+| Temizleme **kabuk tarafında** | Sekiz kalıp, veri yardımcı sürece verilmeden önce taranıyor. Hatalı ya da ele geçirilmiş bir süreç, hiç almadığı veriyi sızdıramaz |
+| Boşlukla başlayan satır bağlama girmez | Kullanıcının zaten bildiği bir hareket, bağlamdan kaçmanın yolu oluyor |
+| Ortam değişkenlerinin **yalnızca adları** | Değerler asla; ad listesi oturum açılışında bir kez |
+| Belirli dizinlerde AI **tamamen kapalı** | Karar gönderen tarafta, yani veri karşı tarafa hiç ulaşmıyor |
+
+**Maskeleme girişte yapılıyor, çıkışta değil.** İki sebebi var: `nax ctx`
+gidecek baytları aynen basmak zorunda ve maskelemeyi gönderme anına bırakmak
+iki ayrı yol üretirdi; ikincisi daha önemli — temizlenmemiş bir sır bellekte
+hiç durmuyor.
+
+**`nax ctx` gizlilik iddiasını denetlenebilir kılan tek özellik.** Belgeye
+güvenmek zorunda değilsin, bakabilirsin. Testi de bunu kullanıyor: sahte bir
+sır ekip çıktıda görünmediğini doğruluyor.
+
 ### Test durumu
 
 | Grup | Vaka | Mutasyon |
@@ -145,25 +186,15 @@ eklendi:
 | **yardımcı süreç senaryoları** | **23** | **23/23** |
 | **gerçek daemon (Python)** | **20** | — |
 | **tel biçimi çaprazlama** | **36** | — |
-| boru ile bütünleşik | 115 | — |
+| **maskeleyici** | **47** | **17/17** |
+| **bağlam halkası** | **26** | — |
+| boru ile bütünleşik | 124 | — |
 | sahte terminal (pty) | 35 | — |
 
 Yakalanmayan dört mutasyon davranışı hiç değiştirmiyor; gerekçeleri kodda ve
 [FINDINGS.md](FINDINGS.md)'de yazılı.
 
 ## Sırada
-
-### M3 — paylaşılan durum
-
-Projeyi ayırt eden ikinci şey: içerideki AI cwd'yi, son komutları, `$?`'yi ve
-git dalını **sormadan** bilir.
-
-- oturum bağlamı için halka tampon
-- `HELLO` anlık görüntüsü: cwd, git dalı, son durum, son komutlar
-- maskeleme; kurallar [PRIVACY.md](PRIVACY.md)'de
-- `nax ctx` — bağlamda ne olduğunu kullanıcıya gösteren komut
-- `EXPLAIN` yolu: tek başına `?` son hatayı açıklatır (sınıflandırıcıda hazır,
-  bağlı değil)
 
 ### M4 — tamamlama
 

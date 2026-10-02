@@ -181,8 +181,37 @@ Kurulum: `cp nax.conf.example nax.conf`, `chmod 600 nax.conf`, `api_key`
 satırını doldur. Ayarı kaydettiğin an geçerli olur; kabuğu yeniden başlatmak
 gerekmez. Ayrıntısı [docs/CONFIG.md](docs/CONFIG.md)'de.
 
-Sıradaki: paylaşılan durum — içerideki AI'ın cwd'yi, son komutları ve git
-dalını **sormadan** bilmesi. Bkz. [docs/ROADMAP.md](docs/ROADMAP.md).
+**İçerideki AI artık sormadan biliyor:** çalışma dizini, son komutlar ve
+çıkış kodları, git dalı, en sık kullandığın araçlar. Terminalde ayrı bir
+program olarak koşan bir yardımcı bunları bilemez.
+
+Ne gönderildiğini görmek için tahmin etmen gerekmiyor:
+
+```
+nax ~/nax-shell $ ctx
+--- her istekte gidiyor ---
+dizin: ~/nax-shell
+git dali: main
+son komutlar:
+  [0] echo bir
+  [127] boylebirkomutyok
+--- yalniz oturum acilisinda gitti ---
+ortam degiskeni adlari: PATH, HOME, TERM, ...
+--- bunun disinda hicbir sey ---
+```
+
+Gizlilik sözleşmesi dört kuralla uygulanıyor — ayrıntısı
+[docs/PRIVACY.md](docs/PRIVACY.md)'de:
+
+- **Sır temizleme kabuk tarafında**, veri yardımcı sürece verilmeden önce.
+  Hatalı ya da ele geçirilmiş bir süreç, hiç almadığı veriyi sızdıramaz.
+- **Boşlukla başlayan satır bağlama hiç girmez** — bağlamdan kaçmanın yolu.
+- Ortam değişkenlerinin **yalnızca adları** gider, değerleri asla.
+- Belirli dizinlerde AI **tamamen kapatılabilir**; kararı kabuk verir, yani
+  veri karşı tarafa hiç ulaşmaz.
+
+Sıradaki: tamamlama — `<<`, `&& || ;`, dosya adı genişletmesi ve çevrimdışı
+için belirlenimci niyet tablosu. Bkz. [docs/ROADMAP.md](docs/ROADMAP.md).
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 
