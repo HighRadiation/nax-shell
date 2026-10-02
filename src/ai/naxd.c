@@ -70,6 +70,7 @@ void	naxd_init(t_naxd *nx, char *const *argv, const char *log_path)
 	nx->tries = 0;
 	nx->warned = 0;
 	nx->has_key = 0;
+	nx->nogo = NULL;
 	nx->first_fail_ms = 0;
 	nx->next_try_ms = 0;
 	nx->tick_ms = NAXD_TICK_MS;
@@ -292,6 +293,18 @@ static void	apply_times(t_naxd *nx, const t_frame *reply)
 	}
 }
 
+/* AI'in kapali oldugu dizin listesini saklar. */
+static void	keep_nogo(t_naxd *nx, const t_frame *reply)
+{
+	const char	*text;
+
+	free(nx->nogo);
+	nx->nogo = NULL;
+	text = proto_field(reply, "nogo");
+	if (text != NULL && *text != '\0')
+		nx->nogo = strdup(text);
+}
+
 /*
 ** Sureci baslatir ve READY bekler; basarida 1.
 **
@@ -318,6 +331,7 @@ int	naxd_open(t_naxd *nx)
 	{
 		nx->has_key = ready_has_key(&reply);
 		apply_times(nx, &reply);
+		keep_nogo(nx, &reply);
 		proto_free(&reply);
 		nx->state = AI_READY;
 		nx->tries = 0;
@@ -342,6 +356,8 @@ void	naxd_close(t_naxd *nx)
 		close(nx->wake_wr);
 	nx->wake_rd = -1;
 	nx->wake_wr = -1;
+	free(nx->nogo);
+	nx->nogo = NULL;
 }
 
 /*

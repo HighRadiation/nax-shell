@@ -9,6 +9,9 @@
 **   ";" ile ayrilmis "[kod] metin" kayitlari, ESKIDEN YENIYE. Halkada
 **   hicbir sey kalmadiysa "yok".
 **
+** "D:liste|dizin" vakalari AI'in kapali oldugu dizin eslesmesini olcuyor;
+** beklenen "kapali" ya da "acik".
+**
 ** NEDEN SIRA OLCULUYOR:
 **   Dil modelleri sonda olana daha cok dikkat eder ve son komut en
 **   degerli olan. Sira ters olsa baglam yaniltici olurdu.
@@ -212,11 +215,43 @@ static void	case_check(t_score *score, int no, char *input, char *want)
 		report_fail(score, no, input, want, "kontrol basarisiz");
 }
 
+/*
+** Kapali dizin eslesmesi vakasi.
+**
+** Girdi "liste|dizin", beklenen "kapali" ya da "acik". En kritik kural
+** onek eslesmesi: "/tmp" listesi "/tmpfoo" dizinini KAPATMAMALI, yoksa
+** liste istemeden komsu dizinleri de kapatirdi.
+*/
+static void	case_dir(t_score *score, int no, char *input, char *want)
+{
+	char		*bar;
+	const char	*got;
+
+	bar = strchr(input, '|');
+	if (bar == NULL)
+	{
+		report_fail(score, no, input, want, "liste|dizin bekleniyor");
+		return ;
+	}
+	*bar = '\0';
+	if (ai_dir_blocked(input, bar + 1))
+		got = "kapali";
+	else
+		got = "acik";
+	*bar = '|';
+	if (strcmp(got, want) == 0)
+		score->passed++;
+	else
+		report_fail(score, no, input, want, got);
+}
+
 /* Vakayi onekine gore yonlendirir. */
 static void	run_case(t_score *score, int no, char *input, char *want)
 {
 	if (strncmp(input, "C:", 2) == 0)
 		case_check(score, no, input + 2, want);
+	else if (strncmp(input, "D:", 2) == 0)
+		case_dir(score, no, input + 2, want);
 	else
 		case_ring(score, no, input, want);
 }

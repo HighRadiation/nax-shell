@@ -39,6 +39,8 @@ KIP ARGUMANLA SECILIR: fake_naxd.py <kip> [gecikme_saniye]
     risky_cmd       Riskli bir komut onerir ve danger=1 der.
     risky_lie       Riskli bir komut onerir ama danger=0 DER. Kabuk karsi
                     tarafa guvenmeyip kendi listesine bakmali.
+    nogo            READY'de AI'in kapali oldugu dizin listesini bildirir;
+                    liste NAX_FAKE_NOGO ortam degiskeninden okunur.
     silent_fast     READY'de KISA sure bildirir, sonra hic cevap vermez.
                     Kabugun el sikismada bildirilen zaman asimini gercekten
                     uyguladigini olcmek icin.
@@ -50,6 +52,7 @@ cevabi tamponda kalmis olabilir diye zaman asimina ugrardi.
 """
 
 import base64
+import os
 import sys
 import time
 
@@ -101,7 +104,10 @@ def main():
         sys.stderr.flush()
     if mode == "slow_ready":
         time.sleep(delay)
-    if mode == "silent_fast":
+    if mode == "nogo":
+        send("READY\tid=0\tversion=1\tkey=yes\tnogo=%s"
+             % os.environ.get("NAX_FAKE_NOGO", "/yok"))
+    elif mode == "silent_fast":
         send("READY\tid=0\tversion=1\tkey=yes\ttimeout=1\tspinner=0.3")
     elif mode != "no_ready":
         send("READY\tid=0\tversion=1\tkey=taklit")

@@ -39,3 +39,23 @@ C:clear_empties	ok
 # "nax ctx" ciktisi gonderilen blogu ICERMELI; gizlilik iddiasini
 # denetlenebilir kilan tek ozellik bu.
 C:dump_contains_block	ok
+
+# --- AI'in kapali oldugu dizinler ---
+# Liste bos ya da bilinmiyorsa kapatma yok.
+D:|/tmp/x	acik
+# Tam eslesme ve alt dizinler kapali.
+D:/tmp/gizli|/tmp/gizli	kapali
+D:/tmp/gizli|/tmp/gizli/alt/daha-alt	kapali
+# EN KRITIK KURAL: onek eslesmesi komsu dizini kapatmamali. "/tmp/gizli"
+# listesi "/tmp/gizlice" dizinini kapatirsa liste istemeden yayilir.
+D:/tmp/gizli|/tmp/gizlice	acik
+D:/tmp/gizli|/tmp/gizli-degil	acik
+# Ust dizin kapali degil.
+D:/tmp/gizli|/tmp	acik
+# Birden fazla giris iki nokta ile ayrilir.
+D:/opt/a:/tmp/gizli|/tmp/gizli/alt	kapali
+D:/opt/a:/tmp/gizli|/var/baska	acik
+# Sondaki bolu isareti fark yaratmamali.
+D:/tmp/gizli/|/tmp/gizli/alt	kapali
+# Kok dizin listelenirse her sey kapali olur; kullanicinin karari.
+D:/|/herhangi/bir/yer	kapali

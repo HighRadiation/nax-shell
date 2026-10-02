@@ -41,6 +41,7 @@ DEFAULTS = {
     "local_fallback": "true",
     "timeout": "15",
     "spinner": "4",
+    "ai_off_dirs": "",
 }
 
 

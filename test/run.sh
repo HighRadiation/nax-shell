@@ -582,6 +582,19 @@ export NAX_NAXD="python3 test/fake_naxd.py garbage"
 run_stderr "bozuk cevap baglantiyi keser" $'dun degisen dosyalari goster\n' "baglantisi koptu"
 unset NAX_NAXD
 
+# AI'in kapali oldugu dizinde HICBIR SEY gonderilmez. Karar gonderen
+# tarafta oldugu icin veri karsi tarafa hic ulasmiyor; kullaniciya tek
+# satir bildirilir ve satir duz kabuk gibi ele alinir.
+export NAX_NAXD="python3 test/fake_naxd.py nogo"
+export NAX_FAKE_NOGO="$PWD"
+run_stderr "kapali dizinde AI calismaz"   $'dun degisen dosyalari goster\n' "bu dizinde AI kapali"
+run_status "kapali dizinde durum 127"     $'dun degisen dosyalari goster\n' 127
+# Liste baska bir dizini gosteriyorsa istek normal gider.
+export NAX_FAKE_NOGO="/kesinlikle-olmayan-bir-dizin"
+run_stderr "liste disinda AI calisir"     $'dun degisen dosyalari goster\n' "nax: ls -la"
+unset NAX_FAKE_NOGO
+unset NAX_NAXD
+
 # --- cocuga sizan sinyal davranisi ---
 run_signal_mask_check
 run_inherited_ignore_check

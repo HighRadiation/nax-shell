@@ -17,6 +17,12 @@
 **   bilgilendirici davranis - satiri sessizce yutmak kullaniciyi neyin
 **   olmadigi konusunda karanlikta birakirdi.
 **
+** BAZI DIZINLERDE AI TAMAMEN KAPALI:
+**   Liste yapilandirmada duruyor ve el sikismada kabuga bildiriliyor.
+**   Karari kabuk veriyor, cunku "hic gonderme" karari GONDEREN tarafta
+**   olmak zorunda - karsi tarafa sorup beklemek veriyi zaten yollamis
+**   olmak demekti.
+**
 ** RISK KARARINI KABUK KENDI VERIYOR:
 **   Yardimci surec bir "danger" ipucu gonderiyor ama tek basina ona
 **   guvenilmiyor. Kabuk komutun basini kendi listesiyle de denetliyor ve
@@ -121,6 +127,106 @@ static void	send_hello(void)
 }
 
 /*
+** Yoldaki bastaki "~" yerine ev dizinini koyar; cagiran birakir.
+**
+** Liste kullanici tarafindan yazildigi icin "~/musteri-islari" bicimi
+** beklenmeli; genisletmeden karsilastirmak listeyi ise yaramaz kilardi.
+*/
+static char	*expand_home(const char *path)
+{
+	const char	*home;
+	t_buf		buf;
+
+	buf_init(&buf);
+	if (path[0] == '~' && (path[1] == '/' || path[1] == '\0'))
+	{
+		home = getenv("HOME");
+		if (home != NULL && buf_push_str(&buf, home) == 0)
+			return (buf_free(&buf), NULL);
+		path++;
+	}
+	if (buf_push_str(&buf, path) == 0)
+		return (buf_free(&buf), NULL);
+	return (buf_take(&buf));
+}
+
+/*
+** Dizin, verilen agacin icinde mi; esitlik de sayilir.
+**
+** SINIR KONTROLU SART: yalnizca onek karsilastirmak "/tmp/gizli"
+** listesinin "/tmp/gizlice" dizinini de kapatmasina yol acardi, yani
+** liste istemeden komsu dizinlere yayilirdi. Eslesmeden sonraki
+** karakter ya dizi sonu ya bolu olmak zorunda.
+**
+** KOK AYRI ELE ALINIYOR: kokun kendisi bolu ile bittigi icin sinir
+** kontrolu orada yanlis sonuc verir. Liste "/" iceriyorsa kullanici her
+** yerde kapatmak istemis demektir.
+*/
+static int	inside(const char *cwd, const char *root)
+{
+	size_t	len;
+
+	len = strlen(root);
+	while (len > 1 && root[len - 1] == '/')
+		len--;
+	if (len == 0)
+		return (0);
+	if (len == 1 && root[0] == '/')
+		return (cwd[0] == '/');
+	if (strncmp(cwd, root, len) != 0)
+		return (0);
+	return (cwd[len] == '\0' || cwd[len] == '/');
+}
+
+/*
+** Calisma dizini AI'in kapali oldugu bir agacin icinde mi.
+**
+** Liste bos ya da bilinmiyorsa kapali degil. Esleme halinde HICBIR istek
+** gonderilmiyor: karar gonderen tarafta oldugu icin veri karsi tarafa
+** hic ulasmiyor.
+**
+** LISTE VE DIZIN DISARIDAN VERILIYOR, calisma dizininden okunmuyor.
+** Sebebi test edilebilirlik: en kritik kural burada onek eslesmesi ve
+** "/tmp" listesinin "/tmpfoo" dizinini KAPATMAMASI bir vakayla
+** olculmeli. Gercek dizini okuyan sarmalayici hemen altinda.
+*/
+int	ai_dir_blocked(const char *list, const char *cwd)
+{
+	char	*copy;
+	char	*part;
+	char	*root;
+	int		hit;
+
+	if (list == NULL || *list == '\0' || cwd == NULL)
+		return (0);
+	copy = strdup(list);
+	if (copy == NULL)
+		return (0);
+	hit = 0;
+	part = strtok(copy, ":");
+	while (part != NULL && hit == 0)
+	{
+		root = expand_home(part);
+		if (root != NULL && *root != '\0')
+			hit = inside(cwd, root);
+		free(root);
+		part = strtok(NULL, ":");
+	}
+	free(copy);
+	return (hit);
+}
+
+/* Calisma dizini kapali bir agacin icinde mi. */
+static int	in_forbidden_dir(void)
+{
+	char	cwd[1024];
+
+	if (getcwd(cwd, sizeof(cwd)) == NULL)
+		return (0);
+	return (ai_dir_blocked(g_ai.nogo, cwd));
+}
+
+/*
 ** Baglantiyi gerekiyorsa kurar; konusmaya hazirsa 1 doner.
 **
 ** Basarisizlikta sebep oturumda bir kez yazilir. Her satirda yeniden
@@ -159,6 +265,11 @@ static int	ensure_ready(t_shell *sh)
 			g_ai.warned = 1;
 			ex_warn("AI kapali: nax.conf icinde api_key bos");
 		}
+		return (0);
+	}
+	if (in_forbidden_dir())
+	{
+		ex_warn("bu dizinde AI kapali; hicbir sey gonderilmedi");
 		return (0);
 	}
 	send_hello();

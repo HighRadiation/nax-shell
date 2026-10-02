@@ -21,6 +21,11 @@ HATA CIKISI GUNLUGE GIDER:
     Buradan yazilan her sey oraya gider: kullanicinin ekrani bozulmaz ama
     ayrinti da kaybolmaz.
 
+AI'IN KAPALI OLDUGU DIZINLER DE EL SIKISMADA GIDER:
+    "Hic gonderme" karari GONDEREN tarafta olmak zorunda; listeyi burada
+    tutup kabuga bildirmek, karari dogru tarafta birakirken yapilandirmayi
+    tek kaynakta tutuyor.
+
 SURELER EL SIKISMADA BILDIRILIR:
     timeout ve spinner yapilandirmada duruyor ama yapilandirmayi yalnizca
     bu taraf okuyor. Kabugun da bu surelere ihtiyaci var: beklemeyi o
@@ -154,6 +159,7 @@ def main():
         "key": "yes" if cfg.has_key() else "no",
         "timeout": "%g" % cfg.number("timeout"),
         "spinner": "%g" % cfg.number("spinner"),
+        "nogo": cfg.text("ai_off_dirs"),
     }))
     if not cfg.has_key():
         log("api_key bos: AI kapali, kabuk duz kabuk olarak calisir")

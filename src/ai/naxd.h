@@ -82,6 +82,10 @@ typedef void	(*t_tick_fn)(void);
 ** wake_rd ve wake_wr kendine boru. Yazma ucu sinyal isleyicisine
 ** veriliyor; okuma ucu beklemede gozlenen ikinci tanimlayici.
 **
+** nogo, AI'in tamamen kapali oldugu dizinlerin listesi. Yapilandirmada
+** duruyor ama karari kabuk veriyor: "hic gonderme" karari GONDEREN
+** tarafta olmak zorunda, yoksa veri karsi tarafa ulasmis olurdu.
+**
 ** has_key, READY kaydindaki "key" alanindan gelir. Kabuk bunu bilmek
 ** zorunda: anahtar yoksa istek gondermek bos bir tur demek ve kullaniciya
 ** oturumda BIR KEZ sebebi soylenmeli. Anahtarsiz durum bir hata hali
@@ -109,6 +113,7 @@ typedef struct s_naxd
 	int			tries;
 	int			warned;
 	int			has_key;
+	char		*nogo;
 	long		first_fail_ms;
 	long		next_try_ms;
 	long		tick_ms;

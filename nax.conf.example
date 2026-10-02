@@ -50,3 +50,13 @@ local_model    = qwen2.5-coder:7b
 local_fallback = true
 timeout        = 15
 spinner        = 4
+
+# ---------------------------------------------------------------------------
+# AI'in TAMAMEN kapatilacagi dizinler, iki nokta ile ayrilir.
+# Calisma dizini bunlardan birinin icindeyse hicbir istek gonderilmez ve
+# kullaniciya tek satir bildirilir. Hassas depolar icin.
+#   ornek: ai_off_dirs = ~/musteri-islari:/opt/gizli
+# Liste kabuga el sikismada bildirilir; karari kabuk veriyor, cunku
+# "hic gonderme" karari gonderen tarafta olmak zorunda.
+# ---------------------------------------------------------------------------
+ai_off_dirs    =

@@ -156,6 +156,7 @@ char		*ctx_dump(void);
 char		*redact_text(const char *text);
 int			redact_is_secret_name(const char *name);
 
+int			ai_dir_blocked(const char *list, const char *cwd);
 void		ai_intent(t_shell *sh, const char *text);
 void		ai_explain(t_shell *sh);
 void		ai_stop(void);
