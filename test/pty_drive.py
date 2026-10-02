@@ -430,6 +430,36 @@ def case_fix_history_ranking(binary, rep):
     return "".join(screens)
 
 
+def case_fix_far_not_preloaded(binary, rep):
+    """
+    IKI ADIM uzaktaki oneri yazilir ama tampona KONULMAZ.
+
+    Gercek kullanimda olctuk: kullanici "yerel" yazdi, kabuk iki adim
+    uzaktaki "vercel" komutunu onerdi, tampona koydu ve Enter bir dagitim
+    aracini calistirdi. Tek adim uzaklik parmak kaymasidir; iki adim
+    uzaklik cogu zaman baska bir sozcuktur.
+
+    Vaka "eksport" kullaniyor cunku adayi bir YERLESIK ("export"), yani
+    PATH'ten bagimsiz ve her makinede ayni.
+    """
+    sh = Shell(binary)
+    sh.ask(b"eksport uzak-vaka\n")
+    suggested = sh.wait_for("bunu mu demek istediniz: export")
+    sh.quiet()
+    loaded = "export uzak-vaka" in sh.screen()
+    sh.ask(b"echo uzak-sonrasi\n")
+    alive = sh.wait_for("uzak-sonrasi", skip=1)
+    sh.ask(b"exit\n")
+    sh.close()
+    rep.check("iki adim uzaktaki oneri yazildi", suggested,
+              sh.screen()[-300:])
+    rep.check("iki adim uzaktaki oneri tampona KONULMADI", not loaded,
+              sh.screen()[-400:])
+    rep.check("uzak oneri sonrasi kabuk calismaya devam etti", alive,
+              sh.screen()[-300:])
+    return sh.screen()
+
+
 def case_fix_quoted_head_not_preloaded(binary, rep):
     """
     Bas satirin basinda aynen gecmiyorsa satir yeniden yazilmaz.
@@ -633,6 +663,7 @@ def main():
         case_eof,
         case_fix_preload,
         case_fix_danger_not_preloaded,
+        case_fix_far_not_preloaded,
         case_fix_history_ranking,
         case_fix_quoted_head_not_preloaded,
         case_child_signal_mask,

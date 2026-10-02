@@ -135,7 +135,10 @@ static void	remember_command(t_shell *sh, const char *line)
 **      modunda on yukleme hicbir sey yapmiyor, yalnizca bir dize
 **      ayrilmis kaliyor. Kaldirilmasi davranisi degistirmiyor; niyet
 **      belirtmek ve bosa ayirma yapmamak icin duruyor.
-**   3  Bas satirin basinda aynen gecmiyorsa; fix_rewrite NULL doner.
+**   3  Uzaklik FIX_PRELOAD_DIST'ten buyukse. Oneri yazilir ama
+**      hazirlanmaz: iki adim uzaklik cogu zaman parmak kaymasi degil,
+**      baska bir sozcuktur. Gerekcenin olcumu ai.h'de yazili.
+**   4  Bas satirin basinda aynen gecmiyorsa; fix_rewrite NULL doner.
 **
 ** DURUM KODU 127: hicbir sey kosmadi, yani bash'in "command not found"
 ** kodu dogru cevap. Oneri yazilmis olmasi bunu degistirmiyor.
@@ -149,7 +152,8 @@ static void	report_fix(t_shell *sh, const t_decision *d)
 	fprintf(stderr, "%s: bunu mu demek istediniz: %s\n", NAX_NAME,
 		d->fix.name);
 	sh->last_status = 127;
-	if (fix_is_dangerous(d->fix.name) || sh->interactive == 0)
+	if (fix_is_dangerous(d->fix.name) || sh->interactive == 0
+		|| d->fix.distance > FIX_PRELOAD_DIST)
 		return ;
 	fixed = fix_rewrite(d->text, d->fix.from, d->fix.name);
 	if (fixed != NULL)

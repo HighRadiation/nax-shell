@@ -70,6 +70,24 @@ typedef enum e_route
 */
 # define FIX_MAX_LEN 24
 
+/*
+** Onerinin duzenleme tamponuna KONULDUGU en buyuk uzaklik.
+**
+** Oneri esigi (fix_limit) uzun sozcukte 2'ye kadar cikiyor ve bu DOGRU:
+** iki adim uzaktaki bir adi yazmak kullaniciya yardim ediyor. Ama tampona
+** koymak baska bir sey - tampona konan satir tek Enter'la kosuyor.
+**
+** OLCULDU, GERCEK KULLANIMDA: kullanici "yerel" yazdi (bir Turkce
+** sozcuk), kabuk iki adim uzaktaki "vercel" komutunu onerdi ve tampona
+** koydu; Enter'a basildiginda bir dagitim araci calisti. Tek adim uzaklik
+** parmak kaymasidir; iki adim uzaklik cogu zaman BASKA BIR SOZCUKTUR.
+**
+** O yuzden oneri iki adima kadar YAZILIR, yalnizca bir adima kadar
+** HAZIRLANIR. Yanlis tahminin bedeli bir satir yazmak, bir program
+** calistirmak degil.
+*/
+# define FIX_PRELOAD_DIST 1
+
 typedef struct s_fix
 {
 	char	from[FIX_MAX_LEN + 1];

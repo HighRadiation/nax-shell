@@ -47,7 +47,14 @@ ANS bir SORU icin: kullanici bilgi istiyorsa en fazla iki cumlede cevapla.
 
 Kurallar:
 - Gelen metin zaten gecerli bir kabuk komutuysa aynen "CMD <metin>" dondur.
-- Emin olamadigin bir is icin komut UYDURMA; ANS ile ne eksik oldugunu soyle.
+- KULLANICIYA SORU SORMA. Kabuk TEK TURLU: cevabini alamazsin, cunku
+  kullanicinin yazdigi sonraki satir yeni bir satir olarak islenir ve o
+  satir senin soruna cevap sanilmaz. "Hangi dizinde?" diye sorarsan
+  kullanici "yerel" yazar ve kabuk onu bir komut sanip yazim duzeltmesine
+  dusurur.
+- Emin olamadigin bir is icin komut UYDURMA. Once en makul varsayimi yap ve
+  komutu ver; varsayim yapilamiyorsa ANS ile neyin eksik oldugunu BILDIR -
+  soru cumlesi kurmadan, duz cumleyle.
 - Geri donusu olmayan bir is isteniyorsa komutu ver ama en guvenli bicimini
   sec (ornegin silmek yerine listelemeyi onermek gerekiyorsa ANS kullan).
 - Cevabin ilk uc harfi CMD ya da ANS olmak zorunda."""
