@@ -72,3 +72,7 @@ C:late_reader_recovers	ok
 C:deaf_write_does_not_hang	ok
 # Poll sinyalle kesilse de zaman asimi uzamamali.
 C:eintr_does_not_extend	ok
+# GERCEK yardimci surecle el sikisma. Taklitle konusmak "kendi yazdigimla
+# anlasiyorum" demek; uretimdeki asil eslesme C istemcisi ile Python
+# daemon'i ve bu vaka o ikisini karsilastiriyor.
+C:real_naxd_handshake	ok

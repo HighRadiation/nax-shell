@@ -8,6 +8,7 @@
 #
 # UC TEST GRUBU, UCU AYRI SEYI GORUR:
 #   birim testleri  modulleri dogrudan cagirir (NAX_UNITS ile verilir)
+#   python birimleri yardimci surecin tarafi (test/unit_*.py)
 #   boru testleri   ikiliyi boru ile besler, etkilesimsiz yolu kosar
 #   pty testleri    sahte terminalde etkilesimli yolu kosar
 #
@@ -309,6 +310,16 @@ fi
 # Makefile bunlari NAX_UNITS icinde verir; elle kosuldugunda bos olabilir.
 UNIT_RC=0
 for unit in ${NAX_UNITS:-}; do
+	if [ -x "$unit" ]; then
+		"$unit" || UNIT_RC=1
+		printf "\n"
+	fi
+done
+
+# Python birim testleri: yardimci surecin kendi tarafi ve tel biciminin
+# iki dilde ayni olmasi. Makefile'dan gelmiyorlar cunku derlenmiyorlar;
+# dogrudan calistirilabilir dosyalar.
+for unit in test/unit_*.py; do
 	if [ -x "$unit" ]; then
 		"$unit" || UNIT_RC=1
 		printf "\n"

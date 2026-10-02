@@ -463,6 +463,62 @@ static int	check_eintr_does_not_extend(void)
 	return (state == ASK_TIMEOUT && spent < TEST_LIMIT_MS * 2);
 }
 
+/*
+** GERCEK yardimci surecle el sikisma.
+**
+** NEDEN TAKLIT YETMEZ: taklit bu testin beklentilerine gore yazildi, yani
+** onunla konusmak "kendi yazdigimla anlasiyorum" demek. Uretimdeki asil
+** eslesme C istemcisi ile PYTHON daemon'i. Bu vaka o ikisini
+** karsilastiriyor: gercek surec baslatiliyor, READY'si okunuyor ve bir
+** istek gonderiliyor.
+**
+** ANAHTARSIZ YAPILANDIRMA KULLANILIYOR: testin ag, anahtar ya da ucret
+** gerektirmemesi gerekiyor. Anahtar bos oldugunda dogru davranis READY
+** vermek ve istege tek satir hata donmektir - yani el sikisma ve hata
+** yolu bir arada olculuyor.
+*/
+static int	check_real_naxd_handshake(void)
+{
+	t_naxd	nx;
+	char	*argv[5];
+	t_frame	reply;
+	t_field	field;
+	t_askst	state;
+	FILE	*fp;
+	char	path[64];
+	int		ok;
+
+	snprintf(path, sizeof(path), "/tmp/nax_real_conf_XXXXXX");
+	if (mkstemp(path) < 0)
+		return (0);
+	fp = fopen(path, "w");
+	if (fp == NULL)
+		return (0);
+	fprintf(fp, "provider = groq\napi_key =\nmodel_intent = x\n");
+	fclose(fp);
+	setenv("NAX_CONF", path, 1);
+	argv[0] = (char *)"python3";
+	argv[1] = (char *)"naxd/naxd.py";
+	argv[2] = NULL;
+	naxd_init(&nx, argv, log_path());
+	nx.tick_ms = TEST_TICK_MS;
+	nx.limit_ms = TEST_LIMIT_MS * 4;
+	ok = naxd_open(&nx);
+	if (ok)
+	{
+		field.key = "text";
+		field.value = "dun degisen dosyalar";
+		proto_blank(&reply);
+		state = naxd_ask(&nx, FR_INTENT, &field, 1, &reply, on_tick);
+		ok = (state == ASK_ERR);
+		proto_free(&reply);
+	}
+	naxd_close(&nx);
+	unsetenv("NAX_CONF");
+	unlink(path);
+	return (ok);
+}
+
 /* Adi verilen kontrolu kosar. */
 static void	case_check(t_score *score, int no, char *input, char *want)
 {
@@ -484,6 +540,8 @@ static void	case_check(t_score *score, int no, char *input, char *want)
 		ok = check_late_reader_recovers();
 	else if (strcmp(input, "event_write_marks_dead") == 0)
 		ok = check_event_write_marks_dead();
+	else if (strcmp(input, "real_naxd_handshake") == 0)
+		ok = check_real_naxd_handshake();
 	else
 	{
 		report_fail(score, no, input, want, "boyle bir kontrol yok");

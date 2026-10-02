@@ -1,0 +1,54 @@
+# Gercek yardimci surecin ucu uca davranisi.
+#
+# Girdi sahte servisin kipi; bicimin tamami test/unit_naxd.py basliginda.
+# Kipler ve dondurdukleri metin test/stub_provider.py icinde.
+
+# --- komut onerisi ---
+# Modelin "CMD" basligi istek demek; cevap duzenleme satirina gidecek.
+ok	READY:yes;OK:request:ls -la:0
+# Fazla bosluk ve kucuk harf basliklar da taninmali.
+spaced	READY:yes;OK:request:ls -la:0
+# Model kurala ragmen kod blogu eklerse isaretler atilir; komut tek satir
+# olmak zorunda.
+fenced	READY:yes;OK:request:ls -la:0
+# Geri donusu olmayan komut isaretlenir. Bu yalnizca bir IPUCU: asil karari
+# kabuk kendi listesiyle veriyor.
+risky	READY:yes;OK:request:rm -rf /tmp/kazadan-sonra:1
+
+# --- soru cevabi ---
+# "ANS" basligi soru demek; cevap ekrana basilacak.
+answer	READY:yes;OK:question:bu bir dizin listesi
+# BASLIK YOKSA CEVAP SAYILIR. Sira bilincli: yanlis okunan bir metni basmak
+# zararsiz, yanlis okunan bir komutu duzenleme satirina yazmak degil.
+noprefix	READY:yes;OK:question:ls -la
+# Hata aciklamasi her zaman soru yolundan gider.
+explain:explain	READY:yes;OK:question:Komut bulunamadi, cunku PATH icinde boyle bir program yok.
+
+# --- anahtar yoksa ---
+# Anahtarsiz durum bir hata hali degil, desteklenen bir calisma bicimi:
+# acilista bildirilir ve kabuk duz kabuk olarak calisir.
+nokey	READY:no;ERR:saglayici
+
+# --- servis hatalari ---
+# Hepsi tek satir hataya cevrilir; ayrinti gunluge gider, ekrana degil.
+http500	READY:yes;ERR:saglayici
+http429	READY:yes;ERR:saglayici
+badjson	READY:yes;ERR:saglayici
+nochoices	READY:yes;ERR:saglayici
+empty	READY:yes;ERR:saglayici
+
+# --- tabloda anlatilamayanlar ---
+# Dosya degisince yeni ayar gecerli olur; kabugu yeniden baslatmak gerekmez.
+C:config_reload	ok
+# Ornek dosyadaki her anahtar kodda taninmali, yoksa sessizce yok sayilir.
+C:example_keys_known	ok
+# Taninmayan anahtar bildirilir; sessizce yok sayilmasi en sinir bozucu hata.
+C:unknown_key_warns	ok
+# Dusme kurali: iki bulut hatasindan sonra yerele gecilir.
+C:fallback_after_two_failures	ok
+# Basarili cagri sayaci sifirlar, yoksa oturum sonsuza kadar yerelde kalirdi.
+C:success_resets_counter	ok
+# Anahtar Bearer basligina konulur ve niyet isteginde sicaklik sifirdir.
+C:key_reaches_header	ok
+# Kullanicinin yazdigi metin modele oldugu gibi gider.
+C:intent_text_reaches_model	ok
