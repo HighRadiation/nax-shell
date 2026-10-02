@@ -1,6 +1,9 @@
 # NAX
 
-AI'ı terminalin *yanına* değil, kabuğun *dilinin içine* koyan bir komut kabuğu.
+**N**atural-language **A**ware e**X**ecution — AI'ı terminalin *yanına* değil,
+kabuğun *dilinin içine* koyan bir komut kabuğu.
+
+*[English version](README.en.md)*
 
 Ayrı bir mod yok, özel bir işaret yok, çağrılacak bir program adı yok. Aynı
 satıra hem komut hem niyet yazılır; hangisi olduğuna kabuk karar verir.

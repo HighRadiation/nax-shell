@@ -15,6 +15,16 @@ Açıklamalar burada da Türkçe, kullanıcıya yazılan hata mesajları da
 (`HATA: readline basliklari bulunamadi`) — programın her yerinde olduğu gibi.
 Ayrım şu: **terim İngilizce, cümle Türkçe.**
 
+**Kullanıcıya gösterilen her hata satırı, bakılacak yeri söylemek
+zorunda.** Durum kodu tek başına yeterli değil; gerekçe de gerekiyor.
+Bu kural bir desenden doğdu: bir gün içinde üç hata satırı aynı şekilde
+eksik çıktı — `AI baslatilamadi` (neden olduğunu söylemiyordu),
+`servis 403 dondurdu` (sebep gövdede duruyordu, çöpe atılıyordu),
+`yanit bos` (hiçbir şey loglanmıyordu). Üçü de kullanıcıyı yanlış yere
+baktırdı; 403 görünce insan ilk iş anahtarını suçluyor. Bu kod tabanının
+iç doğruluğu güçlü, insana durumu anlatması tarihsel olarak zayıf — kural
+bu yüzden yazılı. Tam yanıt günlüğe, tek satırlık gerekçe ekrana.
+
 **Kod dosyaları tamamen ASCII.** Türkçe karakterler ASCII karşılıklarıyla
 yazılır, uzun tire yerine `-` kullanılır. Dokümanlar (`docs/*.md`) bu kuralın
 dışında — orada tam Türkçe yazım geçerli.
