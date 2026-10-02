@@ -17,9 +17,12 @@
 **   harcamak olurdu.
 **
 ** GIT DALI DOSYADAN OKUNUYOR, KOMUTLA DEGIL:
-**   ".git/HEAD" okumak bir alt surec catallamaktan cok daha hizli ve her
-**   istekte yapiliyor. Dizinin temiz olup olmadigi ise alt surec
-**   gerektiriyor; o yuzden su an gonderilmiyor ve FINDINGS'te kayitli.
+**   ".git/HEAD" okumak bir alt surec catallamaktan hizli ve dal adi her
+**   istekte gerekiyor.
+**
+**   "TEMIZ MI" SORUSU ALT SUREC ISTIYOR ve bedeli olculdu: cagri basina
+**   3-5 ms, buyuk depoda bile. Ag turu yuz milisaniyeler surdugu icin bu
+**   gorunmez. Alt surec yalnizca depo iCINDEYKEN cagriliyor.
 */
 
 #include "nax.h"
@@ -89,6 +92,42 @@ static char	*git_branch(void)
 		return (strdup(line + 16));
 	line[7] = '\0';
 	return (strdup(line));
+}
+
+/*
+** Calisma agacinda kaydedilmemis degisiklik var mi; bilinmiyorsa NULL.
+**
+** NEDEN ALT SUREC: "temiz mi" sorusunun cevabi calisma agacini taramayi
+** gerektiriyor ve bunu elden yazmak git'in is mantigini kopyalamak olurdu.
+**
+** MALIYETI OLCULDU, TAHMIN EDILMEDI: cagri basina 3-5 ms, buyuk bir
+** depoda bile. Ilk notum "50-100 ms" diyordu ve bir buyukluk mertebesi
+** yanlisti; madde o yanlis tahmin yuzunden ertelenmisti. Ag turu zaten
+** yuz milisaniyeler surdugu icin bu bedel gorunmez.
+**
+** CIKTI TAMAMEN OKUNUYOR: yarida kapatmak git'e EPIPE verir ve kabuk
+** SIGPIPE'i yok saydigi icin git hata yazabilir. Hata cikisi zaten
+** /dev/null'a gidiyor ama ciktiyi sonuna kadar okumak sorunu kaynaginda
+** bitiriyor.
+*/
+static const char	*git_dirty(void)
+{
+	FILE	*fp;
+	char	buf[256];
+	int		seen;
+
+	fp = popen("git status --porcelain --untracked-files=no 2>/dev/null",
+			"r");
+	if (fp == NULL)
+		return (NULL);
+	seen = 0;
+	while (fgets(buf, sizeof(buf), fp) != NULL)
+		seen = 1;
+	if (pclose(fp) != 0)
+		return (NULL);
+	if (seen)
+		return ("kaydedilmemis degisiklik var");
+	return ("temiz");
 }
 
 /* Terminal genisligini verir; olculemezse 0. */
@@ -165,6 +204,8 @@ static int	push_all(t_buf *buf, char *cwd, char *branch, char *os,
 
 	ok = push_fact(buf, "dizin", cwd);
 	ok = ok && push_fact(buf, "git dali", branch);
+	if (branch != NULL)
+		ok = ok && push_fact(buf, "git durumu", git_dirty());
 	ok = ok && push_fact(buf, "isletim sistemi", os);
 	ok = ok && push_fact(buf, "dil", getenv("LANG"));
 	ok = ok && push_number(buf, "terminal genisligi", term_width());

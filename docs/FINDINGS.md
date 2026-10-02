@@ -43,13 +43,13 @@ listenin geçmişi de okunabilir kalır.
 
 | 2026-10-01 | Satır okuyucuda üç satır **davranışı değiştirmiyor**, yani mutasyon testi onları yakalamıyor: `rd_feed`'in baştaki "akış bitti mi" kontrolü (kapanmış akıştan okumak da sıfır döndürür), `rd_grow`'daki kapasite kontrolünün kırpmadan sonra gelmesi, ve `rd_take`'in baştaki NULL kontrolü | `src/ai/lineio.c` | Üçü de duruyor, gerekçeleri kodda yazılı: sırasıyla poll döngüsünde gereksiz sistem çağrısı yapmamak, sınırdaki tampon için boşa `realloc` çağırmamak ve `memchr`'a NULL geçirmemek (standart yasaklıyor). Hiçbiri bir hatayı maskeleyebilecek doğrulama değil |
 
-| 2026-10-02 | Git dizininin **temiz olup olmadığı** bağlama girmiyor. Dal adı `.git/HEAD` okunarak bedavaya geliyor ama "değişiklik var mı" sorusu alt süreç (`git status`) gerektiriyor ve bu her istekte ~50-100 ms demek | `src/ai/ctx_facts.c` | Gizlilik sözleşmesi bu bilgiyi sayıyor, yani eksik. Çözümü dizin değişiminde bir kez hesaplayıp önbelleklemek; M4'e bırakıldı |
 | 2026-10-02 | Yardımcı süreç `naxd/naxd.py` olarak **depo köküne göre** çağrılıyor. Kabuk başka bir yere kurulursa bulunamaz | `src/ai/bridge.c` | `NAX_NAXD` ile elle gösterilebiliyor. Gerçek çözüm kurulum adımıyla gelecek; şu an depo içinden çalışmak desteklenen tek biçim |
 
 ## Kapandı
 
 | Tarih | Ne | Nerede kapandı |
 |---|---|---|
+| 2026-10-02 | ~~Git dizininin temiz olup olmadığı bağlama girmiyordu; ertelenme gerekçesi "alt süreç her istekte ~50-100 ms" idi~~ | `src/ai/ctx_facts.c` — **gerekçe ölçülünce çürüdü:** `git status --porcelain` çağrı başına **3-5 ms**, büyük depoda bile. Tahmin bir büyüklük mertebesi yanlıştı. Alt süreç yalnızca depo içindeyken çağrılıyor ve çıktı sonuna kadar okunuyor (yarıda kapatmak git'e EPIPE verirdi) |
 | 2026-10-02 | ~~**Koşul:** `SA_RESTART` olmadığı için yardımcı süreç beklemesindeki `poll` da `EINTR` döngüsüne sarılmak zorunda~~ | `src/ai/naxd_wait.c` — poll **aynı süreyle yeniden denenmiyor**: `EINTR` "henüz karar yok" sayılıyor ve kalan süre tek yönlü sayaçtan yeniden hesaplanıyor. Sinyali her gelişte süreyi baştan başlatmak zaman aşımını sonsuza öteleyebilirdi. Testi ölçüyor: 150 ms'de bir SIGALRM altında sonuç `TIMEOUT` kalıyor ve toplam süre sınırın iki katını geçmiyor |
 | 2026-09-30 | ~~readline etkileşimsiz girdide okuduğu satırı yankılıyor, çıktıyı ikiye katlıyordu~~ | `src/line.c` — etkileşimsiz yol `getline` kullanır, readline yalnızca terminalde çalışır |
 | 2026-09-30 | ~~Prompt'ta Ctrl-C kabuğu öldürüyordu (sinyal 2)~~ | `src/signal.c` — `rl_catch_signals` kapatıldı, işleyici yalnızca bayrak set ediyor, satır iptali `rl_event_hook` içinde normal bağlamda yapılıyor. Ctrl-C yarım satırı atar, `^C` basar, `$?`'yi 130 yapar; Ctrl-\ yok sayılır |

@@ -183,6 +183,51 @@ run_case_contains() {
 	esac
 }
 
+# Git dali ve temizlik durumunun baglama girdigini olcer.
+#
+# Uc hal: temiz depo, kirli depo ve depo disi. Son hal onemli - depo
+# disinda git satirlari HIC yazilmamali, yoksa her dizinde bos bir alt
+# surec catallanirdi.
+run_git_state_check() {
+	local dir out abs
+
+	# IKILI MUTLAK YOLA CEVRILIYOR: vakalar baska dizine gecip kosuyor ve
+	# goreli bir yol orada cozulmez.
+	case "$BIN" in
+		/*) abs="$BIN" ;;
+		*) abs="$PWD/${BIN#./}" ;;
+	esac
+	dir="$FIX/gitdepo"
+	mkdir -p "$dir"
+	( cd "$dir" && git init -q && git config user.email t@t \
+		&& git config user.name T && echo bir > a.txt && git add . \
+		&& git commit -qm ilk ) >/dev/null 2>&1
+	out="$(cd "$dir" && printf 'ctx\n' | timeout "$CASE_TIMEOUT" "$abs" 2>/dev/null)"
+	case "$out" in
+		*"git durumu: temiz"*) PASS=$((PASS + 1));
+			printf "  ${G}gecti${N}   temiz depo temiz bildirilir\n" ;;
+		*) FAIL=$((FAIL + 1));
+			printf "  ${R}patladi${N} temiz depo temiz bildirilir\n" ;;
+	esac
+	echo degisiklik >> "$dir/a.txt"
+	out="$(cd "$dir" && printf 'ctx\n' | timeout "$CASE_TIMEOUT" "$abs" 2>/dev/null)"
+	case "$out" in
+		*"kaydedilmemis degisiklik var"*) PASS=$((PASS + 1));
+			printf "  ${G}gecti${N}   kirli depo kirli bildirilir\n" ;;
+		*) FAIL=$((FAIL + 1));
+			printf "  ${R}patladi${N} kirli depo kirli bildirilir\n" ;;
+	esac
+	out="$(cd "$FIX" && printf 'ctx\n' | timeout "$CASE_TIMEOUT" "$abs" 2>/dev/null \
+		| grep -c '^git ' || true)"
+	if [ "$out" = "0" ]; then
+		PASS=$((PASS + 1))
+		printf "  ${G}gecti${N}   depo disinda git satiri yok\n"
+	else
+		FAIL=$((FAIL + 1))
+		printf "  ${R}patladi${N} depo disinda git satiri yok (gelen %s satir)\n" "$out"
+	fi
+}
+
 run_out_absent() {
 	local name="$1" input="$2" unwanted="$3" got
 
@@ -615,6 +660,10 @@ run_stderr "artalan isareti desteklenmiyor"  $'sleep 1 &\n' "desteklenmeyen oper
 # "nax ctx" bir sonraki istekte gidecek baytlari basar. Gizlilik iddiasini
 # denetlenebilir kilan tek ozellik bu: belgeye guvenmek zorunda degilsin.
 run_case_contains "ctx kosan komutu gosterir" $'echo kanit\nctx\n' "[0] echo kanit"
+# Git dali ve calisma agacinin durumu baglama giriyor. Fikstur kendi
+# deposunu kuruyor: depo ici/disi ve temiz/kirli ayrimini olcmenin tek
+# yolu bu.
+run_git_state_check
 # SAHTE SIR EKLENIP GORUNMEDIGI DOGRULANIYOR. PRIVACY.md bunu acikca
 # testin isi sayiyor.
 run_out_absent "ctx sirri sizdirmaz" \
