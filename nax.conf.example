@@ -21,6 +21,22 @@ base_url       = https://api.groq.com/openai/v1
 api_key        =
 
 # ---------------------------------------------------------------------------
+# Claude kullanmak icin provider = anthropic yazip su ucu ve model adlarini
+# kullan. Claude ayri bir bicim konusuyor ve farklar kucuk degil: uc nokta
+# "/messages", anahtar "x-api-key" basliginda, sistem istemi ust duzey bir
+# alan ve SICAKLIK GONDERILMIYOR - guncel modeller sicakligi reddediyor.
+# Bunlarin hepsi kod tarafinda ele alindi; burada yalnizca adres ve model
+# adlari degisiyor.
+#
+#   provider       = anthropic
+#   base_url       = https://api.anthropic.com/v1
+#   model_intent   = claude-haiku-4-5
+#   model_explain  = claude-opus-5
+#
+# Model adlari TAM olarak boyle yazilir; sonlarina tarih eklenmez.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
 # Gorev basina model.
 # Niyeti tek komuta cevirmek dar bir istir; kucuk ve hizli model daha iyidir,
 # cunku burada gecikme kalitenin parcasidir. Hata aciklamak akil ister,

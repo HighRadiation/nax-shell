@@ -12,9 +12,12 @@ NE OLCULUYOR:
     bicimde konusuyor mu" sorusunu da yanitliyor.
 
 GIRDI BICIMI:
-    <kip>[:tur]   Kip sahte servisin model adi olarak gonderilir ve onun
-                  hangi cevabi dondurecegini secer. tur "intent" (ontanimli)
-                  ya da "explain".
+    <kip>[@saglayici][:tur]
+                  Kip sahte servisin model adi olarak gonderilir ve onun
+                  hangi cevabi dondurecegini secer. Saglayici "anthropic"
+                  yazilirsa Claude bagdastiricisi kullanilir; yazilmazsa
+                  uyumlu bagdastirici. tur "intent" (ontanimli) ya da
+                  "explain".
     C:<ad>        Tabloda anlatilamayan adli kontrol.
 
 BEKLENEN BICIMI:
@@ -41,7 +44,7 @@ import pyharness
 import stub_provider
 import wire
 
-CONF_TEMPLATE = """provider = groq
+CONF_TEMPLATE = """provider = %(provider)s
 base_url = %(base)s
 api_key = %(key)s
 model_intent = %(mode)s
@@ -76,11 +79,12 @@ class quiet_log:
         return False
 
 
-def write_conf(base, mode, key="testanahtari", extra=""):
+def write_conf(base, mode, key="testanahtari", extra="", provider="groq"):
     """Gecici bir yapilandirma dosyasi yazar ve yolunu dondurur."""
     handle = tempfile.NamedTemporaryFile("w", suffix=".conf", delete=False,
                                          encoding="utf-8")
-    handle.write(CONF_TEMPLATE % {"base": base, "mode": mode, "key": key})
+    handle.write(CONF_TEMPLATE % {"base": base, "mode": mode, "key": key,
+                                  "provider": provider})
     handle.write(extra)
     handle.close()
     return handle.name
@@ -131,10 +135,13 @@ def describe(lines):
 def case_play(report, number, given, want):
     """Senaryo vakasi: kipi secip tek bir istek gonderir."""
     mode, _, task = given.partition(":")
+    provider = "groq"
+    if "@" in mode:
+        mode, _, provider = mode.partition("@")
     task = task or "intent"
     server, base = stub_provider.start()
     key = "" if mode == "nokey" else "testanahtari"
-    conf = write_conf(base, mode, key=key)
+    conf = write_conf(base, mode, key=key, provider=provider)
     try:
         if task == "explain":
             frame = wire.build("EXPLAIN", 1,
@@ -157,7 +164,8 @@ def check_config_reload():
         before = cfg.text("model_intent")
         with open(conf, "w", encoding="utf-8") as handle:
             handle.write(CONF_TEMPLATE
-                         % {"base": base, "mode": "degisti", "key": "k"})
+                         % {"base": base, "mode": "degisti", "key": "k",
+                            "provider": "groq"})
         os.utime(conf, (0, 0))
         changed = cfg.refresh()
         after = cfg.text("model_intent")
@@ -273,7 +281,95 @@ def check_intent_text_reaches_model():
     return got == "READY:yes;OK:request:echo sirket dosyasini bul:0"
 
 
+def check_anthropic_shape():
+    """
+    Claude istegi dogru bicimde gidiyor mu.
+
+    Uc sey olculuyor ve ucu de zorunlu:
+      - uc nokta "/messages", anahtar "x-api-key" basliginda, surum basligi
+        var
+      - sistem istemi UST DUZEY "system" alaninda, mesaj listesinde degil
+      - SICAKLIK GONDERILMIYOR: guncel modellerde gonderilmesi istegi 400
+        yapiyor, yani uyumlu bagdastiricinin govdesi oldugu gibi
+        kullanilamaz
+    """
+    server, base = stub_provider.start()
+    conf = write_conf(base, "ok", key="gizli", provider="anthropic")
+    try:
+        with quiet_log():
+            cfg = config_mod.Config(conf)
+            prov = provider_mod.Provider(cfg)
+            text = prov.ask("intent", [{"role": "system", "content": "SIS"},
+                                       {"role": "user", "content": "merhaba"}])
+        seen = server.seen[-1]
+    finally:
+        server.shutdown()
+        os.unlink(conf)
+    ok = seen["path"].endswith("/messages")
+    ok = ok and seen["api_key"] == "gizli" and seen["auth"] == ""
+    ok = ok and seen["version"] == "2023-06-01"
+    ok = ok and seen["system"] == "SIS"
+    ok = ok and all(m.get("role") != "system" for m in seen["messages"])
+    ok = ok and seen["temperature"] is None
+    ok = ok and isinstance(seen["max_tokens"], int)
+    return ok and text == "CMD ls -la"
+
+
+def check_anthropic_refusal():
+    """
+    Reddedilen istek hata sayilmali.
+
+    Red HTTP 200 ile geliyor, yani durum koduna bakmak yetmiyor;
+    "stop_reason" denetlenmek zorunda. Denetlenmezse bos bir cevap
+    kullaniciya "bos komut" olarak gider ve sebebi hic gorunmez.
+    """
+    server, base = stub_provider.start()
+    conf = write_conf(base, "refused", provider="anthropic")
+    try:
+        with quiet_log():
+            cfg = config_mod.Config(conf)
+            prov = provider_mod.Provider(cfg)
+            try:
+                prov.ask("intent", [{"role": "user", "content": "x"}])
+                return False
+            except provider_mod.ProviderError as exc:
+                return "reddedildi" in str(exc)
+    finally:
+        server.shutdown()
+        os.unlink(conf)
+
+
+def check_local_uses_compat():
+    """
+    Dusme yolu her zaman UYUMLU bicimi kullanir.
+
+    Saglayici "anthropic" olsa bile yerel sunucular uyumlu bicimi
+    konusuyor. Yerel cagriyi Claude bicimiyle yapmak, dusmenin hic
+    calismamasi demek olurdu.
+    """
+    server, base = stub_provider.start()
+    conf = write_conf(base, "http500", provider="anthropic")
+    try:
+        with quiet_log():
+            cfg = config_mod.Config(conf)
+            prov = provider_mod.Provider(cfg)
+            for _ in range(2):
+                try:
+                    prov.ask("intent", [{"role": "user", "content": "x"}])
+                except provider_mod.ProviderError:
+                    pass
+            text = prov.ask("intent", [{"role": "user", "content": "x"}])
+        seen = server.seen[-1]
+    finally:
+        server.shutdown()
+        os.unlink(conf)
+    return seen["path"].endswith("/chat/completions") and "yerelden" in text
+
+
 CHECKS = {
+    "anthropic_shape": check_anthropic_shape,
+    "anthropic_refusal": check_anthropic_refusal,
+    "local_uses_compat": check_local_uses_compat,
     "config_reload": check_config_reload,
     "example_keys_known": check_example_keys_known,
     "unknown_key_warns": check_unknown_key_warns,

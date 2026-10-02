@@ -1,12 +1,28 @@
 """
 provider.py - bulut ve yerel model cagrilari.
 
-TEK ADAPTOR, COK SAGLAYICI:
+NEDEN RESMI SDK DEGIL HAM HTTP:
+    Projenin kurali "yalnizca Python standart kutuphanesi" - kullanicinin
+    paket kurmasi gerekmemeli. Resmi istemci kutuphaneleri bu kurali
+    bozardi, o yuzden istekler urllib ile elden kuruluyor. Bu bilincli bir
+    secim, kolaylik degil.
+
+IKI ADAPTOR, COK SAGLAYICI:
     Groq, OpenRouter, OpenAI, NVIDIA ve yerel sunucularin cogu ayni
     "/v1/chat/completions" bicimini konusuyor. Bu yuzden aralarinda gecis
-    yapmak yalnizca adres, anahtar ve model adi degistirmek demek - kod
-    degismiyor. Claude'un ayri bicimi icin ayri bir adaptor gerekecek ve
-    bu modul o yuzden tek bir islev degil.
+    yapmak yalnizca adres, anahtar ve model adi degistirmek demek.
+
+    Claude ayri bir bicim konusuyor ve farklari KUCUK DEGIL:
+      - uc nokta "/messages", baslik "x-api-key" ve "anthropic-version"
+      - sistem istemi bir MESAJ degil, ust duzey "system" alani
+      - yanit metni "content" listesindeki "text" turu bloklarda
+      - "max_tokens" zorunlu
+      - SICAKLIK GONDERILMEZ: guncel modellerde "temperature" reddediliyor
+        ve istek 400 ile donuyor. Uyumlu adaptor sicaklik gonderdigi icin
+        ayni govdeyi iki yere yollamak mumkun degil.
+
+    Yerel sunucular uyumlu bicimi konustugu icin dusme yolu her zaman
+    uyumlu adaptoru kullaniyor.
 
 DUSME TETIKLEYICISI "INTERNET VAR MI" DEGIL:
     Gercek hayatta internetin gitmesi yilda birkac kez olur; servis
@@ -30,6 +46,9 @@ import urllib.error
 import urllib.request
 
 CLOUD_FAIL_LIMIT = 2
+
+# Claude bicimi icin zorunlu surum basligi.
+ANTHROPIC_VERSION = "2023-06-01"
 
 
 class ProviderError(Exception):
@@ -77,6 +96,81 @@ def read_content(data):
     return content
 
 
+def split_system(messages):
+    """Sistem istemini mesajlardan ayirir; (metin, kalan) dondurur."""
+    system = []
+    rest = []
+    for message in messages:
+        if message.get("role") == "system":
+            system.append(message.get("content", ""))
+        else:
+            rest.append(message)
+    return ("\n\n".join(system), rest)
+
+
+def build_compat(base, key, model, messages, limit, task):
+    """Uyumlu bicimde istek kurar; (adres, baslik, govde) dondurur."""
+    headers = {}
+    if key:
+        headers["Authorization"] = "Bearer %s" % key
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0.0 if task == "intent" else 0.3,
+        "max_tokens": limit,
+    }
+    return (base.rstrip("/") + "/chat/completions", headers, payload)
+
+
+def build_anthropic(base, key, model, messages, limit):
+    """
+    Claude biciminde istek kurar; (adres, baslik, govde) dondurur.
+
+    UC FARK, hepsi zorunlu:
+      - sistem istemi ust duzey "system" alaninda, mesaj listesinde DEGIL
+      - anahtar "x-api-key" basliginda ve surum basligi sart
+      - SICAKLIK YOK: guncel modellerde gonderilmesi istegi 400 yapiyor
+    """
+    system, rest = split_system(messages)
+    headers = {"anthropic-version": ANTHROPIC_VERSION}
+    if key:
+        headers["x-api-key"] = key
+    payload = {
+        "model": model,
+        "max_tokens": limit,
+        "messages": rest,
+    }
+    if system:
+        payload["system"] = system
+    return (base.rstrip("/") + "/messages", headers, payload)
+
+
+def read_anthropic(data):
+    """
+    Claude yanitindaki metni cikarir; beklenen yapi yoksa ProviderError.
+
+    Yanit metni "content" listesindeki "text" turu bloklarda duruyor ve
+    birden fazla blok olabilir. Ayrica istek guvenlik nedeniyle
+    reddedilmis olabilir: bu HTTP 200 ile geliyor, yani durum kodu
+    yetmiyor ve "stop_reason" denetlenmek zorunda.
+    """
+    if isinstance(data, dict) and data.get("stop_reason") == "refusal":
+        raise ProviderError("istek reddedildi")
+    blocks = data.get("content") if isinstance(data, dict) else None
+    if not isinstance(blocks, list):
+        sys.stderr.write("naxd: beklenmeyen yanit yapisi: %r\n" % (data,))
+        sys.stderr.flush()
+        raise ProviderError("yanit beklenen bicimde degil")
+    parts = []
+    for block in blocks:
+        if isinstance(block, dict) and block.get("type") == "text":
+            parts.append(block.get("text", ""))
+    text = "".join(parts)
+    if not text.strip():
+        raise ProviderError("yanit bos")
+    return text
+
+
 class Provider:
     """Cagrilari yonetir ve dusme kuralini uygular."""
 
@@ -116,6 +210,12 @@ class Provider:
             return self.config.text("model_explain")
         return self.config.text("model_intent")
 
+    def uses_anthropic(self, where):
+        """Bu cagri Claude bicimini mi kullanacak."""
+        if where == "local":
+            return False
+        return self.config.text("provider").strip().lower() == "anthropic"
+
     def ask(self, task, messages):
         """
         Modele sorar ve metni dondurur; basarisizlikta ProviderError.
@@ -128,16 +228,15 @@ class Provider:
         model = self.model_for(where, task)
         if not model.strip():
             raise ProviderError("model adi ayarlanmamis")
-        headers = {}
-        if key:
-            headers["Authorization"] = "Bearer %s" % key
-        payload = {
-            "model": model,
-            "messages": messages,
-            "temperature": 0.0 if task == "intent" else 0.3,
-            "max_tokens": 200 if task == "intent" else 400,
-        }
-        url = base.rstrip("/") + "/chat/completions"
+        limit = 200 if task == "intent" else 400
+        if self.uses_anthropic(where):
+            url, headers, payload = build_anthropic(base, key, model,
+                                                    messages, limit)
+            reader = read_anthropic
+        else:
+            url, headers, payload = build_compat(base, key, model, messages,
+                                                 limit, task)
+            reader = read_content
         try:
             data = post_json(url, headers, payload,
                              self.config.number("timeout"))
@@ -147,4 +246,4 @@ class Provider:
             raise
         if where == "cloud":
             self.cloud_fails = 0
-        return read_content(data)
+        return reader(data)

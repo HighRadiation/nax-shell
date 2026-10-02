@@ -37,6 +37,31 @@ kalitenin parçasıdır, iki saniye ile üç yüz milisaniye arasındaki fark
 OpenRouter eşdeğer bir başlangıçtır: tek anahtarla çok sayıda modele erişir ve
 aynı kod yolunu kullanır.
 
+### `anthropic` adaptörü neyi değiştiriyor
+
+Farklar küçük değil, hepsi kodda ele alındı; yapılandırmada yalnızca adres ve
+model adları değişir:
+
+| | uyumlu | anthropic |
+|---|---|---|
+| uç nokta | `/chat/completions` | `/messages` |
+| anahtar | `Authorization: Bearer` | `x-api-key` + `anthropic-version` |
+| sistem istemi | mesaj listesinde bir rol | **üst düzey `system` alanı** |
+| yanıt metni | `choices[0].message.content` | `content[]` içindeki `text` blokları |
+| sıcaklık | gönderilir | **gönderilmez** |
+
+Son satır bir incelik değil, zorunluluk: güncel Claude modellerinde
+`temperature` gönderilmesi isteği 400 ile reddettiriyor. Yani iki adaptör aynı
+gövdeyi paylaşamıyor.
+
+Bir de **ret** hali var: güvenlik sınıflandırıcısı isteği reddettiğinde yanıt
+HTTP 200 ile geliyor ve `stop_reason` alanında bildiriliyor. Durum koduna
+bakmak yetmez; denetlenmezse boş bir yanıt kullanıcıya "boş komut" olarak
+görünür ve sebebi hiç anlaşılmaz.
+
+**Düşme yolu her zaman uyumlu adaptörü kullanır**, sağlayıcı `anthropic` olsa
+bile: yerel model sunucuları uyumlu biçimi konuşuyor.
+
 ## Bulut varsayılan, yerel opsiyon
 
 Bu sıra bilinçlidir. Bulut her makinede çalışır, kurulum istemez ve hızlıdır.

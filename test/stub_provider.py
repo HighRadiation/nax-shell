@@ -7,6 +7,11 @@ NEDEN GERCEK SERVISE CIKMIYORUZ:
     modelin kalitesi degil, BIZIM yanit isleme yolumuz: baslik
     ayristirma, hata hali, dusme kurali.
 
+IKI BICIM BIR ARADA:
+    Uc nokta "/chat/completions" ise uyumlu bicim, "/messages" ise Claude
+    bicimi. Ikisini ayni sunucuda tutmak, testin ayni kiple iki
+    bagdastiriciyi de sinamasini sagliyor.
+
 KIP MODEL ADINDAN OKUNUR:
     Istegin "model" alani kip olarak kullaniliyor. Bu sayede yeni bir
     yapilandirma alani eklemek gerekmiyor ve her vaka yalnizca model adini
@@ -45,6 +50,15 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         """Sunucunun kendi gunlugu kapali; test ciktisini kirletmesin."""
 
+    def anthropic_body(self, mode, text):
+        """Claude biciminde yanit govdesi uretir."""
+        if mode == "refused":
+            return json.dumps({"stop_reason": "refusal",
+                               "stop_details": {"type": "refusal"},
+                               "content": []})
+        return json.dumps({"stop_reason": "end_turn",
+                           "content": [{"type": "text", "text": text}]})
+
     def do_POST(self):
         """Istegi okur, model adini kip sayar ve ona gore cevap verir."""
         length = int(self.headers.get("Content-Length", "0"))
@@ -56,8 +70,13 @@ class Handler(BaseHTTPRequestHandler):
         mode = str(payload.get("model", "ok"))
         self.server.seen.append({
             "mode": mode,
+            "path": self.path,
             "auth": self.headers.get("Authorization", ""),
+            "api_key": self.headers.get("x-api-key", ""),
+            "version": self.headers.get("anthropic-version", ""),
             "messages": payload.get("messages", []),
+            "system": payload.get("system"),
+            "max_tokens": payload.get("max_tokens"),
             "temperature": payload.get("temperature"),
         })
         if mode in FAILURES:
@@ -76,7 +95,10 @@ class Handler(BaseHTTPRequestHandler):
             text = "CMD echo %s" % user.splitlines()[0]
         else:
             text = REPLIES.get(mode, "CMD ls -la")
-        body = json.dumps({"choices": [{"message": {"content": text}}]})
+        if self.path.endswith("/messages"):
+            body = self.anthropic_body(mode, text)
+        else:
+            body = json.dumps({"choices": [{"message": {"content": text}}]})
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))

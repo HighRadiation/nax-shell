@@ -52,3 +52,17 @@ C:success_resets_counter	ok
 C:key_reaches_header	ok
 # Kullanicinin yazdigi metin modele oldugu gibi gider.
 C:intent_text_reaches_model	ok
+
+# --- Claude bagdastiricisi ---
+# Ayni kip, Claude bicimiyle: uc nokta ve yanit yapisi farkli ama sonuc ayni.
+ok@anthropic	READY:yes;OK:request:ls -la:0
+answer@anthropic	READY:yes;OK:question:bu bir dizin listesi
+# Istek bicimi: /messages ucu, x-api-key basligi, ust duzey system alani ve
+# SICAKLIK YOK. Son madde zorunlu: guncel modellerde sicaklik gonderilmesi
+# istegi 400 yapiyor.
+C:anthropic_shape	ok
+# Red HTTP 200 ile geliyor; durum koduna bakmak yetmiyor.
+C:anthropic_refusal	ok
+# Dusme yolu Claude saglayicisinda bile UYUMLU bicimi kullanir, cunku yerel
+# sunucular o bicimi konusuyor.
+C:local_uses_compat	ok
