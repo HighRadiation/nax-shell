@@ -59,11 +59,43 @@ static void	on_slow(void)
 }
 
 /*
+** Yardimci surecin betigini KENDI IKILIMIZIN yanindan bulur.
+**
+** NEDEN GORELI YOL YETMEZ: betik yolu kullanildigi anda cozuluyor ve o
+** an calisma dizini degismis olabilir. Olculdu: "cd /tmp" yazdiktan
+** sonra yardimci surec hic baslamiyordu, cunku "naxd/naxd.py" artik
+** /tmp icinde araniyordu. "cd" bir kabukta en sik kullanilan komut, yani
+** bu her oturumda yasanacak bir hataydi.
+**
+** Ikilinin yeri /proc/self/exe uzerinden okunuyor: calisma dizininden ve
+** kabugun nasil cagrildigindan bagimsiz. Okunamazsa goreli yola
+** dusuluyor; o da calisirsa calisir.
+*/
+static const char	*naxd_script(void)
+{
+	static char	path[1024];
+	ssize_t		len;
+	char		*cut;
+
+	if (path[0] != '\0')
+		return (path);
+	len = readlink("/proc/self/exe", path, sizeof(path) - 32);
+	if (len <= 0)
+		return ("naxd/naxd.py");
+	path[len] = '\0';
+	cut = strrchr(path, '/');
+	if (cut == NULL)
+		return ("naxd/naxd.py");
+	snprintf(cut, sizeof(path) - (size_t)(cut - path), "/naxd/naxd.py");
+	return (path);
+}
+
+/*
 ** Yardimci sureci baslatacak komutu kurar.
 **
 ** NAX_NAXD ortam degiskeni verildiyse o kullanilir; testler sahte bir
-** surece yoneltmek icin bunu kullaniyor. Varsayilan, depo kokundeki
-** gercek surec.
+** surece yoneltmek icin bunu kullaniyor. Varsayilan, ikilinin yanindaki
+** gercek surec - mutlak yol olarak.
 */
 static char	*const	*build_command(void)
 {
@@ -74,7 +106,7 @@ static char	*const	*build_command(void)
 	if (given == NULL || *given == '\0')
 	{
 		g_words[0] = (char *)"python3";
-		g_words[1] = (char *)"naxd/naxd.py";
+		g_words[1] = (char *)naxd_script();
 		g_words[2] = NULL;
 		return (g_words);
 	}

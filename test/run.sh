@@ -59,6 +59,11 @@ printf 'satir1\nsatir2\n' > "$FIX/girdi.txt"
 # Dosya adi genisletmesi fiksturu: iki ".g" dosyasi, bir gizli dosya, bir
 # alt dizin ve adinda YILDIZ gecen bir dosya. Son dosya onemli: desen ile
 # harf ayrimini olcen tek sey o.
+# Anahtarsiz yapilandirma: yardimci surecin BULUNDUGUNU olcmek icin.
+# Anahtar bos oldugunda surec baslar, "api_key bos" der ve API'"'"'ye hicbir
+# istek gitmez - yani bedelsiz bir kanit.
+printf 'provider=groq\napi_key=\nmodel_intent=m\n' > "$FIX/anahtarsiz.conf"
+
 mkdir "$FIX/glob"
 : > "$FIX/glob/bir.g"
 : > "$FIX/glob/iki.g"
@@ -188,6 +193,23 @@ run_case_contains() {
 # Uc hal: temiz depo, kirli depo ve depo disi. Son hal onemli - depo
 # disinda git satirlari HIC yazilmamali, yoksa her dizinde bos bir alt
 # surec catallanirdi.
+# Yardimci surecin dizin degisiminden sonra da bulundugunu olcer.
+run_naxd_found_check() {
+	local out
+
+	out="$(NAX_CONF="$FIX/anahtarsiz.conf" printf 'cd /tmp\nsunucuya baglan\n' \
+		| NAX_CONF="$FIX/anahtarsiz.conf" timeout "$CASE_TIMEOUT" "$BIN" 2>&1)"
+	case "$out" in
+		*"api_key bos"*)
+			PASS=$((PASS + 1))
+			printf "  ${G}gecti${N}   dizin degisse de yardimci surec bulunur\n" ;;
+		*)
+			FAIL=$((FAIL + 1))
+			printf "  ${R}patladi${N} dizin degisse de yardimci surec bulunur\n"
+			printf "    gelen: %s\n" "$out" ;;
+	esac
+}
+
 run_git_state_check() {
 	local dir out abs
 
@@ -677,6 +699,18 @@ run_out_absent "bosluklu satir baglama girmez" \
 # Ortam degiskenlerinin DEGERLERI gonderilmez; yalnizca adlar.
 run_out_absent "ortam degeri gonderilmez" $'ctx\n' "$NAX_TV"
 run_case_contains "ortam adi gonderilir" $'ctx\n' "NAX_TV"
+
+# YARDIMCI SUREC DIZIN DEGISSE DE BULUNMALI.
+#
+# Betik yolu goreli oldugunda "cd /tmp" yazdiktan sonra surec hic
+# baslamiyordu: "naxd/naxd.py" artik /tmp icinde araniyordu. "cd" bir
+# kabukta en sik kullanilan komut, yani her oturumda yasanacak bir
+# hataydi. Yol artik ikilinin yanindan, mutlak olarak bulunuyor.
+#
+# AYIRT EDICI MESAJ: surec bulunamazsa "baslatilamadi", bulunup anahtar
+# bos oldugunda "api_key bos" denir. Ikincisini gormek surecin
+# gercekten calistigini kanitliyor ve API'ye istek gitmez.
+run_naxd_found_check
 
 # --- elle yazilmis niyet tablosu ---
 # Tablo MODELDEN ONCE bakiliyor ve eslesirse yardimci surec HIC
