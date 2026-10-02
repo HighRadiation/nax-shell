@@ -1,4 +1,30 @@
 /*
+** SPDX-License-Identifier: GPL-3.0-or-later
+**
+** nax - AI'i kabugun dilinin icine koyan bir komut kabugu.
+** Copyright (C) 2026 Bugra Oksuz
+**
+** This program is free software: you can redistribute it and/or modify
+** it under the terms of the GNU General Public License as published by
+** the Free Software Foundation, either version 3 of the License, or
+** (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program.  If not, see <https://www.gnu.org/licenses/>.
+** Bu depoda LICENSE dosyasinda duruyor.
+**
+** NEDEN BILDIRIM INGILIZCE: lisans metnini ceviren bir bildirim, lisans
+** tarayicilari (SPDX, scancode) tarafindan TANINMIYOR. Bildirim hukuki
+** bir beyan, kodu anlatan bir yorum degil; o yuzden burada projenin
+** yorum dili kurali disinda kaliyor.
+*/
+
+/*
 ** main.c - giris noktasi ve okuma dongusu.
 **
 ** NEDEN VAR:
@@ -6,18 +32,19 @@
 **   sonra her seyi geri birak. Satirin nasil okundugu line.c'nin isi;
 **   satirin ne anlama geldigi ise siniflandiriciya (classifier.c) gececek.
 **
-** BU ASAMADA:
+** SATIR NASIL ISLENIYOR:
 **   Satir once SINIFLANDIRILIYOR: kabuk komutu mu, dogal dil mi. Kabuk
-**   komutuysa ayristirilip calistiriliyor; dogal dilse simdilik bir bilgi
-**   satiri basiliyor, cunku yardimci surec henuz yok.
+**   komutuysa ayristirilip calistiriliyor; dogal dil bes yoldan birine
+**   gidiyor (yazim duzeltmesi, sozdizimi hatasi, niyet, aciklama, bos).
 **
-**   Bos satir ve denetim karakteri filtresi de artik siniflandiricinin
-**   isi; main.c'deki eski is_blank kontrolu oraya tasindi.
+**   Bos satir ve denetim karakteri filtresi de siniflandiricinin isi;
+**   burada ayri bir is_blank kontrolu YOK, cunku iki yerde duran bir
+**   filtre tek bir yerde duzeltildiginde sessizce ayrisir.
 **
-**   "exit" artik gecici bir ozel durum DEGIL, gercek bir yerlesik. Onceki
-**   surumde satir daha ayristirilmadan yakalaniyordu; o kestirme
-**   kaldirildi, cunku "exit 7" ve "exit abc" gibi haller ancak normal
-**   hattan gecerek dogru davranabiliyor.
+**   "exit" ozel bir durum DEGIL, gercek bir yerlesik. Satiri daha
+**   ayristirmadan yakalayan bir kestirme kullanilmiyor: "exit 7" ve
+**   "exit abc" gibi haller ancak normal hattan gecerek dogru
+**   davranabiliyor.
 **
 ** CIKIS KODLARI:
 **   Sozdizimi hatasi 2. Calistirma tarafindaki kodlar exec.c icinde

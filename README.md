@@ -280,3 +280,25 @@ bölümünde. Kabuk bu durumların hiçbirinde durmaz: düz kabuk olarak çalı�
 | [docs/NORMS.md](docs/NORMS.md) | Kod stili sözleşmesi |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Nerede kaldık, sırada ne var |
 | [docs/FINDINGS.md](docs/FINDINGS.md) | Ertelenmiş işler |
+
+## Lisans
+
+**GPL-3.0-or-later** — tam metin [LICENSE](LICENSE) dosyasında.
+
+Seçim serbest değildi: `nax` GNU readline'a bağlanıyor ve readline GPLv3
+veya sonrası. Dağıtılan ikili, bu kod ile readline'ın birleşik eseri; o eserin
+GPLv3 şartlarıyla dağıtılabilir olması gerekiyor. Kaynağı izin verici bir
+lisansa koymak mümkündü ama o zaman kaynak bir lisansta, derlenmiş program
+başka bir lisansta olurdu — okuyanın kaçırmaması gereken bir nüans. Aynı
+lisansta olmak belirsizliği bitiriyor. Üstelik bash da GPLv3, ve bu proje
+davranışını baştan sona bash ile karşılaştırarak ölçüyor.
+
+Bir sebep daha var: bu kabuğun gizlilik sözleşmesi ("sır temizleme kabuk
+tarafında", "ortam değişkenlerinin yalnızca adları gider") ancak kaynak açık
+kalmak **zorundaysa** denetlenebilir. Birisi nax'ı kapalı bir ürüne gömebilse,
+o sözleşmenin doğrulanabilirliği kaybolurdu.
+
+Pratikte: kullan, değiştir, dağıt. Değiştirdiğin bir sürümü dağıtıyorsan
+kaynağını da aynı lisansla vermen gerekiyor.
+
+Telif hakkı © 2026 Buğra Öksüz.
