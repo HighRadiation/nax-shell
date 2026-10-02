@@ -1,0 +1,86 @@
+# Gonderilecek metinden sirlarin temizlenmesi.
+#
+# Kurallar docs/PRIVACY.md icinde yazili. Bicim test_redact.c basliginda.
+#
+# KORPUSUN YARISI NEGATIF VAKA: maskelemenin yakalamasi kadar
+# YAKALAMAMASI da olculuyor. Yanlis maskeleme sessizce yanlis cevap
+# uretir - model maskelenmis bir dizin adini anlayamaz.
+
+# --- bilinen anahtar onekleri ---
+export GROQ_KEY=gsk_abcdefghij1234567890ABCDEFGHIJ	export GROQ_KEY=[GIZLI:anahtar]
+curl -H x sk-abcdefghijklmnopqrstuvwx	curl -H x [GIZLI:anahtar]
+anahtar sk-ant-api03-abcdefghijklmnop	anahtar [GIZLI:anahtar]
+token ghp_1234567890abcdefghijklmnopqrstuvwxyz	token [GIZLI:anahtar]
+slack xoxb-123456789012-abcdefghij	slack [GIZLI:anahtar]
+google AIzaSyAbcdefghijklmnopqrstuv	google [GIZLI:anahtar]
+nvidia nvapi-abcdefghijklmnopqrst	nvidia [GIZLI:anahtar]
+yuz hf_abcdefghijklmnopqrstuvwx	yuz [GIZLI:anahtar]
+gitlab glpat-abcdefghijklmnopqrst	gitlab [GIZLI:anahtar]
+erisim ya29.abcdefghijklmnopqrstuvwxyz	erisim [GIZLI:anahtar]
+
+# --- bulut erisim anahtari ---
+aws AKIAIOSFODNN7EXAMPLE listele	aws [GIZLI:bulut-anahtar] listele
+gecici ASIAY34FZKBOKMUTVV7A	gecici [GIZLI:bulut-anahtar]
+
+# --- imzali jeton ---
+Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVP	Bearer [GIZLI:imzali-jeton]
+
+# --- adres icine gomulmus kimlik ---
+# SEMA, makine adi ve yol KALIR: baglam icin degerli ve sir degil.
+git clone https://kullanici:parolam@sunucu.com/depo.git	git clone https://[GIZLI:url-kimlik]@sunucu.com/depo.git
+# Kimlik yoksa adrese dokunulmaz.
+git clone https://sunucu.com/depo.git	git clone https://sunucu.com/depo.git
+# Yalniz kullanici adi varsa (iki nokta yok) sir sayilmaz.
+git clone https://kullanici@sunucu.com/depo.git	git clone https://kullanici@sunucu.com/depo.git
+
+# --- uzun secenekler ---
+# Secenek ADI kaliyor: modelin komutun yapisini gormesi gerekiyor.
+mysql --password=cokgizlibirsey -e x	mysql --password=[GIZLI:parola] -e x
+gh --token abcdefghijklmnop	gh --token [GIZLI:parola]
+api --api-key=anahtar123	api --api-key=[GIZLI:parola]
+
+# --- ozel anahtar blogu ---
+cat -----BEGIN RSA PRIVATE KEY----- MIIEow== -----END RSA PRIVATE KEY----- bitti	cat [GIZLI:ozel-anahtar] bitti
+
+# --- uzun diziler ---
+echo d41d8cd98f00b204e9800998ecf8427e8f00b204e9800998	echo [GIZLI:uzun-dizi]
+veri YWJjZGVmZ2hpams3ODkwQUJDREVGR0hJSktMTU5PUFFS	veri [GIZLI:uzun-dizi]
+
+# --- YAKALANMAMASI gerekenler ---
+# Kisa secenek taranmiyor; "mkdir -p dizin" bozulmamali.
+mkdir -p /tmp/bir/iki	mkdir -p /tmp/bir/iki
+# Sade yollar ve komutlar dokunulmaz.
+ls -la /home/kullanici/projeler	ls -la /home/kullanici/projeler
+git commit -m "ilk surum"	git commit -m "ilk surum"
+# Tamami kucuk harf AMA onaltilik olan dizi SIRDIR. Yalnizca "kucuk harfse
+# gec" demek bu sinifi acikta birakirdi.
+echo abcdefabcdefabcdefabcdefabcdefabcdef	echo [GIZLI:uzun-dizi]
+# Uzun ama tamami kucuk harf olan sozcuk sir degil.
+echo buradacokuzunbirkelimevarduzyazidanbasimsi	echo buradacokuzunbirkelimevarduzyazidanbasimsi
+# Uzun ama tamami rakam olan dizi sir degil.
+echo 123456789012345678901234567890123456	echo 123456789012345678901234567890123456
+# Kisa onaltilik dizi sir degil.
+echo d41d8cd98f00b204	echo d41d8cd98f00b204
+# Onekli ama cok kisa kuyruk sir sayilmaz.
+echo sk-abc	echo sk-abc
+
+# --- ortam degiskeni ADLARI ---
+N:GROQ_API_KEY	sir
+N:my_github_token	sir
+N:AWS_REGION	sir
+N:DATABASE_URL	sir
+N:MY_PASSWORD	sir
+N:SESSION_ID	sir
+N:HOME	temiz
+N:PATH	temiz
+N:TERM	temiz
+N:LANG	temiz
+
+# --- tabloda anlatilamayanlar ---
+# Satirlara yayilmis blok TEK yer tutucuya inmeli; yoksa metnin bir anahtar
+# BLOGU oldugu bilgisi kaybolur.
+C:multiline_block	ok
+# Bitis satiri olmayan blok sonuna kadar maskelenir.
+C:unterminated_block	ok
+# NULL girdi bos dize verir.
+C:null_input	ok
