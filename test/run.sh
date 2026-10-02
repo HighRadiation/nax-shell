@@ -403,6 +403,34 @@ run_type_clash_check() {
 	fi
 }
 
+# readline dahil eden her dosya ondan ONCE stdio.h dahil etmis mi.
+#
+# NEDEN AYRI DENETIM: <readline/readline.h> kendisi <stdio.h> dahil
+# ETMIYOR, FILE tipinin cagiran tarafindan onceden taninmasini bekliyor.
+# Bazi dagitimlarin basligi bunu kendi icinde telafi ediyor, bazilari
+# etmiyor - yani hata YALNIZCA baska bir makinede ortaya cikiyor ve bizim
+# derlememiz yesil kaliyor. Gercekten boyle oldu: depo baska bir makineye
+# cekildiginde "unknown type name FILE" ile patladi.
+run_readline_order_check() {
+	local file bad before
+
+	bad=""
+	for file in $(grep -rln "readline/readline.h" src/ 2>/dev/null)
+	do
+		before=$(grep -nE "^#[[:blank:]]*include" "$file" \
+			| sed -n "1,/readline\/readline.h/p")
+		echo "$before" | grep -q "<stdio.h>" || bad="$bad $file"
+	done
+	if [ -z "$bad" ]; then
+		PASS=$((PASS + 1))
+		printf "  ${G}gecti${N}   readline'dan once stdio.h dahil ediliyor\n"
+	else
+		FAIL=$((FAIL + 1))
+		printf "  ${R}patladi${N} readline'dan once stdio.h yok:%s\n" \
+			"$(echo $bad)"
+	fi
+}
+
 run_norm_check() {
 	local src hdr bad
 
@@ -834,6 +862,7 @@ run_case   "env PATH'ten kosar"           $'export NAXZ=bulundu\nenv | grep "^NA
 
 run_macro_clash_check
 run_type_clash_check
+run_readline_order_check
 run_norm_check
 run_leak_check
 

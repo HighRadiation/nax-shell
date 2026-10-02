@@ -49,6 +49,7 @@
 
 #include "nax.h"
 #include <signal.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <readline/readline.h>
 
