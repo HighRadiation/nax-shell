@@ -59,8 +59,18 @@ echo abcdefabcdefabcdefabcdefabcdefabcdef	echo [GIZLI:uzun-dizi]
 echo buradacokuzunbirkelimevarduzyazidanbasimsi	echo buradacokuzunbirkelimevarduzyazidanbasimsi
 # Uzun ama tamami rakam olan dizi sir degil.
 echo 123456789012345678901234567890123456	echo 123456789012345678901234567890123456
+# Onek SOZCUK ORTASINDA gecerse sir degil: "mask-" icinde "sk-" var.
+echo mask-abcdefghij	echo mask-abcdefghij
+# Sema olmadan "a:b@c" bir adres kimligi degil; dokunulmamali.
+echo etiket:deger@makine	echo etiket:deger@makine
 # Kisa onaltilik dizi sir degil.
 echo d41d8cd98f00b204	echo d41d8cd98f00b204
+# Bulut anahtari oneki AMA cok kisa: uzunluk siniri olmasa her "AKIA..."
+# dizisi sir sanilirdi.
+echo AKIAB	echo AKIAB
+# Imzali jeton oneki AMA nokta yok ve kisa: uc parcali olmayan bir base64
+# parcasi jeton degildir.
+echo eyJhbGciOiJIUzI1NiJ9	echo eyJhbGciOiJIUzI1NiJ9
 # Onekli ama cok kisa kuyruk sir sayilmaz.
 echo sk-abc	echo sk-abc
 
