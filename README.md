@@ -1,48 +1,60 @@
 # NAX
 
-**N**atural-language **A**ware e**X**ecution — AI'ı terminalin *yanına* değil,
-kabuğun *dilinin içine* koyan bir komut kabuğu.
+**N**atural-language **A**ware e**X**ecution — a command shell that puts AI
+*inside* the shell's language instead of *next to* it.
 
-*[English version](README.en.md)*
+*[Türkçe sürüm](README.tr.md)*
 
-Ayrı bir mod yok, özel bir işaret yok, çağrılacak bir program adı yok. Aynı
-satıra hem komut hem niyet yazılır; hangisi olduğuna kabuk karar verir.
+No mode to enter, no sigil to prefix, no program name to call. You type both
+commands and sentences on the same line; the shell decides which one it is.
 
 ```
-nax ~/projeler $ ls -la
-...                                  ← normal komut: sıfır gecikme, AI'a hiç uğramaz
+nax ~/projects $ ls -la
+...                                  ← ordinary command: zero latency, never reaches the AI
 
-nax ~/projeler $ dün değişen dosyaları zip'le
-  ↳ find . -newermt '1 day ago' -type f -print0 | xargs -0 zip degisen.zip
-nax ~/projeler $ find . -newermt '1 day ago' ...
-                                     ← öneri düzenleme satırına yazılır, Enter çalıştırır
+nax ~/projects $ zip the files that changed yesterday
+  ↳ find . -newermt '1 day ago' -type f -print0 | xargs -0 zip changed.zip
+nax ~/projects $ find . -newermt '1 day ago' ...
+                                     ← the suggestion lands in the edit buffer; Enter runs it
 
-nax ~/projeler $ bu dizin ne işe yarıyor
-Kabuğun kaynak kodu burada; src/ altında okuma döngüsü ve satır yönetimi var.
-                                     ← soru: metin cevap, çalıştırılacak bir şey yok
+nax ~/projects $ what is this directory for
+This is the shell's own source; src/ holds the read loop and line handling.
+                                     ← a question: text answer, nothing to run
 ```
 
-## Neden bu, "terminalde AI çalıştırmak"tan farklı
+## Read this first: the shell speaks Turkish
 
-Ayrı bir AI programına "şu hatayı çöz" dediğinde o program dosya sormak, `ls`
-çekmek, tahmin etmek zorundadır. Kabuğun içindeki AI ise çalışma dizinini, son
-çalıştırdığın komutları, çıkış kodlarını ve git dalını **hiç sormadan** bilir.
+The code, filenames and identifiers are English. **The shell's own messages,
+the documentation and the offline intent table are Turkish.** Error
+explanations from the AI always come back in Turkish. The classifier accepts
+both Turkish and English input, and the model answers requests in whatever
+language you write — but `command not found` reads `boyle bir komut yok`.
 
-Fark kodun nerede durduğu değil, paylaşılan durum.
+This is not a plan to change tomorrow; it is a fact to know before you build
+it. It is recorded in [docs/FINDINGS.md](docs/FINDINGS.md).
 
-## İki kural
+## Why this differs from "running AI in a terminal"
 
-**Hiçbir komut sen görmeden çalışmaz.** AI'ın ürettiği satır düzenleme
-tamponuna yazılır; çalıştıran şey senin Enter'a basmandır. Yıkıcı komutlarda
-ayrıca açık onay istenir.
+Tell a separate AI program "fix this error" and it must ask for files, run
+`ls`, and guess. The AI inside the shell already knows the working directory,
+the commands you just ran, their exit codes and the git branch — **without
+asking**.
 
-**AI çökerse kabuk çalışır.** Ağ giderse, anahtar yoksa, yardımcı süreç
-ölürse kabuk tek satır uyarı basar ve düz bir kabuk olarak tam işlevle devam
-eder. Bu bir kabuk; AI onun bir aşaması.
+The difference is not where the code lives. It is shared state.
 
-## Kurulum
+## Two rules
 
-Gereken tek harici bağımlılık readline geliştirme başlıkları:
+**No command runs without you seeing it.** Whatever the AI produces is written
+into the edit buffer; the thing that runs it is you pressing Enter. Destructive
+commands are never pre-loaded at all.
+
+**If the AI breaks, the shell works.** Network gone, no key, helper process
+dead — the shell prints one warning line and carries on as a plain shell with
+full functionality. This is a shell; the AI is one of its stages.
+
+## Install
+
+The only external dependency is the readline development headers:
 
 ```
 sudo apt-get install -y libreadline-dev
@@ -50,145 +62,145 @@ make
 ./nax
 ```
 
-AI tarafı için yapılandırma:
+Linux only today. macOS does not build yet and the four concrete blockers are
+listed in [docs/FINDINGS.md](docs/FINDINGS.md); `make` stops with a readable
+message rather than producing a broken binary.
+
+Configuration for the AI side:
 
 ```
 cp nax.conf.example nax.conf
-chmod 600 nax.conf          # api_key satirini doldur
+chmod 600 nax.conf          # then fill in the api_key line
 ```
 
-`nax.conf` olmadan da kabuk tam çalışır; yalnızca AI yolu kapalı kalır.
+The shell is fully functional without `nax.conf`; only the AI path stays off.
 
-## Geliştirme
-
-```
-make            kabugu derler, uyarilar hata sayilir
-make asan       adres ve tanimsiz davranis denetleyicili ikili
-make test       testleri normal ikili ile kosar
-make check      testleri her iki ikili ile kosar
-make clean      uretilen her seyi siler
-```
-
-Bu ortamda `valgrind` yok; bellek doğrulaması `make check` üzerinden
-denetleyicilerle yapılır. Sızıntı sıfır olmadan hiçbir aşama bitmiş sayılmaz.
-
-## Durum
-
-Çekirdek kabuk çalışıyor: okuma döngüsü, renkli prompt, kalıcı geçmiş,
-`exit`, Ctrl-D ve sinyaller — Ctrl-C yarım satırı atıp temiz bir prompt
-verir, Ctrl-\ yok sayılır. **Komutlar artık gerçekten koşuyor** — tek komut,
-`PATH` çözümleme, gerçek çıkış kodları ve bash ile birebir eşleşen hata
-mesajları:
+## Development
 
 ```
-nax ~/projeler $ echo merhaba dunya
-merhaba dunya
-nax ~/projeler $ printf "[%s]" $BOSLUKLU
-[bir][iki]
-nax ~/projeler $ boylebirkomutyok
-nax: boylebirkomutyok: command not found
-nax ~/projeler $ echo $?
+make            build the shell, warnings are errors
+make asan       second binary with address and undefined-behaviour sanitizers
+make test       run the suite against the plain binary
+make check      run the suite against both binaries
+make clean      remove everything generated
+```
+
+`valgrind` is not available in this environment, so memory verification goes
+through the sanitizer binary in `make check`. No stage counts as finished while
+a leak exists.
+
+## What works
+
+**The shell core.** Read loop, coloured prompt, persistent history, `exit`,
+Ctrl-D and signals — Ctrl-C drops the half-typed line and gives a clean
+prompt, Ctrl-\ is ignored. Commands really run: `PATH` resolution, real exit
+codes, and error messages that match bash exactly.
+
+```
+nax ~/projects $ printf "[%s]" $WITH_SPACES
+[one][two]
+nax ~/projects $ nosuchcommand
+nax: nosuchcommand: command not found
+nax ~/projects $ echo $?
 127
 ```
 
-**Borular ve yönlendirmeler de çalışıyor:**
+**Pipes, redirections, and the operators.** `|`, `<`, `>`, `>>`, heredoc
+(`<<`), plus `;`, `&&`, `||` and filename expansion. The whole behaviour was
+measured against bash rather than assumed.
 
 ```
-nax ~/projeler $ printf "c\na\nb\n" | sort | head -2 | tr "\n" ","
+nax ~/projects $ printf "c\na\nb\n" | sort | head -2 | tr "\n" ","
 a,b,
-nax ~/projeler $ wc -l < girdi.txt > sayim.txt
-nax ~/projeler $ true | false
-nax ~/projeler $ echo $?
-1
+nax ~/projects $ make && ./test/run.sh || echo "failed"
+nax ~/projects $ echo *.c
+a.c b.c
+nax ~/projects $ cat << END
+> two lines
+> END
+two lines
 ```
 
-**Yerleşikler de çalışıyor** — `cd`, `echo`, `pwd`, `export`, `unset`, `exit`:
+**Seven builtins:** `cd`, `echo`, `pwd`, `export`, `unset`, `exit`, `ctx`.
+`cd` and `export` run in the parent process — otherwise the change would die
+with the child.
+
+**The shell classifies every line itself.** No sigil, no mode. Ordinary
+commands pass straight through; natural language takes a different path.
 
 ```
-nax ~ $ cd projeler
-nax ~/projeler $ export AD=dunya
-nax ~/projeler $ echo -n "merhaba $AD"
-merhaba dunya
+nax ~/projects $ ls -la                      # command, runs directly
+nax ~/projects $ find all big files          # natural language, goes to intent
+nax ~/projects $ cat report.txt              # "cat" + an existing file: command
 ```
 
-`cd` ve `export` ana süreçte koşar, yoksa değişiklik çocukla birlikte yok
-olurdu.
+The point: typing `ls -la` costs no latency and no money. The AI engages only
+on lines the shell could not make sense of. How the decision is made is in
+[docs/CLASSIFIER.md](docs/CLASSIFIER.md).
 
-**Kabuk artık her satırı kendisi sınıflandırıyor** — hiçbir işaret, hiçbir
-kip yok. Normal komutlar bu yoldan hiç sapmadan geçiyor; doğal dil ayrı yola
-gidiyor:
-
-```
-nax ~/projeler $ ls -la                      # komut, doğrudan koşar
-nax ~/projeler $ find all big files          # doğal dil, niyet yoluna gider
-nax ~/projeler $ cat sirket.txt              # "cat" + var olan dosya: komut
-```
-
-Önemli olan şu: `ls -la` yazıldığında ne gecikme ne ücret oluşuyor. AI yalnızca
-kabuğun anlamlandıramadığı satırlarda devreye giriyor. Kararın nasıl
-verildiği [docs/CLASSIFIER.md](docs/CLASSIFIER.md) içinde.
-
-**Yazım hataları AI'a hiç gitmeden yerelde düzeltiliyor:**
+**Typos are fixed locally, without reaching the AI:**
 
 ```
-nax ~/projeler $ celar
+nax ~/projects $ celar
 nax: celar: boyle bir komut yok
 nax: bunu mu demek istediniz: clear
-nax ~/projeler $ clear▮        ← düzeltilmiş satır tampona hazır gelir
+nax ~/projects $ clear▮        ← the corrected line arrives in the buffer
 ```
 
-Geri dönüşü olmayan komutlar (`rm`, `dd`, `chmod`, `kill` ve benzeri) bu
-istisnanın dışında: önerilirler ama **tampona konulmazlar.** Tampona konan
-öneri tek Enter'la koşar ve bu tür bir komut için o fazla yakın.
+Two exceptions, both measured into existence. Irreversible commands (`rm`,
+`dd`, `chmod`, `kill` and friends) are suggested but **never pre-loaded** — a
+pre-loaded line runs on a single Enter, and that is too close for such a
+command. And a suggestion two edits away is suggested but not pre-loaded
+either: one edit away is a slipped finger, two edits away is usually *a
+different word*. That rule came from a real incident — a user typed a Turkish
+word, the shell offered a deployment CLI two edits away, and Enter ran it.
 
-**Yardımcı süreç gerçek, ama dayanıklılığı taklitle ölçüldü.** Karşı tarafta
-kasten kötü davranan bir süreç koşturuluyor, çünkü gerçek bir model ölmeyi,
-donmayı ve saçmalamayı sipariş üzerine yapmaz. Sorulan soru şu: yardımcı
-süreç ölürse, donarsa ya da saçmalarsa kabuk sağlam kalıyor mu? Ölçülen cevap:
-
-| Durum | Kabuk ne yapıyor |
-|---|---|
-| Süreç ölür | Bağlantıyı kapatır, yaşamaya devam eder |
-| Hiç cevap vermez | Zaman aşımı, satır kullanıcıya geri döner |
-| Okumayı bırakır | Yazmayı da sınırlı bekler, kilitlenmez |
-| Bozuk konuşur | İhlal sayar, süreci yeniden başlatır |
-
-`Ctrl-C` beklemeyi keser: kesme işleyicisi bir boruya tek bayt yazar, çünkü
-sinyal bağlamında güvenle yapılabilecek tek iş bu.
-
-**Doğal dil artık gerçekten çalışıyor.** Yardımcı süreç yalnızca Python
-standart kütüphanesiyle yazıldı; paket kurmak gerekmiyor.
+**Natural language, two paths.** A *request* produces a command and prepares
+it in the buffer; a *question* is printed. The model draws the line, but the
+shell does not trust it blindly:
 
 ```
-nax ~/projeler $ dun degisen dosyalari goster
-nax: find . -newermt "1 day ago" -type f
-nax ~/projeler $ find . -newermt "1 day ago" -type f▮   ← tampona hazır gelir
-
-nax ~/projeler $ boylebirkomutyok
-nax: boylebirkomutyok: command not found
-nax ~/projeler $ ?
+nax ~/projects $ show me disk usage
+nax: df -h
+nax ~/projects $ nosuchcommand
+nax: nosuchcommand: command not found
+nax ~/projects $ ?
 Komut bulunamadi, cunku PATH icinde boyle bir program yok.
 ```
 
-Doğal dilin iki türü ayrı yollardan geçer: **istek** bir komut önerir ve
-tampona hazırlanır, **soru** ekrana basılır. Ayrımı model yapar ama kabuk
-ona körü körüne güvenmez:
+A lone `?` explains the last failed command: the command, its exit code and
+the shell's own message go to the model.
 
-- Riskli komut önerilir, **tampona konulmaz** — karşı taraf "güvenli" dese
-  bile, çünkü kabuk komutun başını kendi listesiyle de denetler.
-- `api_key` boşsa sebep bir kez yazılır ve kabuk **düz kabuk** olarak çalışır:
-  satır bash'in yaptığı şeye düşer. Anahtarsız durum bir hata hâli değil.
-- Yardımcı süreç ölürse, donarsa ya da saçmalarsa kabuk sağlam kalır.
+- A risky command is suggested, **not pre-loaded** — even if the other side
+  claims it is safe, because the shell checks the command's head against its
+  own list too.
+- If `api_key` is empty the reason is printed once and the shell runs as a
+  **plain shell**. A missing key is not an error state.
+- If the helper process dies, hangs or talks nonsense, the shell stays intact.
 
-Kurulum: `cp nax.conf.example nax.conf`, `chmod 600 nax.conf`, `api_key`
-satırını doldur. Ayarı kaydettiğin an geçerli olur; kabuğu yeniden başlatmak
-gerekmez. Ayrıntısı [docs/CONFIG.md](docs/CONFIG.md)'de.
+**The helper process is real; its resilience was measured with a fake.** On
+the other end of the protocol a deliberately misbehaving process is used,
+because a real model will not die, hang and babble on request. The question
+was: if the helper dies, hangs or talks nonsense, does the shell survive?
 
-**İçerideki AI artık sormadan biliyor:** çalışma dizini, son komutlar ve
-çıkış kodları, git dalı, en sık kullandığın araçlar. Terminalde ayrı bir
-program olarak koşan bir yardımcı bunları bilemez.
+| Situation | What the shell does |
+|---|---|
+| Process dies | Closes the connection, keeps living |
+| Never answers | Times out, the line returns to the user |
+| Stops reading | Bounded wait on writes too; never deadlocks |
+| Talks nonsense | Counts violations, restarts the process |
 
-Ne gönderildiğini görmek için tahmin etmen gerekmiyor:
+`Ctrl-C` interrupts the wait: the signal handler writes a single byte to a
+pipe, because that is the only thing safely doable in a signal context.
+
+The helper is written with the Python standard library only — nothing to
+install.
+
+**The AI knows without asking:** working directory, recent commands with their
+exit codes, git branch and dirty state, the tools you use most. A helper
+running as a separate program in the terminal cannot know these.
+
+You do not have to guess what gets sent:
 
 ```
 nax ~/nax-shell $ ctx
@@ -196,112 +208,119 @@ nax ~/nax-shell $ ctx
 dizin: ~/nax-shell
 git dali: main
 son komutlar:
-  [0] echo bir
-  [127] boylebirkomutyok
+  [0] echo one
+  [127] nosuchcommand
 --- yalniz oturum acilisinda gitti ---
 ortam degiskeni adlari: PATH, HOME, TERM, ...
 --- bunun disinda hicbir sey ---
 ```
 
-Gizlilik sözleşmesi dört kuralla uygulanıyor — ayrıntısı
-[docs/PRIVACY.md](docs/PRIVACY.md)'de:
+The privacy contract has four rules — details in
+[docs/PRIVACY.md](docs/PRIVACY.md):
 
-- **Sır temizleme kabuk tarafında**, veri yardımcı sürece verilmeden önce.
-  Hatalı ya da ele geçirilmiş bir süreç, hiç almadığı veriyi sızdıramaz.
-- **Boşlukla başlayan satır bağlama hiç girmez** — bağlamdan kaçmanın yolu.
-- Ortam değişkenlerinin **yalnızca adları** gider, değerleri asla.
-- Belirli dizinlerde AI **tamamen kapatılabilir**; kararı kabuk verir, yani
-  veri karşı tarafa hiç ulaşmaz.
+- **Secret redaction happens on the shell side**, before data reaches the
+  helper. A buggy or compromised helper cannot leak what it never received.
+- **A line starting with a space never enters the context** — that is the way
+  out of the context.
+- Environment variables contribute **names only**, never values.
+- The AI can be **switched off entirely** in named directories; the shell makes
+  that call, so the data never reaches the other side at all.
 
-**Kabuk dili tamamlandı:** `;`, `&&`, `||`, `<<` ve dosya adı genişletmesi.
-Davranışın tamamı bash ile karşılaştırılarak ölçüldü.
-
-```
-nax ~/projeler $ make && ./test/run.sh || echo "patladi"
-nax ~/projeler $ echo *.c
-a.c b.c
-nax ~/projeler $ cat << SON
-> iki satir
-> SON
-iki satir
-```
-
-**Çevrimdışı da işe yarıyor.** Sık kullanılan niyetlerin elle yazılmış
-karşılığı var ve modelden önce ona bakılıyor — sıfır gecikme, sıfır ücret:
+**It is useful offline too.** Common intents have hand-written answers and the
+table is consulted *before* the model — zero latency, zero cost, and the same
+command every time:
 
 ```
-nax ~/projeler $ disk kullanimini goster
+nax ~/projects $ show me disk usage
 nax: df -h
 ```
 
-Çevrimdışı değerin büyük kısmı dil modelinden değil, bu belirlenimci katmandan
-geliyor: yazım düzeltmesi, PATH çözümlemesi, sınıflandırıcı ve niyet tablosu.
-Yerel dil modeli bunun **üstünde** opsiyonel bir katman, altında değil.
+Most of the offline value does not come from the language model: spell
+correction, `PATH` resolution, the classifier and the intent table are all
+deterministic. A local language model sits *above* that layer, not below it.
 
-Claude için `provider = anthropic` yeterli; farkları kod tarafında ele alındı.
+Providers: any OpenAI-shaped endpoint (Groq, OpenRouter, OpenAI, Gemini,
+NVIDIA) through one code path, plus a separate adapter for Claude
+(`provider = anthropic`). A local model (Ollama and friends) can serve as the
+default or as the fallback. See [docs/CONFIG.md](docs/CONFIG.md).
 
-Planın tamamı bitti — ama bu projenin bittiği anlamına gelmiyor. Neyin
-ölçülmediği [docs/ROADMAP.md](docs/ROADMAP.md)'de açıkça yazılı.
+## What it does not do
 
-Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
+These are limits, not omissions. They are deliberate:
 
-## Ne yapmaz
+- **It is not a chat bot.** Each line stands alone: a request yields a command,
+  a question yields two sentences. The model's answer does not enter the
+  context — only the commands you actually ran do. So you cannot follow up with
+  "and how do I delete that one?"; each line has to stand on its own. That is
+  the shell's contract: one line, one decision.
+- **Nothing runs on its own.** The suggestion is written into the edit buffer;
+  the thing that runs it is you pressing Enter. Destructive commands are never
+  pre-loaded.
+- **No job control (`&`) and no subshells (`( )`).** The lexer recognises them
+  and the parser refuses with a clear message.
+- **The quality of the suggested commands has not been measured.** The
+  protocol, resilience, privacy, classifier and shell language are all covered
+  by case tables; whether the model's command actually works is **not**,
+  because every AI test runs against a fake provider (no network, no key, no
+  cost). This is a deliberate gap, and it is the gap — it is written down in
+  [docs/ROADMAP.md](docs/ROADMAP.md).
 
-Bunlar eksik değil, sınır. Bilerek böyle:
+## When something goes wrong
 
-- **Sohbet botu değildir.** Her satır kendi başına durur: bir istek bir komut
-  üretir, bir soru iki cümlelik cevap alır. Modelin verdiği cevap bağlama
-  girmez, yalnızca **çalıştırdığın komutlar** girer. Yani "peki onu nasıl
-  silerim" diye devam edemezsin; soruyu kendi başına ayakta duracak şekilde
-  yazman gerekir. Bunun sebebi kabuğun sözleşmesi: bir satır, bir karar.
-- **Hiçbir şeyi kendi başına çalıştırmaz.** Öneri düzenleme satırına yazılır;
-  çalıştıran şey senin Enter'a basmandır. Yıkıcı komutlar tampona hiç konmaz.
-- **Arka plan işi (`&`) ve alt kabuk (`( )`) yok.** Sözcük ayırıcı tanıyor,
-  ayrıştırıcı anlaşılır bir hata veriyor.
-- **Önerilen komutların kalitesi ölçülmedi.** Protokol, dayanıklılık,
-  gizlilik, sınıflandırıcı ve kabuk dili vaka tablolarıyla ölçülü; modelin
-  ürettiği komutun işe yarayıp yaramadığı ölçülü **değil**, çünkü bütün AI
-  testleri sahte sağlayıcıya karşı koşuyor (ağ yok, anahtar yok, ücret yok).
-  Bu bilinçli bir boşluk ve [docs/ROADMAP.md](docs/ROADMAP.md) içinde yazılı.
+When the AI path goes quiet or prints `nax: AI: servis 4xx dondurdu`, the
+reason appears on that one line; the full response is in `~/.nax-naxd.log`.
+The two most common causes and their fixes are in the troubleshooting section
+of [docs/CONFIG.md](docs/CONFIG.md). The shell never stops in any of these
+cases: it runs as a plain shell.
 
-## Bir şey ters giderse
+## How it is tested
 
-AI yolu sustuğunda ya da `nax: AI: servis 4xx dondurdu` yazdığında sebep tek
-satırda görünür; tam yanıt `~/.nax-naxd.log` dosyasındadır. En sık iki sebep
-ve çözümü [docs/CONFIG.md](docs/CONFIG.md) içindeki "Sorun giderme"
-bölümünde. Kabuk bu durumların hiçbirinde durmaz: düz kabuk olarak çalışır.
+`make check` runs every case table against two binaries, the second built with
+the address and undefined-behaviour sanitizers. Three groups cover three
+different things: unit tests call modules directly, pipe-fed tests cover the
+non-interactive path, and pseudo-terminal tests cover the interactive path —
+`readline`, history and prompt generation only ever run in the last group.
 
-## Dokümanlar
+**A green test is not proof.** Every test group was verified by deliberately
+injecting faults into the code it claims to cover, and the surviving mutants
+are recorded with their reasons in [docs/FINDINGS.md](docs/FINDINGS.md). Three
+class-level checks exist because a single bug of each class was found once: a
+macro-name clash, a type-name clash, and an include-order mistake that only
+broke on *another* machine.
 
-| Dosya | İçerik |
+## Documentation
+
+| File | Contents |
 |---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Boru hattı, süreç modeli, bellek sahipliği |
-| [docs/CLASSIFIER.md](docs/CLASSIFIER.md) | "Komut mu niyet mi" kararı, vetolar, tuzaklar |
-| [docs/PROTOCOL.md](docs/PROTOCOL.md) | Kabuk ile yardımcı süreç arasındaki protokol |
-| [docs/CONFIG.md](docs/CONFIG.md) | Sağlayıcılar, yerel model, düşme kuralı |
-| [docs/PRIVACY.md](docs/PRIVACY.md) | Neyin gönderildiği ve neyin gönderilmediği |
-| [docs/NORMS.md](docs/NORMS.md) | Kod stili sözleşmesi |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Nerede kaldık, sırada ne var |
-| [docs/FINDINGS.md](docs/FINDINGS.md) | Ertelenmiş işler |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Pipeline, process model, memory ownership |
+| [docs/CLASSIFIER.md](docs/CLASSIFIER.md) | The "command or intent" decision, vetoes, traps |
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | Wire format between shell and helper process |
+| [docs/CONFIG.md](docs/CONFIG.md) | Providers, local model, fallback rule, troubleshooting |
+| [docs/PRIVACY.md](docs/PRIVACY.md) | What is sent and what is not |
+| [docs/NORMS.md](docs/NORMS.md) | Code style contract |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Where we are, what is next |
+| [docs/FINDINGS.md](docs/FINDINGS.md) | Deferred work and known limits |
 
-## Lisans
+The documentation is in Turkish.
 
-**GPL-3.0-or-later** — tam metin [LICENSE](LICENSE) dosyasında.
+## Licence
 
-Seçim serbest değildi: `nax` GNU readline'a bağlanıyor ve readline GPLv3
-veya sonrası. Dağıtılan ikili, bu kod ile readline'ın birleşik eseri; o eserin
-GPLv3 şartlarıyla dağıtılabilir olması gerekiyor. Kaynağı izin verici bir
-lisansa koymak mümkündü ama o zaman kaynak bir lisansta, derlenmiş program
-başka bir lisansta olurdu — okuyanın kaçırmaması gereken bir nüans. Aynı
-lisansta olmak belirsizliği bitiriyor. Üstelik bash da GPLv3, ve bu proje
-davranışını baştan sona bash ile karşılaştırarak ölçüyor.
+**GPL-3.0-or-later** — full text in [LICENSE](LICENSE).
 
-Bir sebep daha var: bu kabuğun gizlilik sözleşmesi ("sır temizleme kabuk
-tarafında", "ortam değişkenlerinin yalnızca adları gider") ancak kaynak açık
-kalmak **zorundaysa** denetlenebilir. Birisi nax'ı kapalı bir ürüne gömebilse,
-o sözleşmenin doğrulanabilirliği kaybolurdu.
+The choice was not free: `nax` links against GNU readline, which is GPLv3 or
+later. The distributed binary is a combined work of this code and readline, and
+that work has to be distributable under GPLv3 terms. Putting the source under a
+permissive licence was possible, but then the source would carry one licence
+and the compiled program another — a nuance readers miss. Using the same
+licence ends the ambiguity. bash is GPLv3 as well, and this project measures
+its behaviour against bash throughout.
 
-Pratikte: kullan, değiştir, dağıt. Değiştirdiğin bir sürümü dağıtıyorsan
-kaynağını da aynı lisansla vermen gerekiyor.
+There is one more reason. This shell's privacy contract ("redaction on the
+shell side", "environment variables contribute names only") is only auditable
+if the source *must* stay open. If someone could embed nax into a closed
+product, that contract would stop being verifiable.
 
-Telif hakkı © 2026 Buğra Öksüz.
+In practice: use it, change it, distribute it. If you distribute a modified
+version, you have to provide its source under the same licence.
+
+Copyright © 2026 Buğra Öksüz.
