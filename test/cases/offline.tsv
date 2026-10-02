@@ -68,3 +68,8 @@ dosya sayisini ogren ve kaydet	yok
 # Dolgu sozcukleri denetimi bozmamali; bunlar hala eslesmeli.
 bana disk kullanimini goster lutfen	df -h
 su anda bos alan ne kadar	df -h
+# KISA ANAHTAR SOZCUKTE EK TOLERANSI OLMAMALI. "bos" uc harf; "bosalt"
+# sozcugunu onunla karsilanmis saymak, baska bir isi isteyen satiri df -h
+# ile cevaplamak olurdu. Bu vaka mutasyonla bulundu: ek uzunlugu sartini
+# kaldiran mutasyon onsuz hayatta kaliyordu.
+bos alani bosalt	yok
