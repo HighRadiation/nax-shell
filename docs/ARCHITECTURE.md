@@ -343,7 +343,10 @@ src/
     b64.c          serbest metin alanları için base64
     proto.c        kayıt kurma ve çözme
     lineio.c       akıştan tam kayıt satırları toplama
-  (ai/ içinde sonraki aşamada: yardımcı sürecin başlatılması ve gözetimi)
+    naxd.h         yardımcı sürecin durumu, istek sonucu, bağlantı
+    naxd.c         süreci başlatma, yazma, gözetim, yeniden doğma
+    naxd_wait.c    cevabı bekleme: poll, kendine boru, zaman aşımı
+  (ai/ içinde sonraki aşamada: niyet yolunun kabuğa bağlanması)
 test/
   test.h           test koşucularının paylaştığı tipler ve iskele
   harness.c        vaka dosyası okuma, kaçış çözme, özet basma
@@ -354,6 +357,8 @@ test/
   test_classify.c  tablo tabanlı sınıflandırıcı testleri; kendi fikstürünü kurar
   test_proto.c     tablo tabanlı protokol testleri; kurma ve çözme bir arada
   test_lineio.c    senaryo tabanlı satır okuma testleri; parçalı veri
+  test_naxd.c      senaryo tabanlı dayanıklılık testleri; taklit süreçle
+  fake_naxd.py     kasten kötü davranan yardımcı süreç taklidi (17 kip)
   cases/*.tsv      vaka tabloları; yeni vaka için yeniden derleme gerekmez
   pty_drive.py     sahte terminal üzerinden etkileşimli yol testleri
 naxd/              AI yardımcı süreci (sonraki aşamada)

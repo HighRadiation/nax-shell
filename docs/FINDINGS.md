@@ -16,7 +16,6 @@ listenin geçmişi de okunabilir kalır.
 
 | Tarih | Ne | Nerede | Neden şimdi değil |
 |---|---|---|---|
-| 2026-09-30 | **Koşul, yardımcı süreç aşaması için:** `SA_RESTART` olmadığı için yardımcı süreç beklemesindeki `poll` da `EINTR` döngüsüne sarılmak zorunda. Çalıştırıcı tarafı ödendi. | `src/naxd_client.c` (henüz yok) | Sarılacak kod henüz yok; bir hata değil, o kod yazılırken uyulacak bir koşul |
 | 2026-09-30 | `<<` yönlendirmesi çalıştırılmıyor; anlaşılır mesaj verilip 1 dönüyor | `src/exec.c` (`unsupported`) | Gövdesini okumak için okuma döngüsünden ek satır almak gerekiyor; bu kabuğun girdi yolunu değiştiren ayrı bir iş |
 | 2026-09-30 | `export NAME` biçimi (eşit işareti olmadan) hiçbir şey yapmıyor, 0 dönüyor | `src/exec/builtin_env.c` (`export_one`) | Kabuk kendi değişken deposunu tutmuyor; "dışa aktarılmak üzere işaretli ama değeri yok" hâli temsil edilemiyor. Depo geldiğinde anlam kazanacak |
 | 2026-09-30 | Argümansız `export` çıktısı bash'in `declare -x NAME=...` biçimi yerine `export NAME="..."` kullanıyor | `src/exec/builtin_env.c` (`export_list`) | Bu kabukta `declare` diye bir şey yok; kullanılan biçim geri yapıştırılabilir. Bilinçli fark |
@@ -48,6 +47,7 @@ listenin geçmişi de okunabilir kalır.
 
 | Tarih | Ne | Nerede kapandı |
 |---|---|---|
+| 2026-10-02 | ~~**Koşul:** `SA_RESTART` olmadığı için yardımcı süreç beklemesindeki `poll` da `EINTR` döngüsüne sarılmak zorunda~~ | `src/ai/naxd_wait.c` — poll **aynı süreyle yeniden denenmiyor**: `EINTR` "henüz karar yok" sayılıyor ve kalan süre tek yönlü sayaçtan yeniden hesaplanıyor. Sinyali her gelişte süreyi baştan başlatmak zaman aşımını sonsuza öteleyebilirdi. Testi ölçüyor: 150 ms'de bir SIGALRM altında sonuç `TIMEOUT` kalıyor ve toplam süre sınırın iki katını geçmiyor |
 | 2026-09-30 | ~~readline etkileşimsiz girdide okuduğu satırı yankılıyor, çıktıyı ikiye katlıyordu~~ | `src/line.c` — etkileşimsiz yol `getline` kullanır, readline yalnızca terminalde çalışır |
 | 2026-09-30 | ~~Prompt'ta Ctrl-C kabuğu öldürüyordu (sinyal 2)~~ | `src/signal.c` — `rl_catch_signals` kapatıldı, işleyici yalnızca bayrak set ediyor, satır iptali `rl_event_hook` içinde normal bağlamda yapılıyor. Ctrl-C yarım satırı atar, `^C` basar, `$?`'yi 130 yapar; Ctrl-\ yok sayılır |
 | 2026-09-30 | ~~Yerleşik komut yoktu; `exit` geçici olarak okuma döngüsünde ele alınıyordu~~ | `src/exec/builtin*.c` — `cd`, `echo`, `pwd`, `export`, `unset`, `exit`. `exit` artık gerçek bir yerleşik; `main.c`'deki kestirme kaldırıldı, çünkü `exit 7` ve `exit abc` ancak normal hattan geçerek doğru davranabiliyor |

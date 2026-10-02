@@ -138,7 +138,23 @@ Geri dönüşü olmayan komutlar (`rm`, `dd`, `chmod`, `kill` ve benzeri) bu
 istisnanın dışında: önerilirler ama **tampona konulmazlar.** Tampona konan
 öneri tek Enter'la koşar ve bu tür bir komut için o fazla yakın.
 
-Sıradaki: AI yardımcı süreci ve protokolü — bkz. [docs/ROADMAP.md](docs/ROADMAP.md).
+**Yardımcı süreçle konuşma hattı hazır** — ama henüz gerçek bir model yok.
+Karşı tarafta kasten kötü davranan bir taklit var, çünkü önce şu soru
+yanıtlanmalı: yardımcı süreç ölürse, donarsa ya da saçmalarsa kabuk sağlam
+kalıyor mu? Ölçülen cevap:
+
+| Durum | Kabuk ne yapıyor |
+|---|---|
+| Süreç ölür | Bağlantıyı kapatır, yaşamaya devam eder |
+| Hiç cevap vermez | Zaman aşımı, satır kullanıcıya geri döner |
+| Okumayı bırakır | Yazmayı da sınırlı bekler, kilitlenmez |
+| Bozuk konuşur | İhlal sayar, süreci yeniden başlatır |
+
+`Ctrl-C` beklemeyi keser: kesme işleyicisi bir boruya tek bayt yazar, çünkü
+sinyal bağlamında güvenle yapılabilecek tek iş bu.
+
+Sıradaki: gerçek yardımcı süreç ve ilk sağlayıcı — bkz.
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 Bilinen eksikler [docs/FINDINGS.md](docs/FINDINGS.md) içinde kayıtlı.
 

@@ -59,41 +59,52 @@ tek adım sayıyor.
 konulmaz.** Tampona konan öneri tek Enter'la koşar ve `rm -rf` için o fazla
 yakın.
 
-### Test durumu
-
-| Grup | Vaka |
-|---|---|
-| sınıflandırıcı korpusu | 62 |
-| genişletme korpusu | 52 |
-| sözcük ayırıcı korpusu | 44 |
-| ayrıştırıcı korpusu | 40 |
-| boru ile bütünleşik | 98 |
-| sahte terminal (pty) | 26 |
-
-Hepsi normal ve denetleyicili derlemede ayrı ayrı koşuyor. Takım kendi kendini
-de denetliyor: sistem makroları ile sabit çakışması taraması ve kod normu
-denetimi `make check` içinde.
-
-## Sırada
-
 ### M2.3 — protokol ve yardımcı süreç iskeleti
 
-Tel biçimi [PROTOCOL.md](PROTOCOL.md)'de yazılı; bu taş onu hayata geçiriyor.
-Henüz gerçek bir model yok — karşı tarafta sahte bir süreç var, çünkü önce
-**dayanıklılık** ölçülmeli.
+Tel biçimi ([PROTOCOL.md](PROTOCOL.md)) hayata geçti. Henüz gerçek model yok;
+karşı tarafta **kasten kötü davranan** bir taklit var, çünkü bu taşın sorusu
+"cevap doğru mu" değil: **yardımcı süreç ölürse, donarsa ya da saçmalarsa
+kabuk sağlam kalıyor mu.**
 
-- `src/ai/proto.c` — çerçeve kodlama ve çözme
-- satır tabanlı okuma/yazma; `poll` üzerinde EINTR döngüsü
-  ([FINDINGS.md](FINDINGS.md)'de açık bir madde)
-- yük için base64
-- yardımcı sürecin başlatılması ve gözetimi: yeniden doğma, zaman aşımı,
-  çökme, hiç cevap vermeme
-- `test/fake_naxd.py` — **kötü davranış kipleriyle**: yavaş cevap, bozuk
-  çerçeve, cevabın ortasında ölme, hiç cevap vermeme, aşırı büyük yük
+- `proto.h` + `b64.c` + `proto.c` — kayıt kurma ve çözme. Serbest metin
+  `b64:` önekiyle; çözmede tek tampon, base64 yerinde çözülüyor
+- `lineio.c` — akıştan tam satır toplama, dört durum. Aşırı uzun satırda
+  bir sonraki satıra kadar atlanıyor, yani bir bozuk kayıt akışı
+  zehirlemiyor
+- `naxd.h` + `naxd.c` + `naxd_wait.c` — süreç yaşam döngüsü, `poll` + kendine
+  boru, zaman aşımı, yeniden doğma, hata çıkışının günlüğe gitmesi
+- `test/fake_naxd.py` — **17 kötü davranış kipi**
 
-Bu taşın asıl sorusu şu: yardımcı süreç ölürse, donarsa ya da saçmalarsa
-**kabuk sağlam kalıyor mu.** Kabuk hiçbir koşulda yardımcı süreç yüzünden
-kilitlenmemeli.
+Ölçülen üç dayanıklılık kuralı:
+
+| Durum | Kabuğun cevabı |
+|---|---|
+| Süreç ölür (yazarken ya da okurken) | Bağlantı kapatılır, kabuk yaşar; SIGPIPE yok sayılı olduğu için yazma hata döndürür |
+| Süreç hiç cevap vermez | Zaman aşımı; `CANCEL` gönderilir, satır kullanıcıya geri verilir |
+| Süreç **okumayı bırakır** | Yazma da sınırlı beklenir. Bu olmadan kabuk `write` içinde sonsuza kadar asılı kalıyordu — okuma tarafındaki zaman aşımı devreye girmiyor |
+
+Kullanıcının `Ctrl-C` ile beklemeyi kesmesi **kendine boru** ile gözleniyor:
+kesme işleyicisi o boruya bir bayt yazıyor, çünkü sinyal bağlamında güvenle
+yapılabilecek tek iş bu. "Bayrak set et" tek başına `poll`'u uyandırmaz.
+
+### Test durumu
+
+| Grup | Vaka | Mutasyon |
+|---|---|---|
+| sınıflandırıcı korpusu | 62 | 15/15 |
+| genişletme korpusu | 52 | — |
+| sözcük ayırıcı korpusu | 44 | — |
+| ayrıştırıcı korpusu | 40 | — |
+| **protokol korpusu** | **40** | **19/20** |
+| **satır okuma senaryoları** | **14** | **14/17** |
+| **yardımcı süreç senaryoları** | **22** | **23/23** |
+| boru ile bütünleşik | 101 | — |
+| sahte terminal (pty) | 29 | — |
+
+Yakalanmayan dört mutasyon davranışı hiç değiştirmiyor; gerekçeleri kodda ve
+[FINDINGS.md](FINDINGS.md)'de yazılı.
+
+## Sırada
 
 ### M2.4 — gerçek yardımcı süreç ve ilk sağlayıcı
 
