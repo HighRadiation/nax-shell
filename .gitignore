@@ -22,3 +22,6 @@ __pycache__/
 
 # Birim test ikilileri
 test/bin/
+
+# Yerel asistan notlari: makineye ozel, takip edilmez
+/nax-memory/

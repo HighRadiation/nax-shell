@@ -9,6 +9,12 @@ Buradaki hiçbir şey ölçülmedi. Yol haritasındaki maddelerin aksine bunlar
 plan, kapanmış iş değil. Bir madde ölçülüp koda girdiğinde yeri burası değil,
 ROADMAP ve ARCHITECTURE olur.
 
+Bu dosya yönü tutuyor. Parçaların ayrıntısı [v0.2.0/](v0.2.0/README.md)
+klasöründe, her özellik ayrı dosyada:
+[ses](v0.2.0/VOICE.md), [bellek](v0.2.0/MEMORY.md),
+[görsel](v0.2.0/VISUAL.md), [işletim sistemi](v0.2.0/OS.md),
+[platformlar](v0.2.0/PLATFORMS.md).
+
 ## Nihai hedef
 
 nax bir **AI-OS** olacak: yerel bir kişisel asistan, taşıyıcısı da kabuğun
