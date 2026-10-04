@@ -299,6 +299,7 @@ broke on *another* machine.
 | [docs/PRIVACY.md](docs/PRIVACY.md) | What is sent and what is not |
 | [docs/NORMS.md](docs/NORMS.md) | Code style contract |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Where we are, what is next |
+| [docs/VISION.md](docs/VISION.md) | Where this is going, and what is not measured yet |
 | [docs/FINDINGS.md](docs/FINDINGS.md) | Deferred work and known limits |
 
 The documentation is in Turkish.

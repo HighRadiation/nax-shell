@@ -282,6 +282,7 @@ bölümünde. Kabuk bu durumların hiçbirinde durmaz: düz kabuk olarak çalı�
 | [docs/PRIVACY.md](docs/PRIVACY.md) | Neyin gönderildiği ve neyin gönderilmediği |
 | [docs/NORMS.md](docs/NORMS.md) | Kod stili sözleşmesi |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Nerede kaldık, sırada ne var |
+| [docs/VISION.md](docs/VISION.md) | Nereye gidiyor, henüz neyin ölçülmediği |
 | [docs/FINDINGS.md](docs/FINDINGS.md) | Ertelenmiş işler |
 
 ## Lisans

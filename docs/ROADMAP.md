@@ -6,7 +6,7 @@ gerekçeleri burada değil, ilgili dokümanlarda: mimari
 [CLASSIFIER.md](CLASSIFIER.md), tel biçimi [PROTOCOL.md](PROTOCOL.md),
 ayarlar [CONFIG.md](CONFIG.md), gizlilik [PRIVACY.md](PRIVACY.md), kod
 kuralları [NORMS.md](NORMS.md), ertelenen işler
-[FINDINGS.md](FINDINGS.md).
+[FINDINGS.md](FINDINGS.md), nereye gidildiği [VISION.md](VISION.md).
 
 ## Nasıl çalışıyoruz
 
