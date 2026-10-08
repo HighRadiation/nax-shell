@@ -8,7 +8,7 @@ parçalarının ayrıntısı.
 |---|---|
 | [VOICE.md](VOICE.md) | Ses girişi, metin çıkışı |
 | [MEMORY.md](MEMORY.md) | Oturumlar arası kalıcı bellek |
-| [VISUAL.md](VISUAL.md) | Jarvis benzeri görsel katman |
+| [VISUAL.md](VISUAL.md) | Görsel katman |
 | [OS.md](OS.md) | İşletim sistemine dönüşme |
 | [PLATFORMS.md](PLATFORMS.md) | macOS ve Windows |
 
