@@ -9,7 +9,7 @@ parçalarının ayrıntısı.
 | [VOICE.md](VOICE.md) | Ses girişi, metin çıkışı |
 | [MEMORY.md](MEMORY.md) | Oturumlar arası kalıcı bellek |
 | [VISUAL.md](VISUAL.md) | Görsel katman |
-| [OS.md](OS.md) | İşletim sistemine dönüşme |
+| [OS.md](OS.md) | İşletim sistemine dönüşme (ek not (buğra tarafından eklendi): Burada bir kafa karışıklığı olmasın, burada ki Operating System'den kastım biraz farklı, sadece AI'a özel, kafamda ki mimari tam oturduğunda daha güzel olacak |
 | [PLATFORMS.md](PLATFORMS.md) | macOS ve Windows |
 
 ## Bu klasörü okurken
